@@ -1,11 +1,9 @@
-use std::{collections::HashMap, hash::Hash};
-
 use crate::{IsDictionary, VKDResult, errors::VKDError, utils::hash_to_mu_bits_with_offset};
-use ark_ff::{AdditiveGroup, Field};
-use ark_piop::arithmetic::mat_poly::mle::{self, MLE};
-use ark_poly::{DenseMultilinearExtension, evaluations};
+use ark_ff::Field;
+use ark_piop::arithmetic::mat_poly::mle::MLE;
+use ark_poly::DenseMultilinearExtension;
 use ark_std::{Zero, fmt, fmt::Debug};
-use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 use thiserror::Error;
 pub struct Dictionary<F: Field> {
     mle: MLE<F>,
