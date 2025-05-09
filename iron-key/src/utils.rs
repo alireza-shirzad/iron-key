@@ -1,10 +1,10 @@
-use ark_ff::Field;
+use ark_ff::{Field, PrimeField};
 use sha2::{Digest, Sha256};
 
 /// Hashes the input string and returns:
 /// (1) the first `mu` bits as a usize, and
 /// (2) the bit representation as Vec<bool> of length `mu`
-pub fn hash_to_mu_bits<F: Field>(input: &str, mu: usize) -> (usize, Vec<F>) {
+pub fn hash_to_mu_bits<F: PrimeField>(input: &str, mu: usize) -> (usize, Vec<F>) {
     assert!(mu <= usize::BITS as usize, "μ must be ≤ usize width");
     assert!(mu <= 256, "SHA-256 only gives 256 bits");
 
@@ -33,7 +33,7 @@ pub fn hash_to_mu_bits<F: Field>(input: &str, mu: usize) -> (usize, Vec<F>) {
     (val, bits)
 }
 
-pub fn hash_to_mu_bits_with_offset<F: Field>(
+pub fn hash_to_mu_bits_with_offset<F: PrimeField>(
     input: &str,
     offset: usize,
     mu: usize,

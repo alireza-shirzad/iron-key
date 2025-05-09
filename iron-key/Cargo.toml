@@ -12,6 +12,7 @@ ark-poly = { workspace = true }
 ark-piop = { workspace = true }
 
 # Other dependencies
+bigint = { version = "4.4.3" }
 rayon = { workspace = true, optional = true }
 thiserror = { workspace = true }
 sha2 = "0.10"
