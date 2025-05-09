@@ -1,0 +1,36 @@
+[package]
+name = "iron-key"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ark-serialize = { workspace = true }
+ark-std = { workspace = true }
+ark-ff = { workspace = true }
+ark-ec = { workspace = true }
+ark-poly = { workspace = true }
+ark-piop = { workspace = true }
+
+# Other dependencies
+rayon = { workspace = true, optional = true }
+thiserror = { workspace = true }
+sha2 = "0.10"
+
+[dev-dependencies]
+ark-test-curves = { workspace = true }
+fake = { version = "4.3.0" }
+
+[features]
+default = ["std", "parallel"]
+std = ["ark-piop/std", "ark-ff/std", "ark-poly/std", "ark-std/std"]
+print-trace = ["ark-std/print-trace"]
+parallel = [
+    "std",
+    "ark-piop/parallel",
+    "ark-ff/parallel",
+    "ark-poly/parallel",
+    "ark-std/parallel",
+    "rayon",
+]
+
+honest-prover = ["ark-piop/honest-prover"]
