@@ -5,14 +5,15 @@ use ark_piop::pcs::PCS;
 use errors::VKDError;
 
 // pub(crate) mod kzh;
+mod IronKey;
 pub mod auditor;
+pub mod bb;
 pub mod client;
 pub mod errors;
 pub mod ironkey;
 pub mod server;
 pub mod structs;
 pub mod utils;
-mod IronKey;
 
 type VKDResult<T> = Result<T, VKDError>;
 
@@ -50,7 +51,7 @@ where
     type SelfAuditProof;
     type UpdateProof;
     type StateCommitment;
-    fn setup(&self, system_spec: Self::Specification) -> VKDResult<Self::PublicParameters>;
+    fn setup(system_spec: Self::Specification) -> VKDResult<Self::PublicParameters>;
 }
 
 pub trait VKDServer<F, PC>
@@ -61,13 +62,18 @@ where
     type UpdateBatch;
     type StateCommitment;
     type Dictionary: VKDDictionary<F>;
+    type BulletinBoard;
     type LookupProof;
     type UpdateProof;
     type SelfAuditProof;
     type ServerKey;
     type PublicParameters: VKDPublicParameters;
-    fn init(&self, pp: &Self::PublicParameters) -> Self;
-    fn update(&self, update_batch: Self::UpdateBatch) -> VKDResult<Self::StateCommitment>;
+    fn init(pp: &Self::PublicParameters) -> Self;
+    fn update(
+        &mut self,
+        update_batch: Self::UpdateBatch,
+        bulletin_board: &mut Self::BulletinBoard,
+    ) -> VKDResult<()>;
     fn lookup_prove(
         &self,
         label: <Self::Dictionary as VKDDictionary<F>>::Label,
@@ -89,17 +95,20 @@ where
     type Dictionary: VKDDictionary<F>;
     type LookupProof;
     type SelfAuditProof;
+    type BulletinBoard;
     fn lookup_verify(
         &self,
         label: <Self::Dictionary as VKDDictionary<F>>::Label,
         value: <Self::Dictionary as VKDDictionary<F>>::Value,
         proof: Self::LookupProof,
+        bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool>;
 
     fn self_audit_verify(
         &self,
         label: <Self::Dictionary as VKDDictionary<F>>::Label,
         proof: Self::SelfAuditProof,
+        bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool>;
 }
 
@@ -111,12 +120,14 @@ where
     type Dictionary: VKDDictionary<F>;
     type UpdateProof;
     type StateCommitment;
+    type BulletinBoard;
     fn verify_update(
         &self,
         state_i: Self::StateCommitment,
         state_i_plus_1: Self::StateCommitment,
         label: <Self::Dictionary as VKDDictionary<F>>::Label,
         proof: Self::UpdateProof,
+        bulltin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool>;
 }
 

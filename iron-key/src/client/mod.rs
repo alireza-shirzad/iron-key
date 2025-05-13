@@ -3,6 +3,7 @@ use ark_piop::pcs::PCS;
 
 use crate::{
     VKDClient, VKDDictionary, VKDLabel, VKDResult,
+    bb::dummybb::DummyBB,
     structs::{
         dictionary::IronDictionary, lookup::IronLookupProof, self_audit::IronSelfAuditProof,
     },
@@ -24,17 +25,24 @@ where
     type LookupProof = IronLookupProof<F, PC>;
 
     type SelfAuditProof = IronSelfAuditProof<F, PC>;
+    type BulletinBoard = DummyBB;
 
     fn lookup_verify(
         &self,
         label: T,
         value: <Self::Dictionary as VKDDictionary<F>>::Value,
         proof: Self::LookupProof,
+        bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool> {
         todo!()
     }
 
-    fn self_audit_verify(&self, label: T, proof: Self::SelfAuditProof) -> VKDResult<bool> {
+    fn self_audit_verify(
+        &self,
+        label: T,
+        proof: Self::SelfAuditProof,
+        bulletin_board: &Self::BulletinBoard,
+    ) -> VKDResult<bool> {
         todo!()
     }
 }

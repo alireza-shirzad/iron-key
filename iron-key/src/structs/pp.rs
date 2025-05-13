@@ -15,8 +15,9 @@ where
     MvPCS: PCS<F, Poly = MLE<F>>,
     UvPCS: PCS<F, Poly = LDE<F>>,
 {
-    mv_snark_pk: ProvingKey<F, MvPCS, MvPCS>,
-    mv_snark_vk: VerifyingKey<F, MvPCS, MvPCS>,
+    snark_pk: ProvingKey<F, MvPCS, UvPCS>,
+    snark_vk: VerifyingKey<F, MvPCS, UvPCS>,
+    capacity: usize,
     _phantom_uvpcs: PhantomData<UvPCS>,
 }
 
@@ -31,7 +32,7 @@ where
     type ClientKey = IronClientKey<F, MvPCS>;
 
     fn to_server_key(&self) -> Self::ServerKey {
-        todo!()
+        IronServerKey::new(self.snark_pk.clone())
     }
 
     fn to_auditor_key(&self) -> Self::AuditorKey {
@@ -42,7 +43,27 @@ where
         todo!()
     }
     fn get_capacity(&self) -> usize {
-        todo!()
+        self.capacity
+    }
+}
+
+impl<F, MvPCS, UvPCS> IronPublicParameters<F, MvPCS, UvPCS>
+where
+    F: ark_ff::PrimeField,
+    MvPCS: PCS<F, Poly = MLE<F>>,
+    UvPCS: PCS<F, Poly = LDE<F>>,
+{
+    pub fn new(
+        capacity: usize,
+        snark_pk: ProvingKey<F, MvPCS, UvPCS>,
+        snark_vk: VerifyingKey<F, MvPCS, UvPCS>,
+    ) -> Self {
+        Self {
+            snark_pk,
+            snark_vk,
+            capacity,
+            _phantom_uvpcs: PhantomData,
+        }
     }
 }
 
@@ -61,6 +82,10 @@ where
     MvPCS: PCS<F, Poly = MLE<F>>,
     UvPCS: PCS<F, Poly = LDE<F>>,
 {
+    pub fn new(snark_pk: ProvingKey<F, MvPCS, UvPCS>) -> Self {
+        Self { snark_pk }
+    }
+
     pub fn get_snark_pk(&self) -> &ProvingKey<F, MvPCS, UvPCS> {
         &self.snark_pk
     }

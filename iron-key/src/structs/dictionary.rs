@@ -2,8 +2,9 @@ use crate::{
     VKDDictionary, VKDLabel, VKDResult, errors::VKDError, utils::hash_to_mu_bits_with_offset,
 };
 use ark_ff::{Field, PrimeField};
-use ark_piop::arithmetic::mat_poly::mle::MLE;
+use ark_piop::{arithmetic::mat_poly::mle::MLE, pcs::PCS};
 use ark_poly::DenseMultilinearExtension;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{Zero, fmt, fmt::Debug};
 use std::collections::HashMap;
 use thiserror::Error;
@@ -31,6 +32,10 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
             label_mle,
             offsets,
         }
+    }
+
+    pub fn contains(&self, label: &T) -> bool {
+        self.offsets.contains_key(label)
     }
 
     pub fn get_label_mle(&self) -> &MLE<F> {
@@ -113,6 +118,13 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
         Ok(())
     }
 
+    pub fn insert_batch(&mut self, batch: &HashMap<T, F>) -> VKDResult<()> {
+        for (label, value) in batch.iter() {
+            self.insert(label, *value)?;
+        }
+        Ok(())
+    }
+
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Dictionary")
             .field("label_mle", &self.label_mle.evaluations())
@@ -125,6 +137,37 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
 impl<F: PrimeField, T: VKDLabel<F>> VKDDictionary<F> for IronDictionary<F, T> {
     type Label = T;
     type Value = F;
+}
+
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+pub struct IronDictionaryCommitment<F, PC>
+where
+    F: PrimeField,
+    PC: PCS<F>,
+{
+    label_commitment: PC::Commitment,
+    value_commitment: PC::Commitment,
+}
+
+impl<F, PC> IronDictionaryCommitment<F, PC>
+where
+    F: PrimeField,
+    PC: PCS<F>,
+{
+    pub fn new(label_commitment: PC::Commitment, value_commitment: PC::Commitment) -> Self {
+        Self {
+            label_commitment,
+            value_commitment,
+        }
+    }
+
+    pub fn label_commitment(&self) -> &PC::Commitment {
+        &self.label_commitment
+    }
+
+    pub fn value_commitment(&self) -> &PC::Commitment {
+        &self.value_commitment
+    }
 }
 
 /// An `enum` specifying the possible failure modes of the DB-SNARK system.
@@ -145,7 +188,6 @@ pub(crate) enum DictionaryError {
 mod tests {
     use super::*;
     use ark_ff::UniformRand;
-    use ark_test_curves::bls12_381::Fr;
     use fake::{
         Fake,
         faker::internet::en::{FreeEmail, FreeEmailProvider, SafeEmail},

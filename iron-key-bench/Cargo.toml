@@ -4,3 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ark-std = { workspace = true }
+divan = { workspace = true }
+ark-ff = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+ark-bls12-381 = { workspace = true }
+
+
+
+[[bench]]
+name = "bench"
+harness = false

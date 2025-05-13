@@ -1,19 +1,23 @@
+use std::{ops::Add, str::FromStr};
+
 use crate::{
     VKD, VKDLabel, VKDResult, VKDSpecification,
     auditor::IronAuditor,
     client::IronClient,
     server::IronServer,
     structs::{
-        dictionary::IronDictionary, lookup::IronLookupProof, self_audit::IronSelfAuditProof,
-        update::IronUpdateProof,
+        IronSpecification, dictionary::IronDictionary, lookup::IronLookupProof,
+        pp::IronPublicParameters, self_audit::IronSelfAuditProof, update::IronUpdateProof,
     },
 };
-use ark_ff::PrimeField;
+use ark_ff::{BigInt, PrimeField};
 use ark_piop::{
     arithmetic::mat_poly::{lde::LDE, mle::MLE},
-    pcs::{PCS, kzg10::KZG10, pst13::PST13},
+    pcs::PCS,
     setup::KeyGenerator,
 };
+use num_bigint::BigUint;
+use sha2::digest::crypto_common::KeyInit;
 
 pub struct IronKey<F, MvPCS, UvPCS, T>
 where
@@ -33,43 +37,28 @@ where
     F: PrimeField,
     MvPCS: PCS<F, Poly = MLE<F>>,
     UvPCS: PCS<F, Poly = LDE<F>>,
+    <MvPCS as PCS<F>>::Commitment: Add<Output = <MvPCS as PCS<F>>::Commitment>,
     T: VKDLabel<F>,
 {
-    type PublicParameters = ();
+    type PublicParameters = IronPublicParameters<F, MvPCS, UvPCS>;
     type Server = IronServer<F, MvPCS, UvPCS, T>;
-    type Auditor = IronAuditor<F, T>;
+    type Auditor = IronAuditor<F, T, MvPCS, UvPCS>;
     type Client = IronClient<F, T>;
     type Specification = IronSpecification;
     type Dictionary = IronDictionary<F, T>;
     type LookupProof = IronLookupProof<F, MvPCS>;
     type SelfAuditProof = IronSelfAuditProof<F, MvPCS>;
-    type UpdateProof = IronUpdateProof<F>;
+    type UpdateProof = IronUpdateProof<F, MvPCS, UvPCS>;
     type StateCommitment = <MvPCS as PCS<F>>::Commitment;
     type Label = T;
 
-    fn setup(&self, specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
+    fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
         let key_generator = KeyGenerator::<F, MvPCS, UvPCS>::new().with_num_mv_vars(num_vars);
-        let (pk, vk) = key_generator.gen_keys().unwrap();
+        let (snark_pk, snark_vk) = key_generator.gen_keys().unwrap();
 
-        todo!()
-    }
-}
-
-pub struct IronSpecification {
-    capacity: usize,
-}
-
-impl IronSpecification {
-    pub fn new(capacity: usize) -> Self {
-        Self { capacity }
-    }
-}
-
-impl VKDSpecification for IronSpecification {
-    fn get_capacity(&self) -> usize {
-        self.capacity
+        Ok(IronPublicParameters::new(capacity, snark_pk, snark_vk))
     }
 }

@@ -15,18 +15,16 @@ ark-ff = { version = "0.5.0", default-features = false }
 ark-ec = { version = "0.5.0", default-features = false }
 ark-poly = { version = "0.5.0", default-features = false }
 ark-piop = { git = "https://github.com/alireza-shirzad/ark-piop", default-features = false }
-
 # Other dependencies
 rayon = { version = "1.5.2", default-features = false }
 thiserror = "2.0.12"
 sha2 = "0.10"
 fake = { version = "4.3.0", default-features = false }
+num-bigint = { version = "0.4.4", default-features = false }
 # Testing dependencies
-ark-test-curves = { version = "0.5.0", default-features = false, features = [
-    "bls12_381_curve",
-] }
+ark-bls12-381 = "0.5.0"
 divan = "0.1.17"
-
+rand = "0.9.1"
 [workspace.metadata.docs.rs]
 rustdoc-args = ["--html-in-header", "../docs-header.html"]
 

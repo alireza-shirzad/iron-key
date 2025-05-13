@@ -12,13 +12,13 @@ ark-poly = { workspace = true }
 ark-piop = { workspace = true }
 
 # Other dependencies
-bigint = { version = "4.4.3" }
+num-bigint = { workspace = true }
 rayon = { workspace = true, optional = true }
 thiserror = { workspace = true }
 sha2 = "0.10"
 
 [dev-dependencies]
-ark-test-curves = { workspace = true }
+ark-bls12-381 = { workspace = true }
 fake = { version = "4.3.0" }
 
 [features]
