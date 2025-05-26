@@ -1,32 +1,38 @@
 use crate::{
     VKDDictionary, VKDLabel, VKDResult, errors::VKDError, utils::hash_to_mu_bits_with_offset,
 };
+use ark_ec::{AdditiveGroup, pairing::Pairing};
 use ark_ff::{Field, PrimeField};
-use ark_piop::{arithmetic::mat_poly::mle::MLE, pcs::PCS};
-use ark_poly::DenseMultilinearExtension;
+use ark_poly::{DenseMultilinearExtension, univariate::DenseOrSparsePolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{Zero, fmt, fmt::Debug};
 use std::collections::HashMap;
+use subroutines::PolynomialCommitmentScheme;
 use thiserror::Error;
-pub struct IronDictionary<F: PrimeField, T: VKDLabel<F>> {
-    value_mle: MLE<F>,
-    label_mle: MLE<F>,
+pub struct IronDictionary<E: Pairing, T: VKDLabel<E>> {
+    value_mle: DenseMultilinearExtension<E::ScalarField>,
+    label_mle: DenseMultilinearExtension<E::ScalarField>,
     offsets: HashMap<T, usize>,
 }
 
-impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
+impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
     pub fn new_with_capacity(capacity: usize) -> Self {
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
-        let mle: MLE<F> = MLE::new(
-            DenseMultilinearExtension::from_evaluations_vec(num_vars, vec![F::ZERO; real_capacity]),
-            None,
-        );
+        let mle: DenseMultilinearExtension<E::ScalarField> =
+            DenseMultilinearExtension::from_evaluations_vec(
+                num_vars,
+                vec![E::ScalarField::ZERO; real_capacity],
+            );
         let offsets = HashMap::new();
         Self::new(mle.clone(), mle, offsets)
     }
 
-    pub fn new(value_mle: MLE<F>, label_mle: MLE<F>, offsets: HashMap<T, usize>) -> Self {
+    pub fn new(
+        value_mle: DenseMultilinearExtension<E::ScalarField>,
+        label_mle: DenseMultilinearExtension<E::ScalarField>,
+        offsets: HashMap<T, usize>,
+    ) -> Self {
         Self {
             value_mle,
             label_mle,
@@ -38,11 +44,11 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
         self.offsets.contains_key(label)
     }
 
-    pub fn get_label_mle(&self) -> &MLE<F> {
+    pub fn get_label_mle(&self) -> &DenseMultilinearExtension<E::ScalarField> {
         &self.label_mle
     }
 
-    pub fn get_value_mle(&self) -> &MLE<F> {
+    pub fn get_value_mle(&self) -> &DenseMultilinearExtension<E::ScalarField> {
         &self.value_mle
     }
     pub fn get_offsets(&self) -> &HashMap<T, usize> {
@@ -50,13 +56,13 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
     }
 
     pub fn max_size(&self) -> usize {
-        debug_assert_eq!(self.label_mle.num_vars(), self.value_mle.num_vars());
-        1 << self.label_mle.num_vars()
+        debug_assert_eq!(self.label_mle.num_vars, self.value_mle.num_vars);
+        1 << self.label_mle.num_vars
     }
 
     pub fn log_max_size(&self) -> usize {
-        debug_assert_eq!(self.label_mle.num_vars(), self.value_mle.num_vars());
-        self.label_mle.num_vars()
+        debug_assert_eq!(self.label_mle.num_vars, self.value_mle.num_vars);
+        self.label_mle.num_vars
     }
 
     pub fn size(&self) -> usize {
@@ -73,37 +79,46 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
                 )));
             },
         };
-        let (label, _) =
-            hash_to_mu_bits_with_offset::<F>(&label.to_string(), *offset, self.log_max_size());
+        let (label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
+            &label.to_string(),
+            *offset,
+            self.log_max_size(),
+        );
         Ok(label)
     }
 
-    pub fn get(&self, label: &T) -> VKDResult<F> {
+    pub fn get(&self, label: &T) -> VKDResult<E::ScalarField> {
         let index = self.find_index(label)?;
         debug_assert_eq!(
             label.to_field(),
-            *self.label_mle.evaluations().get(index).unwrap()
+            *self.label_mle.evaluations.get(index).unwrap()
         );
-        Ok(*self.value_mle.evaluations().get(index).unwrap())
+        Ok(*self.value_mle.evaluations.get(index).unwrap())
     }
 
     fn alloc_index(&mut self, label: &T) -> VKDResult<(usize, usize)> {
         let mut offset: usize = 0;
-        let (mut index, _) =
-            hash_to_mu_bits_with_offset::<F>(&label.to_string(), offset, self.log_max_size());
-        let evaluations = self.label_mle.evaluations();
+        let (mut index, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
+            &label.to_string(),
+            offset,
+            self.log_max_size(),
+        );
+        let evaluations = &self.label_mle.evaluations;
         let mut value = evaluations.get(index).unwrap();
         while !value.is_zero() {
             offset += 1;
-            (index, _) =
-                hash_to_mu_bits_with_offset::<F>(&label.to_string(), offset, self.log_max_size());
+            (index, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
+                &label.to_string(),
+                offset,
+                self.log_max_size(),
+            );
 
             value = evaluations.get(index).unwrap();
         }
         Ok((offset, index))
     }
 
-    pub fn insert(&mut self, label: &T, value: F) -> VKDResult<()> {
+    pub fn insert(&mut self, label: &T, value: E::ScalarField) -> VKDResult<()> {
         if self.offsets.contains_key(label) {
             return VKDResult::Err(VKDError::DictionaryError(
                 DictionaryError::LabelAlreadyExists(label.to_string()),
@@ -114,11 +129,12 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
         }
         let (offset, index) = self.alloc_index(label)?;
         self.offsets.insert(label.clone(), offset);
-        self.value_mle.mat_mle_mut().evaluations[index] = value;
+        self.value_mle.evaluations[index] = value;
+        self.label_mle.evaluations[index] = label.to_field();
         Ok(())
     }
 
-    pub fn insert_batch(&mut self, batch: &HashMap<T, F>) -> VKDResult<()> {
+    pub fn insert_batch(&mut self, batch: &HashMap<T, E::ScalarField>) -> VKDResult<()> {
         for (label, value) in batch.iter() {
             self.insert(label, *value)?;
         }
@@ -127,32 +143,32 @@ impl<F: PrimeField, T: Debug + VKDLabel<F>> IronDictionary<F, T> {
 
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Dictionary")
-            .field("label_mle", &self.label_mle.evaluations())
-            .field("value_mle", &self.value_mle.evaluations())
+            .field("label_mle", &self.label_mle)
+            .field("value_mle", &self.value_mle)
             .field("offsets", &self.offsets)
             .finish()
     }
 }
 
-impl<F: PrimeField, T: VKDLabel<F>> VKDDictionary<F> for IronDictionary<F, T> {
+impl<E: Pairing, T: VKDLabel<E>> VKDDictionary<E> for IronDictionary<E, T> {
     type Label = T;
-    type Value = F;
+    type Value = E::ScalarField;
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
-pub struct IronDictionaryCommitment<F, PC>
+pub struct IronDictionaryCommitment<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
     label_commitment: PC::Commitment,
     value_commitment: PC::Commitment,
 }
 
-impl<F, PC> IronDictionaryCommitment<F, PC>
+impl<E, PC> IronDictionaryCommitment<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
     pub fn new(label_commitment: PC::Commitment, value_commitment: PC::Commitment) -> Self {
         Self {

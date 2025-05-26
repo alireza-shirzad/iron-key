@@ -9,29 +9,36 @@ ark-std = { workspace = true }
 ark-ff = { workspace = true }
 ark-ec = { workspace = true }
 ark-poly = { workspace = true }
-ark-piop = { workspace = true }
 
+
+# Hyperplonk dependencies
+arithmetic = { path = "../arithmetic" }
+subroutines = { path = "../subroutines" }
+transcript = { path = "../transcript" }
 # Other dependencies
+derivative = { workspace = true }
 num-bigint = { workspace = true }
 rayon = { workspace = true, optional = true }
 thiserror = { workspace = true }
 sha2 = "0.10"
-
 [dev-dependencies]
 ark-bls12-381 = { workspace = true }
 fake = { version = "4.3.0" }
 
 [features]
 default = ["std", "parallel"]
-std = ["ark-piop/std", "ark-ff/std", "ark-poly/std", "ark-std/std"]
-print-trace = ["ark-std/print-trace"]
+std = ["ark-ff/std", "ark-poly/std", "ark-std/std"]
+print-trace = [
+    "ark-std/print-trace",
+    "arithmetic/print-trace",
+    "subroutines/print-trace",
+]
 parallel = [
     "std",
-    "ark-piop/parallel",
     "ark-ff/parallel",
     "ark-poly/parallel",
     "ark-std/parallel",
+    "arithmetic/parallel",
+    "subroutines/parallel",
     "rayon",
 ]
-
-honest-prover = ["ark-piop/honest-prover"]

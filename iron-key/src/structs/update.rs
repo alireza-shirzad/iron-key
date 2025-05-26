@@ -1,61 +1,97 @@
+use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
-use ark_piop::{
-    arithmetic::mat_poly::{lde::LDE, mle::MLE},
-    pcs::PCS,
-    prover::structs::proof::Proof,
-};
+
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use std::marker::PhantomData;
+use subroutines::{IOPProof, PolynomialCommitmentScheme};
 
 use super::dictionary::IronDictionaryCommitment;
-
-#[derive(CanonicalSerialize, CanonicalDeserialize)]
-pub struct IronUpdateProof<F, MvPCS, UvPCS>
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+pub struct IronUpdateProof<E, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
 {
-    snark_proof: Proof<F, MvPCS, UvPCS>,
+    zerocheck_proof: IOPProof<E::ScalarField>,
+    opening_proof: MvPCS::Proof,
 }
 
-impl<F, MvPCS, UvPCS> IronUpdateProof<F, MvPCS, UvPCS>
+impl<E, MvPCS> IronUpdateProof<E, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
 {
-    pub fn new(snark_proof: Proof<F, MvPCS, UvPCS>) -> Self {
-        Self { snark_proof }
+    pub fn new(zerocheck_proof: IOPProof<E::ScalarField>, opening_proof: MvPCS::Proof) -> Self {
+        Self {
+            zerocheck_proof,
+            opening_proof,
+        }
+    }
+
+    pub fn get_zerocheck_proof(&self) -> &IOPProof<E::ScalarField> {
+        &self.zerocheck_proof
+    }
+    pub fn get_opening_proof(&self) -> &MvPCS::Proof {
+        &self.opening_proof
     }
 }
 
-#[derive(CanonicalSerialize, CanonicalDeserialize)]
-pub struct IronEpochMessage<F, MvPCS, UvPCS>
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+pub struct IronEpochMessage<E, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
 {
-    dictionary_commitment: IronDictionaryCommitment<F, MvPCS>,
+    dictionary_commitment: IronDictionaryCommitment<E, MvPCS>,
     difference_accumulator: MvPCS::Commitment,
-    update_proof: Option<IronUpdateProof<F, MvPCS, UvPCS>>,
+    update_proof: Option<IronUpdateProof<E, MvPCS>>,
 }
 
-impl<F, MvPCS, UvPCS> IronEpochMessage<F, MvPCS, UvPCS>
+impl<E, MvPCS> IronEpochMessage<E, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
 {
     pub fn new(
-        dictionary_commitment: IronDictionaryCommitment<F, MvPCS>,
+        dictionary_commitment: IronDictionaryCommitment<E, MvPCS>,
         difference_accumulator: MvPCS::Commitment,
-        update_proof: Option<IronUpdateProof<F, MvPCS, UvPCS>>,
+        update_proof: Option<IronUpdateProof<E, MvPCS>>,
     ) -> Self {
         Self {
             dictionary_commitment,
             difference_accumulator,
             update_proof,
         }
+    }
+
+    pub fn get_dictionary_commitment(&self) -> &IronDictionaryCommitment<E, MvPCS> {
+        &self.dictionary_commitment
+    }
+    pub fn get_difference_accumulator(&self) -> &MvPCS::Commitment {
+        &self.difference_accumulator
+    }
+    pub fn get_update_proof(&self) -> &Option<IronUpdateProof<E, MvPCS>> {
+        &self.update_proof
     }
 }

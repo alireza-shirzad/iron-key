@@ -1,3 +1,6 @@
+mod server_lookup;
+mod server_update;
+mod kzh;
 use ark_bls12_381::Fr;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;

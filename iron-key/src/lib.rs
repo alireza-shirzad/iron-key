@@ -1,11 +1,9 @@
 use std::{fmt::Debug, hash::Hash};
 
+use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
-use ark_piop::pcs::PCS;
 use errors::VKDError;
-
-// pub(crate) mod kzh;
-mod IronKey;
+use subroutines::PolynomialCommitmentScheme;
 pub mod auditor;
 pub mod bb;
 pub mod client;
@@ -17,27 +15,27 @@ pub mod utils;
 
 type VKDResult<T> = Result<T, VKDError>;
 
-pub trait VKD<F, PC>
+pub trait VKD<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
     type Server: VKDServer<
-            F,
+            E,
             PC,
             Dictionary = Self::Dictionary,
             LookupProof = Self::LookupProof,
             SelfAuditProof = Self::SelfAuditProof,
         >;
     type Auditor: VKDAuditor<
-            F,
+            E,
             PC,
             Dictionary = Self::Dictionary,
             UpdateProof = Self::UpdateProof,
             StateCommitment = Self::StateCommitment,
         >;
     type Client: VKDClient<
-            F,
+            E,
             PC,
             Dictionary = Self::Dictionary,
             LookupProof = Self::LookupProof,
@@ -45,8 +43,8 @@ where
         >;
     type Specification: VKDSpecification;
     type PublicParameters;
-    type Dictionary: VKDDictionary<F, Label = Self::Label>;
-    type Label: VKDLabel<F>;
+    type Dictionary: VKDDictionary<E, Label = Self::Label>;
+    type Label: VKDLabel<E>;
     type LookupProof;
     type SelfAuditProof;
     type UpdateProof;
@@ -54,14 +52,14 @@ where
     fn setup(system_spec: Self::Specification) -> VKDResult<Self::PublicParameters>;
 }
 
-pub trait VKDServer<F, PC>
+pub trait VKDServer<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
     type UpdateBatch;
     type StateCommitment;
-    type Dictionary: VKDDictionary<F>;
+    type Dictionary: VKDDictionary<E>;
     type BulletinBoard;
     type LookupProof;
     type UpdateProof;
@@ -76,48 +74,46 @@ where
     ) -> VKDResult<()>;
     fn lookup_prove(
         &self,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
-    ) -> VKDResult<(
-        <Self::Dictionary as VKDDictionary<F>>::Value,
-        Self::LookupProof,
-    )>;
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
+    ) -> VKDResult<Self::LookupProof>;
     fn self_audit_prove(
         &self,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
     ) -> VKDResult<Self::SelfAuditProof>;
 }
 
-pub trait VKDClient<F, PC>
+pub trait VKDClient<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
-    type Dictionary: VKDDictionary<F>;
+    type Dictionary: VKDDictionary<E>;
     type LookupProof;
     type SelfAuditProof;
+    type ClientKey;
     type BulletinBoard;
     fn lookup_verify(
-        &self,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
-        value: <Self::Dictionary as VKDDictionary<F>>::Value,
+        &mut self,
+        value: <Self::Dictionary as VKDDictionary<E>>::Value,
         proof: Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
-    ) -> VKDResult<bool>;
+    ) -> VKDResult<()>;
 
     fn self_audit_verify(
-        &self,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
+        &mut self,
         proof: Self::SelfAuditProof,
         bulletin_board: &Self::BulletinBoard,
-    ) -> VKDResult<bool>;
+    ) -> VKDResult<()>;
+
+    fn get_label(&self) -> <Self::Dictionary as VKDDictionary<E>>::Label;
 }
 
-pub trait VKDAuditor<F, PC>
+pub trait VKDAuditor<E, PC>
 where
-    F: PrimeField,
-    PC: PCS<F>,
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
 {
-    type Dictionary: VKDDictionary<F>;
+    type Dictionary: VKDDictionary<E>;
     type UpdateProof;
     type StateCommitment;
     type BulletinBoard;
@@ -125,14 +121,14 @@ where
         &self,
         state_i: Self::StateCommitment,
         state_i_plus_1: Self::StateCommitment,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
         proof: Self::UpdateProof,
         bulltin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool>;
 }
 
-pub trait VKDDictionary<F: PrimeField> {
-    type Label: VKDLabel<F>;
+pub trait VKDDictionary<E: Pairing> {
+    type Label: VKDLabel<E>;
     type Value;
 }
 
@@ -151,6 +147,6 @@ pub trait VKDPublicParameters {
     fn get_capacity(&self) -> usize;
 }
 
-pub trait VKDLabel<F: PrimeField>: Debug + Hash + Eq + ToString + Clone {
-    fn to_field(&self) -> F;
+pub trait VKDLabel<E: Pairing>: Debug + Hash + Eq + ToString + Clone {
+    fn to_field(&self) -> E::ScalarField;
 }

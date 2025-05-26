@@ -8,4 +8,6 @@ use thiserror::Error;
 pub(crate) enum ServerError {
     #[error("The current update batch has a label that is already registered.")]
     AlreadyRegistered,
+
+
 }

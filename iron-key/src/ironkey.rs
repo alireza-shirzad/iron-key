@@ -1,5 +1,3 @@
-use std::{ops::Add, str::FromStr};
-
 use crate::{
     VKD, VKDLabel, VKDResult, VKDSpecification,
     auditor::IronAuditor,
@@ -10,55 +8,93 @@ use crate::{
         pp::IronPublicParameters, self_audit::IronSelfAuditProof, update::IronUpdateProof,
     },
 };
+use ark_ec::pairing::Pairing;
 use ark_ff::{BigInt, PrimeField};
-use ark_piop::{
-    arithmetic::mat_poly::{lde::LDE, mle::MLE},
-    pcs::PCS,
-    setup::KeyGenerator,
+use ark_poly::DenseMultilinearExtension;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, Write};
+use ark_std::{
+    env::current_dir,
+    fs::File,
+    io::{BufReader, BufWriter},
+    ops::Sub,
+    test_rng,
 };
 use num_bigint::BigUint;
 use sha2::digest::crypto_common::KeyInit;
-
-pub struct IronKey<F, MvPCS, UvPCS, T>
+use std::{ops::Add, str::FromStr};
+use subroutines::PolynomialCommitmentScheme;
+pub struct IronKey<E, MvPCS, T>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
-    T: VKDLabel<F>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
+    T: VKDLabel<E>,
 {
-    _phantom_f: std::marker::PhantomData<F>,
+    _phantom_f: std::marker::PhantomData<E::ScalarField>,
     _phantom_t: std::marker::PhantomData<T>,
     _phantom_mvpc: std::marker::PhantomData<MvPCS>,
-    _phantom_upc: std::marker::PhantomData<UvPCS>,
 }
 
-impl<F, MvPCS, UvPCS, T> VKD<F, MvPCS> for IronKey<F, MvPCS, UvPCS, T>
+impl<E, MvPCS, T> VKD<E, MvPCS> for IronKey<E, MvPCS, T>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
-    <MvPCS as PCS<F>>::Commitment: Add<Output = <MvPCS as PCS<F>>::Commitment>,
-    T: VKDLabel<F>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+            Evaluation = E::ScalarField,
+        > + Send
+        + Sync,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    T: VKDLabel<E>,
 {
-    type PublicParameters = IronPublicParameters<F, MvPCS, UvPCS>;
-    type Server = IronServer<F, MvPCS, UvPCS, T>;
-    type Auditor = IronAuditor<F, T, MvPCS, UvPCS>;
-    type Client = IronClient<F, T>;
+    type PublicParameters = IronPublicParameters<E, MvPCS>;
+    type Server = IronServer<E, MvPCS, T>;
+    type Auditor = IronAuditor<E, T, MvPCS>;
+    type Client = IronClient<E, T, MvPCS>;
     type Specification = IronSpecification;
-    type Dictionary = IronDictionary<F, T>;
-    type LookupProof = IronLookupProof<F, MvPCS>;
-    type SelfAuditProof = IronSelfAuditProof<F, MvPCS>;
-    type UpdateProof = IronUpdateProof<F, MvPCS, UvPCS>;
-    type StateCommitment = <MvPCS as PCS<F>>::Commitment;
+    type Dictionary = IronDictionary<E, T>;
+    type LookupProof = IronLookupProof<E, MvPCS>;
+    type SelfAuditProof = IronSelfAuditProof<E, MvPCS>;
+    type UpdateProof = IronUpdateProof<E, MvPCS>;
+    type StateCommitment = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment;
     type Label = T;
 
     fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
-        let key_generator = KeyGenerator::<F, MvPCS, UvPCS>::new().with_num_mv_vars(num_vars);
-        let (snark_pk, snark_vk) = key_generator.gen_keys().unwrap();
-
-        Ok(IronPublicParameters::new(capacity, snark_pk, snark_vk))
+        let srs_path = current_dir()
+            .unwrap()
+            .join(format!("../srs/srs_{}.bin", num_vars));
+        let srs = if srs_path.exists() {
+            let mut buffer = Vec::new();
+            BufReader::new(File::open(&srs_path).unwrap())
+                .read_to_end(&mut buffer)
+                .unwrap();
+            MvPCS::SRS::deserialize_uncompressed_unchecked(&buffer[..]).unwrap_or_else(|_| {
+                panic!("Failed to deserialize SRS from {:?}", srs_path);
+            })
+        } else {
+            let mut rng = test_rng();
+            let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
+            let mut serialized = Vec::new();
+            srs.serialize_uncompressed(&mut serialized).unwrap();
+            BufWriter::new(
+                File::create(srs_path.clone())
+                    .unwrap_or_else(|_| panic!("could not create file for SRS at {:?}", srs_path)),
+            )
+            .write_all(&serialized)
+            .unwrap();
+            srs
+        };
+        Ok(IronPublicParameters::<E, MvPCS>::new(real_capacity, srs))
     }
 }

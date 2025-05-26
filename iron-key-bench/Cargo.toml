@@ -4,15 +4,26 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+iron-key = { path = "../iron-key" }
 ark-std = { workspace = true }
 divan = { workspace = true }
 ark-ff = { workspace = true }
+ark-poly = { workspace = true }
+ark-serialize = { workspace = true }
+subroutines = { path = "../subroutines" }
 rand = { workspace = true }
 sha2 = { workspace = true }
 ark-bls12-381 = { workspace = true }
-
-
+rayon = { workspace = true, optional = true }
+anyhow = "1.0.97"
 
 [[bench]]
 name = "bench"
 harness = false
+
+
+[features]
+default = ["std", "parallel"]
+std = ["ark-ff/std", "ark-std/std"]
+print-trace = ["ark-std/print-trace"]
+parallel = ["std", "ark-ff/parallel", "ark-std/parallel", "rayon"]

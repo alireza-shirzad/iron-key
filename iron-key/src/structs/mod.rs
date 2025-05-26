@@ -1,3 +1,4 @@
+use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use num_bigint::BigUint;
 
@@ -43,11 +44,11 @@ impl std::fmt::Display for IronLabel {
     }
 }
 
-impl<F: PrimeField> VKDLabel<F> for IronLabel {
-    fn to_field(&self) -> F {
+impl<E: Pairing> VKDLabel<E> for IronLabel {
+    fn to_field(&self) -> E::ScalarField {
         let bigint = self.label.parse::<BigUint>().ok().unwrap();
         let bytes = bigint.to_bytes_le();
-        F::from_le_bytes_mod_order(&bytes)
+        E::ScalarField::from_le_bytes_mod_order(&bytes)
     }
 }
 
@@ -56,6 +57,6 @@ fn test_label() {
     let label = IronLabel {
         label: "12345678901234567890".to_string(),
     };
-    let field: ark_bls12_381::Fr = label.to_field();
+    let field: ark_bls12_381::Fr = <IronLabel as VKDLabel<ark_bls12_381::Bls12_381>>::to_field(&label);
     println!("Field: {}", field);
 }

@@ -1,8 +1,9 @@
+pub(crate) mod errors;
+
+use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
-use ark_piop::{
-    arithmetic::mat_poly::{lde::LDE, mle::MLE},
-    pcs::PCS,
-};
+use ark_poly::DenseMultilinearExtension;
+use subroutines::PolynomialCommitmentScheme;
 
 use crate::{
     VKDAuditor, VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -11,37 +12,34 @@ use crate::{
 };
 
 pub struct IronAuditor<
-    F: PrimeField,
-    T: VKDLabel<F>,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    T: VKDLabel<E>,
+    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>> + Send + Sync,
 > {
-    _phantom_f: F,
+    _phantom_f: E,
     _phantom_t: T,
     _phantom_mvpc: MvPCS,
-    _phantom_upc: UvPCS,
 }
 
-impl<F, MvPCS, UvPCS, T> VKDAuditor<F, MvPCS> for IronAuditor<F, T, MvPCS, UvPCS>
+impl<E, MvPCS, T> VKDAuditor<E, MvPCS> for IronAuditor<E, T, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
-    T: VKDLabel<F>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>> + Send + Sync,
+    T: VKDLabel<E>,
 {
-    type Dictionary = IronDictionary<F, T>;
+    type Dictionary = IronDictionary<E, T>;
 
-    type UpdateProof = IronUpdateProof<F, MvPCS, UvPCS>;
+    type UpdateProof = IronUpdateProof<E, MvPCS>;
 
     type StateCommitment = MvPCS::Commitment;
 
-    type BulletinBoard = DummyBB;
+    type BulletinBoard = DummyBB<E, MvPCS>;
 
     fn verify_update(
         &self,
         state_i: Self::StateCommitment,
         state_i_plus_1: Self::StateCommitment,
-        label: <Self::Dictionary as VKDDictionary<F>>::Label,
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
         proof: Self::UpdateProof,
         bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<bool> {

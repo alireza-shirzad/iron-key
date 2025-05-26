@@ -1,110 +1,180 @@
-use std::marker::PhantomData;
+use ark_ec::pairing::Pairing;
 
-use ark_ff::PrimeField;
-use ark_piop::{
-    arithmetic::mat_poly::{lde::LDE, mle::MLE},
-    pcs::PCS,
-    setup::structs::{ProvingKey, VerifyingKey},
-};
+use ark_poly::DenseMultilinearExtension;
+use subroutines::PolynomialCommitmentScheme;
 
 use crate::VKDPublicParameters;
 
-pub struct IronPublicParameters<F, MvPCS, UvPCS>
+pub struct IronPublicParameters<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    snark_pk: ProvingKey<F, MvPCS, UvPCS>,
-    snark_vk: VerifyingKey<F, MvPCS, UvPCS>,
     capacity: usize,
-    _phantom_uvpcs: PhantomData<UvPCS>,
+    pcs_ck: MvPCS::ProverParam,
+    pcs_vk: MvPCS::VerifierParam,
 }
 
-impl<F, MvPCS, UvPCS> VKDPublicParameters for IronPublicParameters<F, MvPCS, UvPCS>
+impl<E, MvPCS> VKDPublicParameters for IronPublicParameters<E, MvPCS>
 where
-    F: PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    type ServerKey = IronServerKey<F, MvPCS, UvPCS>;
-    type AuditorKey = IronAuditorKey<F, MvPCS>;
-    type ClientKey = IronClientKey<F, MvPCS>;
+    type ServerKey = IronServerKey<E, MvPCS>;
+    type AuditorKey = IronAuditorKey<E, MvPCS>;
+    type ClientKey = IronClientKey<E, MvPCS>;
 
     fn to_server_key(&self) -> Self::ServerKey {
-        IronServerKey::new(self.snark_pk.clone())
+        IronServerKey::new(self.capacity, self.pcs_ck.clone())
     }
 
     fn to_auditor_key(&self) -> Self::AuditorKey {
-        todo!()
+        IronAuditorKey::new(self.capacity, self.pcs_vk.clone())
     }
 
     fn to_client_key(&self) -> Self::ClientKey {
-        todo!()
+        IronClientKey::new(self.capacity, self.pcs_vk.clone())
     }
     fn get_capacity(&self) -> usize {
         self.capacity
     }
 }
 
-impl<F, MvPCS, UvPCS> IronPublicParameters<F, MvPCS, UvPCS>
+impl<E, MvPCS> IronPublicParameters<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    pub fn new(
-        capacity: usize,
-        snark_pk: ProvingKey<F, MvPCS, UvPCS>,
-        snark_vk: VerifyingKey<F, MvPCS, UvPCS>,
-    ) -> Self {
+    pub fn new(capacity: usize, pcs_param: MvPCS::SRS) -> Self {
+        let (pcs_ck, pcs_vk) =
+            MvPCS::trim(pcs_param, None, Some(capacity.trailing_zeros() as usize)).unwrap();
         Self {
-            snark_pk,
-            snark_vk,
             capacity,
-            _phantom_uvpcs: PhantomData,
+            pcs_ck,
+            pcs_vk,
         }
     }
 }
 
-pub struct IronServerKey<F, MvPCS, UvPCS>
+pub struct IronServerKey<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    snark_pk: ProvingKey<F, MvPCS, UvPCS>,
+    capacity: usize,
+    pcs_prover_param: MvPCS::ProverParam,
 }
 
-impl<F, MvPCS, UvPCS> IronServerKey<F, MvPCS, UvPCS>
+impl<E, MvPCS> IronServerKey<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
-    UvPCS: PCS<F, Poly = LDE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    pub fn new(snark_pk: ProvingKey<F, MvPCS, UvPCS>) -> Self {
-        Self { snark_pk }
+    pub fn new(capacity: usize, pcs_prover_param: MvPCS::ProverParam) -> Self {
+        Self {
+            capacity,
+            pcs_prover_param,
+        }
     }
 
-    pub fn get_snark_pk(&self) -> &ProvingKey<F, MvPCS, UvPCS> {
-        &self.snark_pk
+    pub fn get_pcs_prover_param(&self) -> &MvPCS::ProverParam {
+        &self.pcs_prover_param
+    }
+    pub fn get_capacity(&self) -> usize {
+        self.capacity
     }
 }
 
-pub struct IronAuditorKey<F, MvPCS>
+pub struct IronAuditorKey<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    _phantom_f: std::marker::PhantomData<F>,
-    _phantom_mvpc: std::marker::PhantomData<MvPCS>,
+    capacity: usize,
+    pcs_verifier_param: MvPCS::VerifierParam,
 }
 
-pub struct IronClientKey<F, MvPCS>
+impl<E, MvPCS> IronAuditorKey<E, MvPCS>
 where
-    F: ark_ff::PrimeField,
-    MvPCS: PCS<F, Poly = MLE<F>>,
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 {
-    _phantom_f: std::marker::PhantomData<F>,
-    _phantom_mvpc: std::marker::PhantomData<MvPCS>,
+    pub fn new(capacity: usize, pcs_verifier_param: MvPCS::VerifierParam) -> Self {
+        Self {
+            capacity,
+            pcs_verifier_param,
+        }
+    }
+    pub fn get_pcs_verifier_param(&self) -> &MvPCS::VerifierParam {
+        &self.pcs_verifier_param
+    }
+
+    pub fn get_capacity(&self) -> usize {
+        self.capacity
+    }
+}
+
+pub struct IronClientKey<E, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
+{
+    capacity: usize,
+    pcs_verifier_param: MvPCS::VerifierParam,
+}
+
+impl<E, MvPCS> IronClientKey<E, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
+{
+    pub fn new(capacity: usize, pcs_verifier_param: MvPCS::VerifierParam) -> Self {
+        Self {
+            capacity,
+            pcs_verifier_param,
+        }
+    }
+
+    pub fn get_pcs_verifier_param(&self) -> &MvPCS::VerifierParam {
+        &self.pcs_verifier_param
+    }
+    pub fn get_capacity(&self) -> usize {
+        self.capacity
+    }
 }
