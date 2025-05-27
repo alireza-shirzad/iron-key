@@ -1,6 +1,6 @@
+mod kzh;
 mod server_lookup;
 mod server_update;
-mod kzh;
 use ark_bls12_381::Fr;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;
@@ -31,5 +31,8 @@ fn sha256_hash(bencher: Bencher) {
 }
 
 fn main() {
-    divan::main();
+    divan::Divan::from_args()
+        .sample_count(1)
+        .sample_size(1)
+        .main();
 }

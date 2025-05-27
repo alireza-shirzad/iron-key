@@ -24,7 +24,7 @@ fn test_server() {
         (IronLabel::new("3"), Fr::from(3)),
     ]);
 
-    server.update(update_batch1, &mut bulletin_board).unwrap();
+    server.update(&update_batch1, &mut bulletin_board).unwrap();
     let bb_size_1 = bulletin_board.size();
     let update_batch1: HashMap<IronLabel, Fr> = HashMap::from([
         (IronLabel::new("4"), Fr::from(4)),
@@ -33,7 +33,7 @@ fn test_server() {
         (IronLabel::new("7"), Fr::from(7)),
     ]);
 
-    server.update(update_batch1, &mut bulletin_board).unwrap();
+    server.update(&update_batch1, &mut bulletin_board).unwrap();
     let bb_size_2 = bulletin_board.size();
     println!("Per epoch size: {}", bb_size_2 - bb_size_1);
 }

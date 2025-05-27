@@ -69,7 +69,7 @@ where
     fn init(pp: &Self::PublicParameters) -> Self;
     fn update(
         &mut self,
-        update_batch: Self::UpdateBatch,
+        update_batch: &Self::UpdateBatch,
         bulletin_board: &mut Self::BulletinBoard,
     ) -> VKDResult<()>;
     fn lookup_prove(

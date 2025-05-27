@@ -24,7 +24,7 @@ fn server_with_updates(log_capacity: usize) -> IronServer<Bls12_381, KZH2<Bls12_
     let updates: HashMap<IronLabel, Fr> = (1..=BATCH_SIZE)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
-    server.update(updates, &mut bb).unwrap();
+    server.update(&updates, &mut bb).unwrap();
     server
 }
 

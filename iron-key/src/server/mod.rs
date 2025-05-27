@@ -74,7 +74,7 @@ where
 
     fn update(
         &mut self,
-        update_batch: Self::UpdateBatch,
+        update_batch: &Self::UpdateBatch,
         bulletin_board: &mut Self::BulletinBoard,
     ) -> VKDResult<()>
     where
@@ -83,6 +83,7 @@ where
         <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     {
+
         #[cfg(test)]
         {
             self.authenticate_batch(&update_batch)?;
