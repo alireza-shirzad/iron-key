@@ -9,7 +9,6 @@ use ark_std::{
 use divan::Bencher;
 
 use rand::seq::index::sample;
-use rayon::vec;
 use std::{
     env::current_dir,
     fs::File,
