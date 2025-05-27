@@ -6,12 +6,12 @@ use ark_ff::{Field, PrimeField};
 use ark_poly::{DenseMultilinearExtension, univariate::DenseOrSparsePolynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{Zero, fmt, fmt::Debug};
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 use subroutines::PolynomialCommitmentScheme;
 use thiserror::Error;
 pub struct IronDictionary<E: Pairing, T: VKDLabel<E>> {
-    value_mle: DenseMultilinearExtension<E::ScalarField>,
-    label_mle: DenseMultilinearExtension<E::ScalarField>,
+    value_mle: Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>>,
+    label_mle: Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>>,
     offsets: HashMap<T, usize>,
 }
 
@@ -25,12 +25,14 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
                 vec![E::ScalarField::ZERO; real_capacity],
             );
         let offsets = HashMap::new();
-        Self::new(mle.clone(), mle, offsets)
+        let value_mle = Arc::new(RefCell::new(mle.clone()));
+        let label_mle = Arc::new(RefCell::new(mle.clone()));
+        Self::new(value_mle, label_mle, offsets)
     }
 
     pub fn new(
-        value_mle: DenseMultilinearExtension<E::ScalarField>,
-        label_mle: DenseMultilinearExtension<E::ScalarField>,
+        value_mle: Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>>,
+        label_mle: Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>>,
         offsets: HashMap<T, usize>,
     ) -> Self {
         Self {
@@ -44,25 +46,25 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
         self.offsets.contains_key(label)
     }
 
-    pub fn get_label_mle(&self) -> &DenseMultilinearExtension<E::ScalarField> {
-        &self.label_mle
+    pub fn get_label_mle(&self) -> Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>> {
+        self.label_mle.clone()
     }
 
-    pub fn get_value_mle(&self) -> &DenseMultilinearExtension<E::ScalarField> {
-        &self.value_mle
+    pub fn get_value_mle(&self) -> Arc<RefCell<DenseMultilinearExtension<E::ScalarField>>> {
+        self.value_mle.clone()
     }
     pub fn get_offsets(&self) -> &HashMap<T, usize> {
         &self.offsets
     }
 
     pub fn max_size(&self) -> usize {
-        debug_assert_eq!(self.label_mle.num_vars, self.value_mle.num_vars);
-        1 << self.label_mle.num_vars
+        debug_assert_eq!(self.label_mle.borrow().num_vars, self.value_mle.borrow().num_vars);
+        1 << self.label_mle.borrow().num_vars
     }
 
     pub fn log_max_size(&self) -> usize {
-        debug_assert_eq!(self.label_mle.num_vars, self.value_mle.num_vars);
-        self.label_mle.num_vars
+        debug_assert_eq!(self.label_mle.borrow().num_vars, self.value_mle.borrow().num_vars);
+        self.label_mle.borrow().num_vars
     }
 
     pub fn size(&self) -> usize {
@@ -91,9 +93,9 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
         let index = self.find_index(label)?;
         debug_assert_eq!(
             label.to_field(),
-            *self.label_mle.evaluations.get(index).unwrap()
+            *self.label_mle.borrow().evaluations.get(index).unwrap()
         );
-        Ok(*self.value_mle.evaluations.get(index).unwrap())
+        Ok(*self.value_mle.borrow().evaluations.get(index).unwrap())
     }
 
     fn alloc_index(&mut self, label: &T) -> VKDResult<(usize, usize)> {
@@ -103,7 +105,7 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
             offset,
             self.log_max_size(),
         );
-        let evaluations = &self.label_mle.evaluations;
+        let evaluations = &self.label_mle.borrow().evaluations;
         let mut value = evaluations.get(index).unwrap();
         while !value.is_zero() {
             offset += 1;
@@ -129,8 +131,8 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
         }
         let (offset, index) = self.alloc_index(label)?;
         self.offsets.insert(label.clone(), offset);
-        self.value_mle.evaluations[index] = value;
-        self.label_mle.evaluations[index] = label.to_field();
+        self.value_mle.borrow_mut().evaluations[index] = value;
+        self.label_mle.borrow_mut().evaluations[index] = label.to_field();
         Ok(())
     }
 

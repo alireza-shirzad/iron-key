@@ -31,8 +31,5 @@ fn sha256_hash(bencher: Bencher) {
 }
 
 fn main() {
-    divan::Divan::from_args()
-        .sample_count(1)
-        .sample_size(1)
-        .main();
+    divan::Divan::from_args().main();
 }

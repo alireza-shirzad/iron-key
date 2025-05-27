@@ -48,7 +48,7 @@ where
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
-pub struct IronEpochMessage<E, MvPCS>
+pub struct IronEpochKeyMessage<E, MvPCS>
 where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -58,12 +58,11 @@ where
         > + Sync
         + Send,
 {
-    dictionary_commitment: IronDictionaryCommitment<E, MvPCS>,
+    value_commitment: MvPCS::Commitment,
     difference_accumulator: MvPCS::Commitment,
-    update_proof: Option<IronUpdateProof<E, MvPCS>>,
 }
 
-impl<E, MvPCS> IronEpochMessage<E, MvPCS>
+impl<E, MvPCS> IronEpochKeyMessage<E, MvPCS>
 where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -74,22 +73,60 @@ where
         + Send,
 {
     pub fn new(
-        dictionary_commitment: IronDictionaryCommitment<E, MvPCS>,
         difference_accumulator: MvPCS::Commitment,
+        value_commitment: MvPCS::Commitment,
+    ) -> Self {
+        Self {
+            value_commitment,
+            difference_accumulator,
+        }
+    }
+
+    pub fn get_value_commitment(&self) -> &MvPCS::Commitment {
+        &self.value_commitment
+    }
+    pub fn get_difference_accumulator(&self) -> &MvPCS::Commitment {
+        &self.difference_accumulator
+    }
+}
+
+#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+pub struct IronEpochRegMessage<E, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
+{
+    label_commitment: MvPCS::Commitment,
+    update_proof: Option<IronUpdateProof<E, MvPCS>>,
+}
+
+impl<E, MvPCS> IronEpochRegMessage<E, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Sync
+        + Send,
+{
+    pub fn new(
+        label_commitment: MvPCS::Commitment,
         update_proof: Option<IronUpdateProof<E, MvPCS>>,
     ) -> Self {
         Self {
-            dictionary_commitment,
-            difference_accumulator,
+            label_commitment,
             update_proof,
         }
     }
 
-    pub fn get_dictionary_commitment(&self) -> &IronDictionaryCommitment<E, MvPCS> {
-        &self.dictionary_commitment
-    }
-    pub fn get_difference_accumulator(&self) -> &MvPCS::Commitment {
-        &self.difference_accumulator
+    pub fn get_label_commitment(&self) -> &MvPCS::Commitment {
+        &self.label_commitment
     }
     pub fn get_update_proof(&self) -> &Option<IronUpdateProof<E, MvPCS>> {
         &self.update_proof

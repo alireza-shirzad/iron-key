@@ -67,7 +67,12 @@ where
     type ServerKey;
     type PublicParameters: VKDPublicParameters;
     fn init(pp: &Self::PublicParameters) -> Self;
-    fn update(
+    fn update_reg(
+        &mut self,
+        update_batch: &Self::UpdateBatch,
+        bulletin_board: &mut Self::BulletinBoard,
+    ) -> VKDResult<()>;
+    fn update_keys(
         &mut self,
         update_batch: &Self::UpdateBatch,
         bulletin_board: &mut Self::BulletinBoard,

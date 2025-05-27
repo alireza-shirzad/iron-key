@@ -56,7 +56,9 @@ fn prepare_prover_update_prove_inputs(
     let initial_batch: HashMap<_, _> = (1..=initial_batch_size)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
-    server.update(&initial_batch, &mut bulletin_board).unwrap();
+    server
+        .update_reg(&initial_batch, &mut bulletin_board)
+        .unwrap();
 
     // Batch whose size we actually benchmark.
     let update_batch: HashMap<_, _> = (1..=(1 << log_update_size))
@@ -107,14 +109,14 @@ pub const PARAMS: &[Params] = &{
 ///   warm-up size is always 3.
 #[divan::bench(
     max_time     = 60,
-    sample_count = 200,
-    sample_size  = 200,
+    sample_count = 1,
+    sample_size  = 1,
     args         = PARAMS
 )]
 fn update(bencher: Bencher, Params(cap, upd, init): Params) {
     let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
 
     bencher.bench_local(|| {
-        server.update(&update_batch, &mut bb).unwrap();
+        server.update_reg(&update_batch, &mut bb).unwrap();
     });
 }

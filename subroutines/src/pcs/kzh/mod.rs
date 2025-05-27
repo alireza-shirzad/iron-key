@@ -83,20 +83,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         let commit_timer = start_timer!(|| "KZH::Commit");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
 
-        let non_zero_elem_iter = poly
-            .evaluations
-            .iter()
-            .enumerate()
-            .filter(|(_i, x)| !x.is_zero());
-        let com = if non_zero_elem_iter.clone().count() < 100_usize {
-            let mut com = E::G1::zero();
-            for (i, x) in non_zero_elem_iter {
-                com += prover_param.get_h_mat()[i] * x;
-            }
-            com
-        } else {
-            E::G1::msm_unchecked(prover_param.get_h_mat(), &poly.evaluations)
-        };
+        let com = E::G1::msm_unchecked(prover_param.get_h_mat(), &poly.evaluations);
         end_timer!(commit_timer);
         Ok(KZH2Commitment::new(com.into(), poly.num_vars()))
     }
@@ -113,16 +100,16 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         cfg_iter_mut!(d)
             .zip(cfg_chunks!(evaluations, 1 << prover_param.get_mu()))
             .for_each(|(d, f)| {
-                let non_zero_elem_iter = f.iter().enumerate().filter(|(_i, x)| !x.is_zero());
-                if non_zero_elem_iter.clone().count() < 100_usize {
-                    let mut com = E::G1::zero();
-                    for (i, x) in non_zero_elem_iter {
-                        com += prover_param.get_h_vec()[i] * x;
-                    }
-                    *d = com.into();
-                } else {
-                    *d = E::G1::msm_unchecked(prover_param.get_h_vec(), f).into_affine();
-                };
+                // let non_zero_elem_iter = f.iter().enumerate().filter(|(_i, x)| !x.is_zero());
+                // if non_zero_elem_iter.clone().count() < 100_usize {
+                //     let mut com = E::G1::zero();
+                //     for (i, x) in non_zero_elem_iter {
+                //         com += prover_param.get_h_vec()[i] * x;
+                //     }
+                //     *d = com.into();
+                // } else {
+                *d = E::G1::msm_unchecked(prover_param.get_h_vec(), f).into_affine();
+                // };
             });
         end_timer!(timer);
         Ok(KZH2AuxInfo::new(d))

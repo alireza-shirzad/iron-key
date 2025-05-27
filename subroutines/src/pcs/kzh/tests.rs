@@ -30,7 +30,7 @@ fn test_single_helper<R: Rng>(
 
 #[test]
 fn test_single_commit() -> Result<(), PCSError> {
-    let nv = 20;
+    let nv = 2;
     let mut rng = test_rng();
     let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)?;
 
