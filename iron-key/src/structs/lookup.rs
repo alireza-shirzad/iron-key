@@ -1,14 +1,14 @@
 use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, Polynomial};
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 pub struct IronLookupProof<E, PC>
 where
     E: Pairing,
     PC: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -22,7 +22,7 @@ where
     E: Pairing,
     PC: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {

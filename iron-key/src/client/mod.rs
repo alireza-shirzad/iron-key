@@ -4,7 +4,7 @@ use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
 
 use ark_poly::{DenseMultilinearExtension, Polynomial};
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
 
 use crate::{
     VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -19,7 +19,11 @@ use crate::{
 pub struct IronClient<
     E: Pairing,
     T: VKDLabel<E>,
-    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>>,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
 > {
     key: IronClientKey<E, MvPCS>,
     index: Option<<MvPCS::Polynomial as Polynomial<E::ScalarField>>::Point>,
@@ -30,7 +34,12 @@ pub struct IronClient<
 impl<E, T, MvPCS> VKDClient<E, MvPCS> for IronClient<E, T, MvPCS>
 where
     E: Pairing,
-    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>> + Send + Sync,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
     T: VKDLabel<E>,
 {
     type Dictionary = IronDictionary<E, T>;
@@ -105,7 +114,11 @@ where
 impl<E, T, MvPCS> IronClient<E, T, MvPCS>
 where
     E: Pairing,
-    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>>,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        >,
     T: VKDLabel<E>,
 {
     fn check_index(
@@ -124,10 +137,12 @@ where
         //                 &self.get_label().to_field(),
         //                 opening_proof,
         //             )
-        //             .map_err(|_| VKDError::ClientError(errors::ClientError::UnknownIndex))?;
+        //             .map_err(|_|
+        // VKDError::ClientError(errors::ClientError::UnknownIndex))?;
         //         },
         //         None => {
-        //             return Err(VKDError::ClientError(errors::ClientError::UnknownIndex));
+        //             return
+        // Err(VKDError::ClientError(errors::ClientError::UnknownIndex));
         //         },
         //     }
         // }

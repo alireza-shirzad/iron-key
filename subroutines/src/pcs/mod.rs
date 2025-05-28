@@ -33,13 +33,21 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// Polynomial Evaluation
     type Evaluation: Field;
     /// Commitments
-    type Commitment: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
+    type Commitment: Clone
+        + CanonicalSerialize
+        + CanonicalDeserialize
+        + Debug
+        + PartialEq
+        + Eq
+        + Default
+        + Send
+        + Sync;
     /// Proofs
     type Proof: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
     /// Batch proofs
     type BatchProof: CanonicalSerialize + CanonicalDeserialize + Clone + Debug + Eq;
     /// Auxiliary output
-    type Aux: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq;
+    type Aux: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq + Send + Sync;
 
     /// Build SRS for testing.
     ///

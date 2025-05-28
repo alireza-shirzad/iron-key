@@ -3,7 +3,7 @@ pub(crate) mod errors;
 use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
 use ark_poly::DenseMultilinearExtension;
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 use crate::{
     VKDAuditor, VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -14,7 +14,12 @@ use crate::{
 pub struct IronAuditor<
     E: Pairing,
     T: VKDLabel<E>,
-    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>> + Send + Sync,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
 > {
     _phantom_f: E,
     _phantom_t: T,
@@ -24,7 +29,12 @@ pub struct IronAuditor<
 impl<E, MvPCS, T> VKDAuditor<E, MvPCS> for IronAuditor<E, T, MvPCS>
 where
     E: Pairing,
-    MvPCS: PolynomialCommitmentScheme<E, Polynomial = DenseMultilinearExtension<E::ScalarField>, Point = Vec<<E as Pairing>::ScalarField>> + Send + Sync,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
     T: VKDLabel<E>,
 {
     type Dictionary = IronDictionary<E, T>;

@@ -1,7 +1,7 @@
 use ark_ec::pairing::Pairing;
 
 use ark_poly::DenseMultilinearExtension;
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 use crate::VKDPublicParameters;
 
@@ -10,7 +10,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -24,7 +24,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -53,7 +53,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -73,7 +73,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -86,7 +86,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -110,7 +110,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -123,7 +123,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -147,7 +147,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
@@ -160,7 +160,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {

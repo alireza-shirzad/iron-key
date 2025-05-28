@@ -9,26 +9,23 @@ use crate::{
     },
 };
 use ark_ec::pairing::Pairing;
-use ark_ff::{BigInt, PrimeField};
-use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, Write};
 use ark_std::{
+    end_timer,
     env::current_dir,
     fs::File,
     io::{BufReader, BufWriter},
     ops::Sub,
-    test_rng,
+    start_timer, test_rng,
 };
-use num_bigint::BigUint;
-use sha2::digest::crypto_common::KeyInit;
 use std::{ops::Add, str::FromStr};
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
 pub struct IronKey<E, MvPCS, T>
 where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -44,7 +41,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
             Evaluation = E::ScalarField,
         > + Send
@@ -68,6 +65,7 @@ where
     type Label = T;
 
     fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
+        let timer = start_timer!(|| "IronKey::setup");
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
@@ -75,6 +73,10 @@ where
             .unwrap()
             .join(format!("../srs/srs_{}.bin", num_vars));
         let srs = if srs_path.exists() {
+            println!(
+                "Using existing SRS from {:?} for {} variables",
+                srs_path, num_vars
+            );
             let mut buffer = Vec::new();
             BufReader::new(File::open(&srs_path).unwrap())
                 .read_to_end(&mut buffer)
@@ -83,6 +85,10 @@ where
                 panic!("Failed to deserialize SRS from {:?}", srs_path);
             })
         } else {
+            println!(
+                "Generating new SRS at {:?} for {} variables",
+                srs_path, num_vars
+            );
             let mut rng = test_rng();
             let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
             let mut serialized = Vec::new();
@@ -95,6 +101,7 @@ where
             .unwrap();
             srs
         };
+        end_timer!(timer);
         Ok(IronPublicParameters::<E, MvPCS>::new(real_capacity, srs))
     }
 }

@@ -57,7 +57,7 @@ fn prepare_prover_update_prove_inputs(
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
     server
-        .update_reg(&initial_batch, &mut bulletin_board)
+        .update_keys(&initial_batch, &mut bulletin_board)
         .unwrap();
 
     // Batch whose size we actually benchmark.
@@ -73,21 +73,47 @@ fn prepare_prover_update_prove_inputs(
     (server, update_batch, bulletin_board)
 }
 
-/// Compile-time list of (log_capacity, log_update_size, **3**) triplets.
-pub const PARAMS: &[Params] = &{
-    const INIT: u64 = 1;
-    const fn build() -> [Params; 530] {
-        let mut out = [Params(4, 1, 0); 530];
+/// Compile-time list of (log_capacity, log_update_size, 3) triplets for light
+/// tests.
+pub const LIGHT_PARAMS: &[Params] = &{
+    const INIT: u64 = 3;
+    const fn build_light() -> [Params; 462] {
+        let mut out = [Params(0, 0, 0); 462];
         let mut i = 0;
 
-        // (1,0,3) and (2,0,3)
-        out[i] = Params(1, 0, 0);
+        // (1, 0, INIT) and (2, 0, INIT)
+        out[i] = Params(1, 0, INIT);
         i += 1;
-        out[i] = Params(2, 0, 0);
+        out[i] = Params(2, 0, INIT);
         i += 1;
 
-        // (n,0…n−2,3) for n = 3..=33
+        // (n, 0..=n-2, INIT) for n = 3..=26
         let mut n = 3;
+        while n <= 26 {
+            let mut k = 0;
+            while k <= n - 2 {
+                out[i] = Params(n, k, INIT);
+                i += 1;
+                k += 1;
+            }
+            n += 1;
+        }
+
+        out
+    }
+    build_light()
+};
+
+/// Compile-time list of (log_capacity, log_update_size, 3) triplets for heavy
+/// tests.
+pub const HEAVY_PARAMS: &[Params] = &{
+    const INIT: u64 = 3;
+    const fn build_heavy() -> [Params; 203] {
+        let mut out = [Params(0, 0, 0); 203];
+        let mut i = 0;
+
+        // (n, 0..=n-2, INIT) for n = 27..=33
+        let mut n = 27;
         while n <= 33 {
             let mut k = 0;
             while k <= n - 2 {
@@ -97,23 +123,33 @@ pub const PARAMS: &[Params] = &{
             }
             n += 1;
         }
+
         out
     }
-    build()
+    build_heavy()
 };
 
-/// Divan benchmark.
-///
-/// * 60 s wall-time cap so 200×200 samples fit.
-/// * `args = PARAMS` sweeps the (log_capacity, log_update_size) pairs; the
-///   warm-up size is always 3.
 #[divan::bench(
     max_time     = 60,
     sample_count = 1,
     sample_size  = 1,
-    args         = PARAMS
+    args         = LIGHT_PARAMS
 )]
-fn update(bencher: Bencher, Params(cap, upd, init): Params) {
+fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
+    let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
+
+    bencher.bench_local(|| {
+        server.update_reg(&update_batch, &mut bb).unwrap();
+    });
+}
+
+#[divan::bench(
+    max_time     = 60,
+    sample_count = 1,
+    sample_size  = 1,
+    args         = HEAVY_PARAMS
+)]
+fn heavy_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
     let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
 
     bencher.bench_local(|| {

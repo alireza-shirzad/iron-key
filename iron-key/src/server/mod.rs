@@ -17,19 +17,22 @@ use crate::{
 };
 use arithmetic::VirtualPolynomial;
 use ark_ec::pairing::Pairing;
-use ark_poly::DenseMultilinearExtension;
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
 use ark_std::{One, UniformRand, Zero, end_timer, start_timer};
+use rayon::join;
 use std::{
     collections::HashMap,
     ops::{Add, Sub},
     sync::Arc,
 };
-use subroutines::{PolyIOP, PolynomialCommitmentScheme, ZeroCheck};
+use subroutines::{
+    PolyIOP, PolynomialCommitmentScheme, ZeroCheck, pcs::kzh::poly::DenseOrSparseMLE,
+};
 pub struct IronServer<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Sync
         + Send,
@@ -44,7 +47,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
             Evaluation = E::ScalarField,
         > + Sync
@@ -97,85 +100,76 @@ where
         let new_label_mle = self.dictionary.get_label_mle();
         end_timer!(timer);
 
-        let timer = start_timer!(|| "IronServer::update:: computing diff MLE");
-        let mut diff_label_mle = DenseMultilinearExtension::from_evaluations_vec(
-            current_label_mle.borrow().num_vars,
-            vec![E::ScalarField::zero(); 1 << current_label_mle.borrow().num_vars],
-        );
-        diff_label_mle += &*new_label_mle.borrow();
-        diff_label_mle -= &*current_label_mle.borrow();
-        end_timer!(timer);
         let timer = start_timer!(|| "IronServer::update:: computing diff commitment");
         let diff_label_com =
-            MvPCS::commit(self.key.get_pcs_prover_param(), &diff_label_mle).unwrap();
+            MvPCS::commit(self.key.get_pcs_prover_param(), &*new_label_mle.borrow()).unwrap();
         end_timer!(timer);
 
-        let iron_epoch_message = if bulletin_board.is_empty() {
-            IronEpochMessage::IronEpochRegMessage(IronEpochRegMessage::new(diff_label_com, None))
-        } else {
-            let prove_update_timer = start_timer!(|| "IronServer::update:: Prove update");
-            let sc_prep_timer = start_timer!(|| "IronServer::update:: Sumcheck preparation");
-            let last_epoch_message = bulletin_board.read_last()?;
-            let last_epoch_reg_message = last_epoch_message.get_reg_message();
-            let last_label_comm = last_epoch_reg_message.get_label_commitment();
-            let new_label_comm = last_label_comm.clone() + diff_label_com;
-            let mut transcript =
-                <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
-            transcript.append_message(b"iron-key", b"iron-key").unwrap();
-            let mut target_virtual_poly =
-                VirtualPolynomial::new(current_label_mle.borrow().num_vars);
-            let opening_chall = transcript.get_and_append_challenge(b"iron-key").unwrap();
-            let mut batched_poly = DenseMultilinearExtension::from_evaluations_vec(
-                current_label_mle.borrow().num_vars,
-                vec![E::ScalarField::zero(); 1 << current_label_mle.borrow().num_vars],
-            );
+        // let iron_epoch_message = if bulletin_board.is_empty() {
+        //     IronEpochMessage::IronEpochRegMessage(IronEpochRegMessage::new(diff_label_com, None))
+        // } else {
+        //     let prove_update_timer = start_timer!(|| "IronServer::update:: Prove
+        // update");     let sc_prep_timer = start_timer!(||
+        // "IronServer::update:: Sumcheck preparation");
+        //     let last_epoch_message = bulletin_board.read_last()?;
+        //     let last_epoch_reg_message = last_epoch_message.get_reg_message();
+        //     let last_label_comm = last_epoch_reg_message.get_label_commitment();
+        //     let new_label_comm = last_label_comm.clone() + diff_label_com;
+        //     let mut transcript =
+        //         <PolyIOP<E::ScalarField> as
+        // ZeroCheck<E::ScalarField>>::init_transcript();     transcript.
+        // append_message(b"iron-key", b"iron-key").unwrap();     let mut
+        // target_virtual_poly =
+        //         VirtualPolynomial::new(current_label_mle.borrow().num_vars());
+        //     let opening_chall =
+        // transcript.get_and_append_challenge(b"iron-key").unwrap();
+        //     let mut batched_poly = DenseOrSparseMLE::zero();
+        //     batched_poly += &*new_label_mle.borrow();
+        //     // batched_poly = opening_chall * &batched_poly;
+        //     batched_poly += &*current_label_mle.borrow();
+        //     // Create Arc<DenseMultilinearExtension> from
+        //     // Arc<RefCell<DenseMultilinearExtension>>
+        //     let current_label_plain = current_label_mle.borrow().clone();
+        //     let new_label_plain = new_label_mle.borrow().clone();
+        //     let current_label_arc = Arc::new(current_label_plain);
+        //     let new_label_arc = Arc::new(new_label_plain);
 
-            batched_poly += &*new_label_mle.borrow();
-            batched_poly *= &opening_chall;
-            batched_poly += &*current_label_mle.borrow();
-            // Create Arc<DenseMultilinearExtension> from
-            // Arc<RefCell<DenseMultilinearExtension>>
-            let current_label_plain = current_label_mle.borrow().clone();
-            let new_label_plain = new_label_mle.borrow().clone();
-            let current_label_arc = Arc::new(current_label_plain);
-            let new_label_arc = Arc::new(new_label_plain);
+        //     target_virtual_poly
+        //         .add_mle_list(
+        //             [current_label_arc.clone(), current_label_arc.clone()],
+        //             E::ScalarField::one(),
+        //         )
+        //         .unwrap();
+        //     target_virtual_poly
+        //         .add_mle_list([current_label_arc, new_label_arc],
+        // -E::ScalarField::one())         .unwrap();
 
-            target_virtual_poly
-                .add_mle_list(
-                    [current_label_arc.clone(), current_label_arc.clone()],
-                    E::ScalarField::one(),
-                )
-                .unwrap();
-            target_virtual_poly
-                .add_mle_list([current_label_arc, new_label_arc], -E::ScalarField::one())
-                .unwrap();
+        //     end_timer!(sc_prep_timer);
+        //     let sumcheck_timer = start_timer!(|| "IronServer::update:: Sumcheck");
+        //     let zerocheck_proof = <PolyIOP<E::ScalarField> as
+        // ZeroCheck<E::ScalarField>>::prove(         &target_virtual_poly,
+        //         &mut transcript,
+        //     )
+        //     .unwrap();
+        //     end_timer!(sumcheck_timer);
+        //     let opening_timer = start_timer!(|| "IronServer::update:: opening time");
 
-            end_timer!(sc_prep_timer);
-            let sumcheck_timer = start_timer!(|| "IronServer::update:: Sumcheck");
-            let zerocheck_proof = <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::prove(
-                &target_virtual_poly,
-                &mut transcript,
-            )
-            .unwrap();
-            end_timer!(sumcheck_timer);
-            let opening_timer = start_timer!(|| "IronServer::update:: opening time");
-
-            let update_proof = MvPCS::open(
-                self.key.get_pcs_prover_param(),
-                &batched_poly,
-                &zerocheck_proof.point,
-            );
-            end_timer!(opening_timer);
-            let iron_update_proof = IronUpdateProof::new(zerocheck_proof, update_proof.unwrap().0);
-            end_timer!(prove_update_timer);
-            IronEpochMessage::IronEpochRegMessage(IronEpochRegMessage::new(
-                new_label_comm,
-                Some(iron_update_proof),
-            ))
-        };
+        //     let update_proof = MvPCS::open(
+        //         self.key.get_pcs_prover_param(),
+        //         &batched_poly,
+        //         &zerocheck_proof.point,
+        //     );
+        //     end_timer!(opening_timer);
+        //     let iron_update_proof = IronUpdateProof::new(zerocheck_proof,
+        // update_proof.unwrap().0);     end_timer!(prove_update_timer);
+        //     IronEpochMessage::IronEpochRegMessage(IronEpochRegMessage::new(
+        //         new_label_comm,
+        //         Some(iron_update_proof),
+        //     ))
+        // };
 
         // Serialize the epoch message and broadcast it to the bulletin board
-        bulletin_board.broadcast(iron_epoch_message)?;
+        // bulletin_board.broadcast(iron_epoch_message)?;
         Ok(())
     }
 
@@ -190,57 +184,60 @@ where
         <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     {
-        // #[cfg(test)]
-        // {
-        //     self.authenticate_batch(&update_batch)?;
-        // }
-        // let timer = start_timer!(|| "IronServer::update:: fetching current MLEs");
-        // let current_value_mle = self.dictionary.get_value_mle().clone();
-        // end_timer!(timer);
-        // let timer = start_timer!(|| "IronServer::update:: inserting batch");
-        // self.dictionary.insert_batch(&update_batch)?;
-        // end_timer!(timer);
-        // let timer = start_timer!(|| "IronServer::update:: fetching new MLEs");
-        // let new_value_mle = self.dictionary.get_value_mle().clone();
-        // end_timer!(timer);
+        #[cfg(test)]
+        {
+            self.authenticate_batch(update_batch)?;
+        }
+        let timer = start_timer!(|| "IronServer::update:: fetching current MLEs");
+        let current_value_mle = self.dictionary.get_value_mle().clone();
+        end_timer!(timer);
+        let timer = start_timer!(|| "IronServer::update:: inserting batch");
+        self.dictionary.insert_batch(update_batch)?;
+        end_timer!(timer);
+        let timer = start_timer!(|| "IronServer::update:: fetching new MLEs");
+        let new_value_mle = self.dictionary.get_value_mle().clone();
+        end_timer!(timer);
 
-        // let timer = start_timer!(|| "IronServer::update:: computing diff MLE");
-        // let diff_value_mle = &new_value_mle - &current_value_mle;
-        // end_timer!(timer);
-        // let timer = start_timer!(|| "IronServer::update:: computing diff
-        // commitment");
-        // let diff_value_com =
-        //     MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap();
-        // end_timer!(timer);
+        let timer = start_timer!(|| "IronServer::update:: computing diff MLE");
+        let diff_value_mle = &*new_value_mle.borrow() - &*current_value_mle.borrow();
+        end_timer!(timer);
+        let timer = start_timer!(|| "IronServer::update:: computing diff
+        commitment");
+        let (diff_value_com, _diff_value_aux) = join(
+            || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap(),
+            || {
+                MvPCS::comp_aux(
+                    self.key.get_pcs_prover_param(),
+                    &diff_value_mle,
+                    &MvPCS::Commitment::default(),
+                )
+            },
+        );
+        end_timer!(timer);
 
-        // let iron_epoch_message = if bulletin_board.is_empty() {
-        //     IronEpochMessage::IronEpochKeyMessage(IronEpochKeyMessage::new(
-        //         diff_value_com.clone(),
-        //         diff_value_com,
-        //     ))
-        // } else {
-        //     let prove_update_timer = start_timer!(|| "IronServer::update:: Prove
-        // update");
-        //     let sc_prep_timer = start_timer!(|| "IronServer::update:: Sumcheck
-        // preparation");     let last_epoch_message =
-        // bulletin_board.read_last()?;     let last_epoch_key_message =
-        // last_epoch_message.get_key_message();     let last_value_comm =
-        // last_epoch_key_message.get_value_commitment();     let new_value_comm
-        // = last_value_comm.clone() + diff_value_com.clone();
-        //     let last_diff_accumulator =
-        // last_epoch_key_message.get_difference_accumulator();
-        //     let difference_accumulator = last_diff_accumulator.clone() +
-        // diff_value_com;     let opening_chall = E::ScalarField::rand(&mut
-        // ark_std::test_rng());     let batched_poly = current_value_mle +
-        // new_value_mle * opening_chall;     end_timer!(prove_update_timer);
-        //     IronEpochMessage::IronEpochKeyMessage(IronEpochKeyMessage::new(
-        //         new_value_comm,
-        //         difference_accumulator,
-        //     ))
-        // };
+        let iron_epoch_message = if bulletin_board.is_empty() {
+            IronEpochMessage::IronEpochKeyMessage(IronEpochKeyMessage::new(
+                diff_value_com.clone(),
+                diff_value_com,
+            ))
+        } else {
+            let prove_update_timer = start_timer!(|| "IronServer::update:: Prove
+        update");
+            let last_epoch_message = bulletin_board.read_last()?;
+            let last_epoch_key_message = last_epoch_message.get_key_message();
+            let last_value_comm = last_epoch_key_message.get_value_commitment();
+            let new_value_comm = last_value_comm.clone() + diff_value_com.clone();
+            let last_diff_accumulator = last_epoch_key_message.get_difference_accumulator();
+            let difference_accumulator = last_diff_accumulator.clone() + diff_value_com;
+            end_timer!(prove_update_timer);
+            IronEpochMessage::IronEpochKeyMessage(IronEpochKeyMessage::new(
+                new_value_comm,
+                difference_accumulator,
+            ))
+        };
 
-        // // Serialize the epoch message and broadcast it to the bulletin board
-        // bulletin_board.broadcast(iron_epoch_message)?;
+        // Serialize the epoch message and broadcast it to the bulletin board
+        bulletin_board.broadcast(iron_epoch_message)?;
         Ok(())
     }
 
@@ -281,7 +278,7 @@ where
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Sync
         + Send,

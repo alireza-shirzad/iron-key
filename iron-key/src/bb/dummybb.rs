@@ -6,7 +6,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalSerialize, Valid};
 use derivative::Derivative;
-use subroutines::PolynomialCommitmentScheme;
+use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 use crate::{
     VKDResult,
@@ -20,7 +20,7 @@ pub enum IronEpochMessage<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -33,7 +33,7 @@ impl<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -58,7 +58,7 @@ impl<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -93,7 +93,7 @@ impl<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -125,7 +125,7 @@ impl<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -145,7 +145,7 @@ pub struct DummyBB<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
@@ -158,7 +158,7 @@ impl<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
             E,
-            Polynomial = DenseMultilinearExtension<E::ScalarField>,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
