@@ -73,10 +73,10 @@ where
             .unwrap()
             .join(format!("../srs/srs_{}.bin", num_vars));
         let srs = if srs_path.exists() {
-            println!(
+            dbg!(format!(
                 "Using existing SRS from {:?} for {} variables",
                 srs_path, num_vars
-            );
+            ));
             let mut buffer = Vec::new();
             BufReader::new(File::open(&srs_path).unwrap())
                 .read_to_end(&mut buffer)
@@ -85,10 +85,10 @@ where
                 panic!("Failed to deserialize SRS from {:?}", srs_path);
             })
         } else {
-            println!(
+            dbg!(format!(
                 "Generating new SRS at {:?} for {} variables",
                 srs_path, num_vars
-            );
+            ));
             let mut rng = test_rng();
             let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
             let mut serialized = Vec::new();
