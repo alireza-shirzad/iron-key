@@ -1,7 +1,6 @@
 use std::{fmt::Debug, hash::Hash};
 
 use ark_ec::pairing::Pairing;
-use ark_ff::PrimeField;
 use errors::VKDError;
 use subroutines::PolynomialCommitmentScheme;
 pub mod auditor;
@@ -80,6 +79,7 @@ where
     fn lookup_prove(
         &self,
         label: <Self::Dictionary as VKDDictionary<E>>::Label,
+        bulletin_board: &mut Self::BulletinBoard,
     ) -> VKDResult<Self::LookupProof>;
     fn self_audit_prove(
         &self,
@@ -97,10 +97,11 @@ where
     type SelfAuditProof;
     type ClientKey;
     type BulletinBoard;
+    fn init(key: Self::ClientKey, label: <Self::Dictionary as VKDDictionary<E>>::Label) -> Self;
     fn lookup_verify(
         &mut self,
         value: <Self::Dictionary as VKDDictionary<E>>::Value,
-        proof: Self::LookupProof,
+        proof: &Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<()>;
 

@@ -1,12 +1,13 @@
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup};
+use rayon::vec;
 
+use super::poly::DenseOrSparseMLE;
 use arithmetic::DenseMultilinearExtension;
 use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
-use ark_std::ops::Sub;
+use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::{fmt, ops::Add};
-use ark_std::Zero;
-use super::poly::DenseOrSparseMLE;
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -41,6 +42,26 @@ impl<E: Pairing> Sub for KZH2Commitment<E> {
     }
 }
 
+impl<'a, 'b, E: Pairing> Add<&'b KZH2Commitment<E>> for &'a KZH2Commitment<E> {
+    type Output = KZH2Commitment<E>;
+
+    fn add(self, rhs: &'b KZH2Commitment<E>) -> Self::Output {
+        debug_assert_eq!(self.nv, rhs.nv, "commitments for different nv!");
+        let com = (self.com + rhs.com).into_affine();
+        KZH2Commitment::new(com, self.nv)
+    }
+}
+
+impl<'a, 'b, E: Pairing> Sub<&'b KZH2Commitment<E>> for &'a KZH2Commitment<E> {
+    type Output = KZH2Commitment<E>;
+
+    fn sub(self, rhs: &'b KZH2Commitment<E>) -> Self::Output {
+        debug_assert_eq!(self.nv, rhs.nv, "commitments for different nv!");
+        let com = (self.com - rhs.com).into_affine();
+        KZH2Commitment::new(com, self.nv)
+    }
+}
+
 impl<E: Pairing> KZH2Commitment<E> {
     /// Create a new commitment
     pub fn new(com: E::G1Affine, nv: usize) -> Self {
@@ -66,6 +87,13 @@ pub struct KZH2AuxInfo<E: Pairing> {
 }
 
 impl<E: Pairing> KZH2AuxInfo<E> {
+    pub fn rand(rng: &mut impl Rng, nu: usize) -> Self {
+        let d = (0..nu)
+            .map(|_| E::G1Affine::rand(rng))
+            .collect::<Vec<E::G1Affine>>();
+        KZH2AuxInfo { d }
+    }
+
     /// Create a new auxiliary information
     pub fn new(d: Vec<E::G1Affine>) -> Self {
         Self { d }
@@ -83,6 +111,30 @@ impl<E: Pairing> Default for KZH2AuxInfo<E> {
     }
 }
 
+impl<E: Pairing> Add for KZH2AuxInfo<E> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut output = vec![E::G1Affine::zero(); self.d.len()];
+        cfg_iter_mut!(output).enumerate().for_each(|(i, v)| {
+            *v = (self.d[i] + rhs.d[i]).into();
+        });
+        Self { d: output }
+    }
+}
+
+impl<E: Pairing> Sub for KZH2AuxInfo<E> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let mut output = vec![E::G1Affine::zero(); self.d.len()];
+        cfg_iter_mut!(output).enumerate().for_each(|(i, v)| {
+            *v = (self.d[i] - rhs.d[i]).into();
+        });
+        Self { d: output }
+    }
+}
+
 ///////////// Opening Proof /////////////////
 
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]
@@ -94,6 +146,12 @@ pub struct KZH2OpeningProof<E: Pairing> {
 }
 
 impl<E: Pairing> KZH2OpeningProof<E> {
+    pub fn rand(rng: &mut impl Rng, nu: usize) -> Self {
+        KZH2OpeningProof {
+            f_star: DenseOrSparseMLE::rand(nu, rng),
+        }
+    }
+
     /// Create a new opening proof
     pub fn new(f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
         Self { f_star }

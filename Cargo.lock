@@ -600,6 +600,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ark-bls12-381",
+ "ark-ec",
  "ark-ff",
  "ark-poly",
  "ark-serialize",

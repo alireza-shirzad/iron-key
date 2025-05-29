@@ -1,9 +1,10 @@
 use ark_ec::pairing::Pairing;
-
-use ark_poly::DenseMultilinearExtension;
-use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+use ark_std::log2;
 
 use crate::VKDPublicParameters;
+use ark_poly::DenseMultilinearExtension;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
 
 pub struct IronPublicParameters<E, MvPCS>
 where
@@ -41,7 +42,7 @@ where
     }
 
     fn to_client_key(&self) -> Self::ClientKey {
-        IronClientKey::new(self.capacity, self.pcs_vk.clone())
+        IronClientKey::new(log2(self.capacity) as usize, self.pcs_vk.clone())
     }
     fn get_capacity(&self) -> usize {
         self.capacity
@@ -142,6 +143,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct IronClientKey<E, MvPCS>
 where
     E: Pairing,
@@ -151,7 +153,7 @@ where
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
-    capacity: usize,
+    log_capacity: usize,
     pcs_verifier_param: MvPCS::VerifierParam,
 }
 
@@ -164,9 +166,11 @@ where
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
-    pub fn new(capacity: usize, pcs_verifier_param: MvPCS::VerifierParam) -> Self {
+
+
+    pub fn new(log_capacity: usize, pcs_verifier_param: MvPCS::VerifierParam) -> Self {
         Self {
-            capacity,
+            log_capacity,
             pcs_verifier_param,
         }
     }
@@ -174,7 +178,7 @@ where
     pub fn get_pcs_verifier_param(&self) -> &MvPCS::VerifierParam {
         &self.pcs_verifier_param
     }
-    pub fn get_capacity(&self) -> usize {
-        self.capacity
+    pub fn get_log_capacity(&self) -> usize {
+        self.log_capacity
     }
 }

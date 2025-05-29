@@ -10,9 +10,15 @@ use iron_key::{
     structs::{IronLabel, IronSpecification},
 };
 use subroutines::pcs::kzh::KZH2;
+// Import a version of KZH2 that implements Add and Sub for its auxiliary info
 
 /// Build a server that has already processed `batch_size` updates.
-fn server_with_updates(log_capacity: usize) -> IronServer<Bls12_381, KZH2<Bls12_381>, IronLabel> {
+fn server_with_updates(
+    log_capacity: usize,
+) -> (
+    IronServer<Bls12_381, KZH2<Bls12_381>, IronLabel>,
+    DummyBB<Bls12_381, KZH2<Bls12_381>>,
+) {
     const BATCH_SIZE: usize = 1;
     let spec = IronSpecification::new(1 << log_capacity);
 
@@ -25,7 +31,8 @@ fn server_with_updates(log_capacity: usize) -> IronServer<Bls12_381, KZH2<Bls12_
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
     server.update_reg(&updates, &mut bb).unwrap();
-    server
+    server.update_keys(&updates, &mut bb).unwrap();
+    (server, bb)
 }
 
 /// Benchmark `lookup_prove` after different-sized update batches.
@@ -37,5 +44,7 @@ fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) {
     // requirement
     bencher
         .with_inputs(|| server_with_updates(batch_size))
-        .bench_values(|server| server.lookup_prove(IronLabel::new("1")));
+        .bench_values(|(server, mut bb)| {
+            server.lookup_prove(IronLabel::new("1"), &mut bb).unwrap()
+        });
 }

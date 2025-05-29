@@ -6,7 +6,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalSerialize, Valid};
 use derivative::Derivative;
-use subroutines::{pcs::kzh::poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
 
 use crate::{
     VKDResult,
@@ -152,6 +152,35 @@ pub struct DummyBB<
 > {
     ledger: LinkedList<IronEpochMessage<E, MvPCS>>,
     size: usize,
+}
+
+impl<E, MvPCS> DummyBB<E, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
+{
+    pub fn get_last_reg_update_message(&self) -> Option<&IronEpochRegMessage<E, MvPCS>> {
+        for message in self.ledger.iter() {
+            if let IronEpochMessage::IronEpochRegMessage(reg_msg) = message {
+                return Some(reg_msg);
+            }
+        }
+        None
+    }
+
+    pub fn get_last_key_update_message(&self) -> Option<&IronEpochKeyMessage<E, MvPCS>> {
+        for message in self.ledger.iter() {
+            if let IronEpochMessage::IronEpochKeyMessage(key_msg) = message {
+                return Some(key_msg);
+            }
+        }
+        None
+    }
 }
 
 impl<

@@ -18,7 +18,7 @@ use ark_std::{
     ops::Sub,
     start_timer, test_rng,
 };
-use std::{ops::Add, str::FromStr};
+use std::ops::Add;
 use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
 pub struct IronKey<E, MvPCS, T>
 where
@@ -29,6 +29,14 @@ where
             Point = Vec<<E as Pairing>::ScalarField>,
         > + Send
         + Sync,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
     T: VKDLabel<E>,
 {
     _phantom_f: std::marker::PhantomData<E::ScalarField>,
@@ -50,6 +58,10 @@ where
         Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
         Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
     T: VKDLabel<E>,
 {
     type PublicParameters = IronPublicParameters<E, MvPCS>;

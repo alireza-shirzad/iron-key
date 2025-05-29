@@ -1,6 +1,9 @@
 pub(crate) mod errors;
 
-use std::ops::{Add, Sub};
+use std::{
+    marker::PhantomData,
+    ops::{Add, Sub},
+};
 
 use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
@@ -16,6 +19,7 @@ use crate::{
         dictionary::IronDictionary, lookup::IronLookupProof, pp::IronClientKey,
         self_audit::IronSelfAuditProof,
     },
+    utils::hash_to_mu_bits_with_offset,
 };
 
 pub struct IronClient<
@@ -30,7 +34,6 @@ pub struct IronClient<
     key: IronClientKey<E, MvPCS>,
     index: Option<<MvPCS::Polynomial as Polynomial<E::ScalarField>>::Point>,
     label: T,
-    _phantom_t: T,
 }
 
 impl<E, T, MvPCS> VKDClient<E, MvPCS> for IronClient<E, T, MvPCS>
@@ -40,6 +43,10 @@ where
         Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
         Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
     MvPCS: PolynomialCommitmentScheme<
             E,
             Polynomial = DenseOrSparseMLE<E::ScalarField>,
@@ -54,6 +61,15 @@ where
 
     type SelfAuditProof = IronSelfAuditProof<E, MvPCS>;
     type BulletinBoard = DummyBB<E, MvPCS>;
+
+    fn init(key: Self::ClientKey, label: T) -> Self {
+        Self {
+            key,
+            index: None,
+            label,
+        }
+    }
+
     fn get_label(&self) -> <Self::Dictionary as VKDDictionary<E>>::Label {
         self.label.clone()
     }
@@ -61,7 +77,7 @@ where
     fn lookup_verify(
         &mut self,
         value: <Self::Dictionary as VKDDictionary<E>>::Value,
-        proof: Self::LookupProof,
+        proof: &Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<()>
     where
@@ -73,19 +89,24 @@ where
         // TODO: Fix this for real scenarios
         let last_reg_message = bulletin_board.read(0)?.get_reg_message();
         let last_keys_message = bulletin_board.read(1)?.get_key_message();
-
         let batched_commitment = last_keys_message.get_value_commitment().clone()
             + last_reg_message.get_label_commitment().clone();
+        let batched_value = value + self.label.to_field();
         MvPCS::verify(
             self.key.get_pcs_verifier_param(),
             &batched_commitment,
             &proof.get_index(),
-            &value,
+            &batched_value,
             proof.get_batched_aux(),
             proof.get_batched_opening_proof(),
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
 
+        let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
+            &self.label.to_string(),
+            0,
+            self.key.get_log_capacity(),
+        );
         Ok(())
     }
 
@@ -128,32 +149,4 @@ where
         >,
     T: VKDLabel<E>,
 {
-    fn check_index(
-        &mut self,
-        label_opening_proof: &Option<MvPCS::Proof>,
-        label_commitment: &MvPCS::Commitment,
-        claimed_index: &<MvPCS::Polynomial as Polynomial<E::ScalarField>>::Point,
-    ) -> VKDResult<()> {
-        // if self.index.is_none() {
-        //     match label_opening_proof {
-        //         Some(opening_proof) => {
-        //             MvPCS::verify(
-        //                 &self.key.get_snark_vk().mv_pcs_vk,
-        //                 label_commitment,
-        //                 claimed_index,
-        //                 &self.get_label().to_field(),
-        //                 opening_proof,
-        //             )
-        //             .map_err(|_|
-        // VKDError::ClientError(errors::ClientError::UnknownIndex))?;
-        //         },
-        //         None => {
-        //             return
-        // Err(VKDError::ClientError(errors::ClientError::UnknownIndex));
-        //         },
-        //     }
-        // }
-        todo!();
-        Ok(())
-    }
 }

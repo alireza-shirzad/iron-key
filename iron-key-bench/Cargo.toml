@@ -8,6 +8,7 @@ iron-key = { path = "../iron-key" }
 ark-std = { workspace = true }
 divan = { workspace = true }
 ark-ff = { workspace = true }
+ark-ec = { workspace = true }
 ark-poly = { workspace = true }
 ark-serialize = { workspace = true }
 subroutines = { path = "../subroutines" }

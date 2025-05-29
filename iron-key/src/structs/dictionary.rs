@@ -160,11 +160,11 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
     }
 
     pub fn insert(&mut self, label: &T, value: E::ScalarField) -> VKDResult<()> {
-        if self.offsets.contains_key(label) {
-            return VKDResult::Err(VKDError::DictionaryError(
-                DictionaryError::LabelAlreadyExists(label.to_string()),
-            ));
-        }
+        // if self.offsets.contains_key(label) {
+        //     return VKDResult::Err(VKDError::DictionaryError(
+        //         DictionaryError::LabelAlreadyExists(label.to_string()),
+        //     ));
+        // }
 
         if self.offsets.len() >= self.max_size() {
             return VKDResult::Err(VKDError::DictionaryError(DictionaryError::DictionaryFull));

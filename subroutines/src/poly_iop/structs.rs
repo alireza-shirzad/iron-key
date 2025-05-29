@@ -20,6 +20,7 @@ pub struct IOPProof<F: PrimeField> {
     pub proofs: Vec<IOPProverMessage<F>>,
 }
 
+
 /// A message from the prover to the verifier at a given round
 /// is a list of evaluations.
 #[derive(Clone, Debug, Default, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]

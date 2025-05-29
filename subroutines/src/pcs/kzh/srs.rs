@@ -1,3 +1,4 @@
+
 use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -139,6 +140,28 @@ impl<E: Pairing> KZH2VerifierParam<E> {
     }
     pub fn get_v_vec(&self) -> &Vec<E::G2Affine> {
         &self.v_vec
+    }
+
+    pub fn rand(nu: usize, mu: usize, rng: &mut impl Rng) -> Self {
+        let m = 1 << mu;
+        let n = 1 << nu;
+        let rng = &mut ark_std::test_rng();
+        // Sampling generators
+        let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();
+        let v = E::G2::rand(rng);
+        // Sampling trapdoors
+        let tau_vec = (0..n)
+            .map(|_| E::ScalarField::rand(rng))
+            .collect::<Vec<_>>();
+        let alpha = E::ScalarField::rand(rng);
+        // Compute the srs elements
+        let minus_v_prime: E::G2Affine = (-v * alpha).into_affine();
+        let v_vec = v.batch_mul(&tau_vec);
+        let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
+            .map(|g| (*g * alpha).into_affine())
+            .collect::<Vec<_>>();
+
+        Self::new(nu as usize, mu as usize, h_vec, minus_v_prime, v_vec)
     }
 }
 
