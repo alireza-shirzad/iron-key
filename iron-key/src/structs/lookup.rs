@@ -15,6 +15,7 @@ where
     index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
     value: E::ScalarField,
     batched_opening_proof: PC::Proof,
+    batched_aux: PC::Aux,
 }
 
 impl<E, PC> IronLookupProof<E, PC>
@@ -30,11 +31,13 @@ where
         index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: E::ScalarField,
         batched_opening_proof: PC::Proof,
+        batched_aux: PC::Aux,
     ) -> Self {
         Self {
             index,
             value,
             batched_opening_proof,
+            batched_aux,
         }
     }
 
@@ -46,5 +49,8 @@ where
     }
     pub fn get_batched_opening_proof(&self) -> &PC::Proof {
         &self.batched_opening_proof
+    }
+    pub fn get_batched_aux(&self) -> &PC::Aux {
+        &self.batched_aux
     }
 }

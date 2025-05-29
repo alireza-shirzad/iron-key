@@ -5,6 +5,8 @@ use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
 use ark_std::ops::Sub;
 use derivative::Derivative;
 use std::{fmt, ops::Add};
+use ark_std::Zero;
+use super::poly::DenseOrSparseMLE;
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -88,17 +90,17 @@ impl<E: Pairing> Default for KZH2AuxInfo<E> {
 /// proof of opening
 pub struct KZH2OpeningProof<E: Pairing> {
     /// Evaluation of quotients
-    f_star: DenseMultilinearExtension<E::ScalarField>,
+    f_star: DenseOrSparseMLE<E::ScalarField>,
 }
 
 impl<E: Pairing> KZH2OpeningProof<E> {
     /// Create a new opening proof
-    pub fn new(f_star: DenseMultilinearExtension<E::ScalarField>) -> Self {
+    pub fn new(f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
         Self { f_star }
     }
 
     /// Get the opening proof
-    pub fn get_f_star(&self) -> DenseMultilinearExtension<E::ScalarField> {
+    pub fn get_f_star(&self) -> DenseOrSparseMLE<E::ScalarField> {
         self.f_star.clone()
     }
 }
@@ -106,7 +108,7 @@ impl<E: Pairing> KZH2OpeningProof<E> {
 impl<E: Pairing> Default for KZH2OpeningProof<E> {
     fn default() -> Self {
         KZH2OpeningProof {
-            f_star: DenseMultilinearExtension::default(),
+            f_star: DenseOrSparseMLE::zero(),
         }
     }
 }

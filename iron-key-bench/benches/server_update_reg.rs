@@ -57,7 +57,7 @@ fn prepare_prover_update_prove_inputs(
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
     server
-        .update_keys(&initial_batch, &mut bulletin_board)
+        .update_reg(&initial_batch, &mut bulletin_board)
         .unwrap();
 
     // Batch whose size we actually benchmark.
@@ -76,16 +76,10 @@ fn prepare_prover_update_prove_inputs(
 /// Compile-time list of (log_capacity, log_update_size, 3) triplets for light
 /// tests.
 pub const LIGHT_PARAMS: &[Params] = &{
-    const INIT: u64 = 3;
-    const fn build_light() -> [Params; 462] {
-        let mut out = [Params(0, 0, 0); 462];
+    const INIT: u64 = 2;
+    const fn build_light() -> [Params; 460] {
+        let mut out = [Params(4, 0, 0); 460];
         let mut i = 0;
-
-        // (1, 0, INIT) and (2, 0, INIT)
-        out[i] = Params(1, 0, INIT);
-        i += 1;
-        out[i] = Params(2, 0, INIT);
-        i += 1;
 
         // (n, 0..=n-2, INIT) for n = 3..=26
         let mut n = 3;
@@ -135,7 +129,7 @@ pub const HEAVY_PARAMS: &[Params] = &{
     sample_size  = 1,
     args         = LIGHT_PARAMS
 )]
-fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
+fn light_update_reg(bencher: Bencher, Params(cap, upd, init): Params) {
     let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
 
     bencher.bench_local(|| {
@@ -149,7 +143,7 @@ fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
     sample_size  = 1,
     args         = HEAVY_PARAMS
 )]
-fn heavy_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
+fn heavy_update_reg(bencher: Bencher, Params(cap, upd, init): Params) {
     let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
 
     bencher.bench_local(|| {

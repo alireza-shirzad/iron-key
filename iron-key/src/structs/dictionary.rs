@@ -22,7 +22,6 @@ use thiserror::Error;
 pub struct IronDictionary<E: Pairing, T: VKDLabel<E>> {
     value_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,
     label_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,
-    inner_dict: BTreeMap<T, E::ScalarField>,
     offsets: HashMap<T, usize>,
 }
 
@@ -38,18 +37,15 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
         let offsets = HashMap::new();
         let value_mle = Arc::new(RefCell::new(mle.clone()));
         let label_mle = Arc::new(RefCell::new(mle.clone()));
-        let inner_dict = BTreeMap::new();
-        Self::new(inner_dict, value_mle, label_mle, offsets)
+        Self::new(value_mle, label_mle, offsets)
     }
 
     pub fn new(
-        inner_dict: BTreeMap<T, E::ScalarField>,
         value_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,
         label_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,
         offsets: HashMap<T, usize>,
     ) -> Self {
         Self {
-            inner_dict,
             value_mle,
             label_mle,
             offsets,
@@ -169,7 +165,7 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
                 DictionaryError::LabelAlreadyExists(label.to_string()),
             ));
         }
-        
+
         if self.offsets.len() >= self.max_size() {
             return VKDResult::Err(VKDError::DictionaryError(DictionaryError::DictionaryFull));
         }

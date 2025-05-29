@@ -15,6 +15,14 @@ pub enum DenseOrSparseMLE<F: Field> {
     Dense(DenseMultilinearExtension<F>),
     Sparse(SparseMultilinearExtension<F>),
 }
+impl<F: Field> DenseOrSparseMLE<F> {
+    pub fn to_dense(&self) -> DenseMultilinearExtension<F> {
+        match self {
+            DenseOrSparseMLE::Dense(mle) => mle.clone(),
+            DenseOrSparseMLE::Sparse(mle) => mle.to_dense_multilinear_extension(),
+        }
+    }
+}
 
 impl<F: Field> ark_serialize::CanonicalSerialize for DenseOrSparseMLE<F> {
     fn serialized_size(&self, compress: ark_serialize::Compress) -> usize {

@@ -18,7 +18,9 @@ use ark_ff::{Field, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
-use ark_std::{cfg_chunks, cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer};
+use ark_std::{
+    cfg_chunks, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer,
+};
 use poly::DenseOrSparseMLE;
 use rayon::{
     iter::{
@@ -183,12 +185,15 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         match polynomial {
             DenseOrSparseMLE::Dense(poly) => {
                 let open_timer = start_timer!(|| "KZH::Open");
-                let (f_star, z0) = open_internal(prover_param.borrow(), poly, point)?;
+                let (f_star, z0) = open_dense_internal(prover_param.borrow(), poly, point)?;
                 end_timer!(open_timer);
-                Ok((KZH2OpeningProof::new(f_star), z0))
+                Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Dense(f_star)), z0))
             },
-            DenseOrSparseMLE::Sparse(_) => {
-                todo!()
+            DenseOrSparseMLE::Sparse(poly) => {
+                let open_timer = start_timer!(|| "KZH::Open");
+                let (f_star, z0) = open_sparse_internal(prover_param.borrow(), poly, point)?;
+                end_timer!(open_timer);
+                Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
             },
         }
     }
@@ -265,10 +270,10 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
 
         // Check 2: Hyrax Check
         let eq_x0_mle = build_eq_x_r(x0)?;
-
+        // TODO: Fix the to_evaluations
         let scalars: Vec<E::ScalarField> = proof
             .get_f_star()
-            .evaluations
+            .to_evaluations()
             .iter()
             .copied()
             .chain(eq_x0_mle.evaluations.iter().map(|&x| -x))
@@ -301,21 +306,44 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     }
 }
 
-fn open_internal<E: Pairing>(
+fn open_dense_internal<E: Pairing>(
     prover_param: &KZH2ProverParam<E>,
     polynomial: &DenseMultilinearExtension<E::ScalarField>,
     point: &[E::ScalarField],
 ) -> Result<(DenseMultilinearExtension<E::ScalarField>, E::ScalarField), PCSError> {
     let timer = start_timer!(|| "KZH::OpenInternal");
     let (x0, y0) = point.split_at(prover_param.get_nu());
-    let new_evals = fix_first_k_vars_parallel(polynomial.evaluations.as_slice(), x0);
+    let new_evals = fix_dense_first_k_vars_parallel(polynomial.evaluations.as_slice(), x0);
     let poly_fixed_at_x0 =
         DenseMultilinearExtension::from_evaluations_vec(prover_param.get_mu(), new_evals);
     let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
     end_timer!(timer);
     Ok((poly_fixed_at_x0, z0))
 }
-fn fix_first_k_vars_parallel<F: Field + Send + Sync + Copy>(evals: &[F], fixed: &[F]) -> Vec<F> {
+
+fn open_sparse_internal<E: Pairing>(
+    prover_param: &KZH2ProverParam<E>,
+    polynomial: &SparseMultilinearExtension<E::ScalarField>,
+    point: &[E::ScalarField],
+) -> Result<(SparseMultilinearExtension<E::ScalarField>, E::ScalarField), PCSError> {
+    let timer = start_timer!(|| "KZH::OpenInternal");
+    let (x0, y0) = point.split_at(prover_param.get_nu());
+    let new_evals = fix_first_k_vars_sparse_parallel::<E::ScalarField>(
+        &polynomial.evaluations,
+        polynomial.num_vars as u32,
+        x0,
+    );
+    let poly_fixed_at_x0 =
+        SparseMultilinearExtension::from_evaluations(prover_param.get_mu(), &new_evals);
+    let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
+    end_timer!(timer);
+    Ok((poly_fixed_at_x0, z0))
+}
+
+fn fix_dense_first_k_vars_parallel<F: Field + Send + Sync + Copy>(
+    evals: &[F],
+    fixed: &[F],
+) -> Vec<F> {
     let total_vars = evals.len().trailing_zeros();
     let k = fixed.len() as u32;
 
@@ -340,6 +368,49 @@ fn fix_first_k_vars_parallel<F: Field + Send + Sync + Copy>(evals: &[F], fixed: 
     // Clone the slice in parallel
     evals[start..end].par_iter().copied().collect()
 }
+
+pub fn fix_first_k_vars_sparse_parallel<F>(
+    sparse: &BTreeMap<usize, F>,
+    total_vars: u32,
+    fixed: &[F],
+) -> Vec<(usize, F)>
+where
+    F: Field + Send + Sync + Copy,
+{
+    let k = fixed.len() as u32;
+    assert!(k <= total_vars, "Cannot fix more variables than exist");
+
+    // Build the k-bit prefix that encodes the fixed assignment
+    let shift_index = fixed.iter().enumerate().fold(0usize, |acc, (i, &bit)| {
+        acc | ((bit.is_one() as usize) << (k - 1 - (i as u32)))
+    });
+
+    // Pre-compute helpers
+    let shift_bits = (total_vars - k) as usize; // how many bits remain
+    let mask = (1usize << shift_bits) - 1; // lower (n-k)-bit mask
+
+    // Filter & re-index in parallel
+    let filtered: Vec<(usize, F)> = sparse
+        .par_iter()
+        .filter_map(|(&idx, &val)| {
+            // First k bits must match the prefix ---------------------------
+            if (idx >> shift_bits) == shift_index {
+                // Keep the lower (n-k) bits as the new index
+                Some((idx & mask, val))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // // Move into a BTreeMap (keeps the ordering & deduplicates if needed)
+    // let mut result = BTreeMap::new();
+    // for (idx, val) in filtered {
+    //     result.insert(idx, val);
+    // }
+    filtered
+}
+
 fn verify_internal<E: Pairing>(
     verifier_param: &KZH2VerifierParam<E>,
     commitment: &KZH2Commitment<E>,

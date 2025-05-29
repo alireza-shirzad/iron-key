@@ -1,5 +1,7 @@
 pub(crate) mod errors;
 
+use std::ops::{Add, Sub};
+
 use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
 
@@ -34,6 +36,10 @@ pub struct IronClient<
 impl<E, T, MvPCS> VKDClient<E, MvPCS> for IronClient<E, T, MvPCS>
 where
     E: Pairing,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+        Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     MvPCS: PolynomialCommitmentScheme<
             E,
             Polynomial = DenseOrSparseMLE<E::ScalarField>,
@@ -57,28 +63,29 @@ where
         value: <Self::Dictionary as VKDDictionary<E>>::Value,
         proof: Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
-    ) -> VKDResult<()> {
-        // let last_epoch_message = bulletin_board.read_last()?;
-        // let last_value_commitment = last_epoch_message
-        //     .get_dictionary_commitment()
-        //     .value_commitment();
-        // MvPCS::verify(
-        //     &self.key.get_snark_vk().mv_pcs_vk,
-        //     last_value_commitment,
-        //     &proof.get_index(),
-        //     &value,
-        //     proof.get_value_opening_proof(),
-        // )
-        // .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
+    ) -> VKDResult<()>
+    where
+        <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+            Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+        <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+            Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+    {
+        // TODO: Fix this for real scenarios
+        let last_reg_message = bulletin_board.read(0)?.get_reg_message();
+        let last_keys_message = bulletin_board.read(1)?.get_key_message();
 
-        // self.check_index(
-        //     proof.get_label_opening_proof(),
-        //     last_epoch_message
-        //         .get_dictionary_commitment()
-        //         .label_commitment(),
-        //     &proof.get_index(),
-        // )?;
-        todo!();
+        let batched_commitment = last_keys_message.get_value_commitment().clone()
+            + last_reg_message.get_label_commitment().clone();
+        MvPCS::verify(
+            self.key.get_pcs_verifier_param(),
+            &batched_commitment,
+            &proof.get_index(),
+            &value,
+            proof.get_batched_aux(),
+            proof.get_batched_opening_proof(),
+        )
+        .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
+
         Ok(())
     }
 
