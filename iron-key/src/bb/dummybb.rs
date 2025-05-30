@@ -1,12 +1,10 @@
 use std::collections::LinkedList;
 
 use ark_ec::pairing::Pairing;
-use ark_ff::PrimeField;
 
-use ark_poly::DenseMultilinearExtension;
-use ark_serialize::{CanonicalSerialize, Valid};
+use ark_serialize::CanonicalSerialize;
 use derivative::Derivative;
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 use crate::{
     VKDResult,
@@ -89,56 +87,6 @@ impl<
     }
 }
 
-impl<
-    E: Pairing,
-    MvPCS: PolynomialCommitmentScheme<
-            E,
-            Polynomial = DenseOrSparseMLE<E::ScalarField>,
-            Point = Vec<<E as Pairing>::ScalarField>,
-        > + Send
-        + Sync,
-> ark_serialize::CanonicalDeserialize for IronEpochMessage<E, MvPCS>
-{
-    fn deserialize_with_mode<R: std::io::Read>(
-        mut reader: R,
-        compress: ark_serialize::Compress,
-        validate: ark_serialize::Validate,
-    ) -> Result<Self, ark_serialize::SerializationError> {
-        let mut tag = [0u8; 1];
-        reader.read_exact(&mut tag)?;
-        match tag[0] {
-            0 => Ok(IronEpochMessage::IronEpochKeyMessage(
-                ark_serialize::CanonicalDeserialize::deserialize_with_mode(
-                    reader, compress, validate,
-                )?,
-            )),
-            1 => Ok(IronEpochMessage::IronEpochRegMessage(
-                ark_serialize::CanonicalDeserialize::deserialize_with_mode(
-                    reader, compress, validate,
-                )?,
-            )),
-            _ => Err(ark_serialize::SerializationError::InvalidData),
-        }
-    }
-}
-impl<
-    E: Pairing,
-    MvPCS: PolynomialCommitmentScheme<
-            E,
-            Polynomial = DenseOrSparseMLE<E::ScalarField>,
-            Point = Vec<<E as Pairing>::ScalarField>,
-        > + Send
-        + Sync,
-> Valid for IronEpochMessage<E, MvPCS>
-{
-    fn check(&self) -> Result<(), ark_serialize::SerializationError> {
-        match self {
-            IronEpochMessage::IronEpochKeyMessage(msg) => msg.check(),
-            IronEpochMessage::IronEpochRegMessage(msg) => msg.check(),
-        }
-    }
-}
-
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct DummyBB<
@@ -173,10 +121,35 @@ where
         None
     }
 
+    pub fn get_second_last_reg_update_message(&self) -> Option<&IronEpochRegMessage<E, MvPCS>> {
+        let mut count = 0;
+        for message in self.ledger.iter().rev() {
+            if let IronEpochMessage::IronEpochRegMessage(reg_msg) = message {
+                count += 1;
+                if count == 2 {
+                    return Some(reg_msg);
+                }
+            }
+        }
+        None
+    }
+
     pub fn get_last_key_update_message(&self) -> Option<&IronEpochKeyMessage<E, MvPCS>> {
         for message in self.ledger.iter() {
             if let IronEpochMessage::IronEpochKeyMessage(key_msg) = message {
                 return Some(key_msg);
+            }
+        }
+        None
+    }
+    pub fn get_second_last_key_update_message(&self) -> Option<&IronEpochKeyMessage<E, MvPCS>> {
+        let mut count = 0;
+        for message in self.ledger.iter().rev() {
+            if let IronEpochMessage::IronEpochKeyMessage(key_msg) = message {
+                count += 1;
+                if count == 2 {
+                    return Some(key_msg);
+                }
             }
         }
         None

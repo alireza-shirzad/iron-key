@@ -19,7 +19,7 @@ use ark_std::{
     start_timer, test_rng,
 };
 use std::ops::Add;
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 pub struct IronKey<E, MvPCS, T>
 where
     E: Pairing,

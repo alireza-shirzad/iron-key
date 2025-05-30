@@ -1,11 +1,11 @@
 pub mod dummybb;
 pub mod errors;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_serialize::CanonicalSerialize;
 
 use crate::VKDResult;
 
 pub trait BulletinBoard {
-    type Message: CanonicalSerialize + CanonicalDeserialize;
+    type Message: CanonicalSerialize;
 
     fn is_empty(&self) -> bool {
         self.size() == 0

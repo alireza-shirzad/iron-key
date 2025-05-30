@@ -123,14 +123,9 @@ where
     type UpdateProof;
     type StateCommitment;
     type BulletinBoard;
-    fn verify_update(
-        &self,
-        state_i: Self::StateCommitment,
-        state_i_plus_1: Self::StateCommitment,
-        label: <Self::Dictionary as VKDDictionary<E>>::Label,
-        proof: Self::UpdateProof,
-        bulltin_board: &Self::BulletinBoard,
-    ) -> VKDResult<bool>;
+    type AuditorKey;
+    fn init(key: Self::AuditorKey) -> Self;
+    fn verify_update(&self, bulltin_board: &Self::BulletinBoard) -> VKDResult<bool>;
 }
 
 pub trait VKDDictionary<E: Pairing> {

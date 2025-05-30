@@ -1,13 +1,11 @@
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup};
-use rayon::vec;
 
-use super::poly::DenseOrSparseMLE;
-use arithmetic::DenseMultilinearExtension;
 use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::{fmt, ops::Add};
+use crate::poly::DenseOrSparseMLE;
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]

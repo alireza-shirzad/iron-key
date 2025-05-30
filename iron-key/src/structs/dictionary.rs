@@ -17,7 +17,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 use thiserror::Error;
 pub struct IronDictionary<E: Pairing, T: VKDLabel<E>> {
     value_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,

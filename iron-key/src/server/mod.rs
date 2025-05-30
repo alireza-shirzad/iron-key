@@ -25,9 +25,7 @@ use std::{
     ops::{Add, Sub},
     sync::Arc,
 };
-use subroutines::{
-    PolyIOP, PolynomialCommitmentScheme, ZeroCheck, pcs::kzh::poly::DenseOrSparseMLE,
-};
+use subroutines::{poly::DenseOrSparseMLE, PolyIOP, PolynomialCommitmentScheme, ZeroCheck};
 pub struct IronServer<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -157,6 +155,7 @@ where
                     .add_mle_list([current_label_mle, new_label_mle], -E::ScalarField::one())
                     .unwrap();
 
+                let zerocheck_aux = target_virtual_poly.aux_info.clone();
                 let zerocheck_proof =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::prove(
                         &target_virtual_poly,
@@ -170,7 +169,7 @@ where
                     &zerocheck_proof.point,
                 );
                 let iron_update_proof =
-                    IronUpdateProof::new(zerocheck_proof, update_proof.unwrap().0);
+                    IronUpdateProof::new(zerocheck_proof, zerocheck_aux, update_proof.unwrap().0);
                 IronEpochRegMessage::new(new_label_comm, Some(iron_update_proof), new_label_aux)
             },
         };
@@ -252,7 +251,6 @@ where
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
-
         let label_mle_clone = self.dictionary.get_label_mle().borrow().clone();
         let value_mle_clone = self.dictionary.get_value_mle().borrow().clone();
         let (batched_poly, batched_aux) = join(

@@ -2,7 +2,7 @@ use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, Polynomial};
 use ark_std::{UniformRand, rand::Rng};
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 pub struct IronLookupProof<E, PC>
 where
     E: Pairing,
@@ -27,7 +27,6 @@ where
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
-
     pub fn new(
         index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: E::ScalarField,

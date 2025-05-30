@@ -8,7 +8,7 @@ use crate::{
     structs::{IronLabel, IronSpecification},
 };
 use ark_bls12_381::{Bls12_381, Fr};
-use subroutines::pcs::kzh::KZH2;
+use subroutines::pcs::kzh2::KZH2;
 
 #[test]
 fn test_server() {
@@ -39,5 +39,4 @@ fn test_server() {
         .update_keys(&update_batch1, &mut bulletin_board)
         .unwrap();
     let bb_size_2 = bulletin_board.size();
-    println!("Per epoch size: {}", bb_size_2 - bb_size_1);
 }

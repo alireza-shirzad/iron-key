@@ -1,8 +1,9 @@
+mod audit;
+mod client_lookup;
 mod kzh;
 mod server_lookup;
-mod client_lookup;
-mod server_update_reg;
 mod server_update_keys;
+mod server_update_reg;
 use ark_bls12_381::Fr;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;

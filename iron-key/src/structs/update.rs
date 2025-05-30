@@ -1,8 +1,9 @@
+use arithmetic::VPAuxInfo;
 use ark_ec::pairing::Pairing;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use subroutines::{IOPProof, PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
-
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+use subroutines::{IOPProof, PolynomialCommitmentScheme};
+use subroutines::poly::DenseOrSparseMLE;
+#[derive(CanonicalSerialize, Clone)]
 pub struct IronUpdateProof<E, MvPCS>
 where
     E: Pairing,
@@ -14,6 +15,7 @@ where
         + Send,
 {
     zerocheck_proof: IOPProof<E::ScalarField>,
+    zerocheck_aux: VPAuxInfo<E::ScalarField>,
     opening_proof: MvPCS::Proof,
 }
 
@@ -27,15 +29,23 @@ where
         > + Sync
         + Send,
 {
-    pub fn new(zerocheck_proof: IOPProof<E::ScalarField>, opening_proof: MvPCS::Proof) -> Self {
+    pub fn new(
+        zerocheck_proof: IOPProof<E::ScalarField>,
+        zerocheck_aux: VPAuxInfo<E::ScalarField>,
+        opening_proof: MvPCS::Proof,
+    ) -> Self {
         Self {
             zerocheck_proof,
+            zerocheck_aux,
             opening_proof,
         }
     }
 
     pub fn get_zerocheck_proof(&self) -> &IOPProof<E::ScalarField> {
         &self.zerocheck_proof
+    }
+    pub fn get_zerocheck_aux(&self) -> &VPAuxInfo<E::ScalarField> {
+        &self.zerocheck_aux
     }
     pub fn get_opening_proof(&self) -> &MvPCS::Proof {
         &self.opening_proof
@@ -97,7 +107,7 @@ where
     }
 }
 
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone)]
+#[derive(CanonicalSerialize, Clone)]
 pub struct IronEpochRegMessage<E, MvPCS>
 where
     E: Pairing,

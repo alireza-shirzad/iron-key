@@ -58,5 +58,4 @@ fn test_label() {
         label: "12345678901234567890".to_string(),
     };
     let field: ark_bls12_381::Fr = <IronLabel as VKDLabel<ark_bls12_381::Bls12_381>>::to_field(&label);
-    println!("Field: {}", field);
 }

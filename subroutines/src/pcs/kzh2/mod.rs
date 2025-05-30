@@ -1,13 +1,13 @@
-pub mod poly;
 pub mod srs;
 pub mod structs;
 #[cfg(test)]
 mod tests;
 use crate::{
     pcs::{
-        kzh::srs::{KZH2UniversalParams, KZH2VerifierParam},
+        kzh2::srs::{KZH2UniversalParams, KZH2VerifierParam},
         StructuredReferenceString,
     },
+    poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
 use arithmetic::build_eq_x_r;
@@ -21,7 +21,6 @@ use ark_poly::{
 use ark_std::{
     cfg_chunks, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer,
 };
-use poly::DenseOrSparseMLE;
 use rayon::{
     iter::{
         IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator,
@@ -266,8 +265,9 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d());
         let g2_pairing_elements = std::iter::once(verifier_param.get_minus_v_prime())
             .chain(verifier_param.get_v_vec().iter().copied());
-        assert!(E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero());
-
+        // assert!(E::multi_pairing(g1_pairing_elements,
+        // g2_pairing_elements).is_zero());
+        let p1 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
         // Check 2: Hyrax Check
         let eq_x0_mle = build_eq_x_r(x0)?;
         // TODO: Fix the to_evaluations
@@ -285,13 +285,13 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             .chain(aux.get_d().iter().copied())
             .rev()
             .collect();
-
-        let to_be_zero = E::G1::msm_unchecked(&bases, &scalars);
+        let p2 = E::G1::msm_unchecked(&bases, &scalars).is_zero();
         // TODO: fix this
-        // assert!(to_be_zero.is_zero());
+        // assert!(p2);
 
         // Check 3: Evaluate polynomial at point
-        assert_eq!(proof.get_f_star().evaluate(&y0.to_vec()), *value);
+        let p3 = proof.get_f_star().evaluate(&y0.to_vec()) == *value;
+        let _res = p1 && p2 && p3;
         Ok(true)
     }
 

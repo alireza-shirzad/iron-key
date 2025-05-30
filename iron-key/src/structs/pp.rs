@@ -4,7 +4,7 @@ use ark_std::log2;
 use crate::VKDPublicParameters;
 use ark_poly::DenseMultilinearExtension;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 
 pub struct IronPublicParameters<E, MvPCS>
 where
@@ -166,8 +166,6 @@ where
             Point = Vec<<E as Pairing>::ScalarField>,
         >,
 {
-
-
     pub fn new(log_capacity: usize, pcs_verifier_param: MvPCS::VerifierParam) -> Self {
         Self {
             log_capacity,

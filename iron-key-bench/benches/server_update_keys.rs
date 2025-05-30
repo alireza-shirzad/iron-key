@@ -14,7 +14,7 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification},
 };
-use subroutines::pcs::kzh::KZH2;
+use subroutines::pcs::kzh2::KZH2;
 
 /// Triplet carried around by Divan.
 #[derive(Copy, Clone, Debug)]

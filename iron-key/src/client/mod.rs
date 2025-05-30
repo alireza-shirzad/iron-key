@@ -6,10 +6,9 @@ use std::{
 };
 
 use ark_ec::pairing::Pairing;
-use ark_ff::{Field, PrimeField};
 
-use ark_poly::{DenseMultilinearExtension, Polynomial};
-use subroutines::{PolynomialCommitmentScheme, pcs::kzh::poly::DenseOrSparseMLE};
+use ark_poly::Polynomial;
+use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
 
 use crate::{
     VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -87,8 +86,8 @@ where
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     {
         // TODO: Fix this for real scenarios
-        let last_reg_message = bulletin_board.read(0)?.get_reg_message();
-        let last_keys_message = bulletin_board.read(1)?.get_key_message();
+        let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
+        let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
         let batched_commitment = last_keys_message.get_value_commitment().clone()
             + last_reg_message.get_label_commitment().clone();
         let batched_value = value + self.label.to_field();
@@ -101,7 +100,6 @@ where
             proof.get_batched_opening_proof(),
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
-
         let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
             &self.label.to_string(),
             0,
