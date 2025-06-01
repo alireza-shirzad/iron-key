@@ -4,6 +4,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter_mut, rand::Rng, UniformRand};
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::ops::Mul;
+use std::sync::Arc;
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4UniversalParams<E: Pairing> {
@@ -12,15 +13,15 @@ pub struct KZH4UniversalParams<E: Pairing> {
     pub num_vars_z: usize,
     pub num_vars_t: usize,
 
-    pub h_xyzt: Vec<E::G1Affine>,
-    pub h_yzt: Vec<E::G1Affine>,
-    pub h_zt: Vec<E::G1Affine>,
-    pub h_t: Vec<E::G1Affine>,
+    pub h_xyzt: Arc<Vec<E::G1Affine>>,
+    pub h_yzt: Arc<Vec<E::G1Affine>>,
+    pub h_zt: Arc<Vec<E::G1Affine>>,
+    pub h_t: Arc<Vec<E::G1Affine>>,
 
-    pub v_x: Vec<E::G2Affine>,
-    pub v_y: Vec<E::G2Affine>,
-    pub v_z: Vec<E::G2Affine>,
-    pub v_t: Vec<E::G2Affine>,
+    pub v_x: Arc<Vec<E::G2Affine>>,
+    pub v_y: Arc<Vec<E::G2Affine>>,
+    pub v_z: Arc<Vec<E::G2Affine>>,
+    pub v_t: Arc<Vec<E::G2Affine>>,
 
     pub v: E::G2Affine,
 }
@@ -31,14 +32,14 @@ impl<E: Pairing> KZH4UniversalParams<E> {
         num_vars_y: usize,
         num_vars_z: usize,
         num_vars_t: usize,
-        h_xyzt: Vec<E::G1Affine>,
-        h_yzt: Vec<E::G1Affine>,
-        h_zt: Vec<E::G1Affine>,
-        h_t: Vec<E::G1Affine>,
-        v_x: Vec<E::G2Affine>,
-        v_y: Vec<E::G2Affine>,
-        v_z: Vec<E::G2Affine>,
-        v_t: Vec<E::G2Affine>,
+        h_xyzt: Arc<Vec<E::G1Affine>>,
+        h_yzt: Arc<Vec<E::G1Affine>>,
+        h_zt: Arc<Vec<E::G1Affine>>,
+        h_t: Arc<Vec<E::G1Affine>>,
+        v_x: Arc<Vec<E::G2Affine>>,
+        v_y: Arc<Vec<E::G2Affine>>,
+        v_z: Arc<Vec<E::G2Affine>>,
+        v_t: Arc<Vec<E::G2Affine>>,
         v: E::G2Affine,
     ) -> Self {
         Self {
@@ -69,28 +70,28 @@ impl<E: Pairing> KZH4UniversalParams<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_xyzt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_xyzt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_xyzt
     }
-    pub fn get_h_yzt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_yzt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_yzt
     }
-    pub fn get_h_zt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_zt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_zt
     }
-    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_t
     }
-    pub fn get_v_x(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_x(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_x
     }
-    pub fn get_v_y(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_y(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_y
     }
-    pub fn get_v_z(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_z(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_z
     }
-    pub fn get_v_t(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_t(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_t
     }
     pub fn get_v(&self) -> E::G2Affine {
@@ -105,10 +106,10 @@ pub struct KZH4ProverParam<E: Pairing> {
     num_vars_y: usize,
     num_vars_z: usize,
     num_vars_t: usize,
-    h_xyzt: Vec<E::G1Affine>,
-    h_yzt: Vec<E::G1Affine>,
-    h_zt: Vec<E::G1Affine>,
-    h_t: Vec<E::G1Affine>,
+    h_xyzt: Arc<Vec<E::G1Affine>>,
+    h_yzt: Arc<Vec<E::G1Affine>>,
+    h_zt: Arc<Vec<E::G1Affine>>,
+    h_t: Arc<Vec<E::G1Affine>>,
 }
 impl<E: Pairing> KZH4ProverParam<E> {
     pub fn new(
@@ -116,10 +117,10 @@ impl<E: Pairing> KZH4ProverParam<E> {
         num_vars_y: usize,
         num_vars_z: usize,
         num_vars_t: usize,
-        h_xyzt: Vec<E::G1Affine>,
-        h_yzt: Vec<E::G1Affine>,
-        h_zt: Vec<E::G1Affine>,
-        h_t: Vec<E::G1Affine>,
+        h_xyzt: Arc<Vec<E::G1Affine>>,
+        h_yzt: Arc<Vec<E::G1Affine>>,
+        h_zt: Arc<Vec<E::G1Affine>>,
+        h_t: Arc<Vec<E::G1Affine>>,
     ) -> Self {
         Self {
             num_vars_x,
@@ -144,16 +145,16 @@ impl<E: Pairing> KZH4ProverParam<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_xyzt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_xyzt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_xyzt
     }
-    pub fn get_h_yzt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_yzt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_yzt
     }
-    pub fn get_h_zt(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_zt(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_zt
     }
-    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_t
     }
 }
@@ -165,11 +166,11 @@ pub struct KZH4VerifierParam<E: Pairing> {
     num_vars_y: usize,
     num_vars_z: usize,
     num_vars_t: usize,
-    h_t: Vec<E::G1Affine>,
-    v_x: Vec<E::G2Affine>,
-    v_y: Vec<E::G2Affine>,
-    v_z: Vec<E::G2Affine>,
-    v_t: Vec<E::G2Affine>,
+    h_t: Arc<Vec<E::G1Affine>>,
+    v_x: Arc<Vec<E::G2Affine>>,
+    v_y: Arc<Vec<E::G2Affine>>,
+    v_z: Arc<Vec<E::G2Affine>>,
+    v_t: Arc<Vec<E::G2Affine>>,
     v: E::G2Affine,
 }
 
@@ -179,11 +180,11 @@ impl<E: Pairing> KZH4VerifierParam<E> {
         num_vars_y: usize,
         num_vars_z: usize,
         num_vars_t: usize,
-        h_t: Vec<E::G1Affine>,
-        v_x: Vec<E::G2Affine>,
-        v_y: Vec<E::G2Affine>,
-        v_z: Vec<E::G2Affine>,
-        v_t: Vec<E::G2Affine>,
+        h_t: Arc<Vec<E::G1Affine>>,
+        v_x: Arc<Vec<E::G2Affine>>,
+        v_y: Arc<Vec<E::G2Affine>>,
+        v_z: Arc<Vec<E::G2Affine>>,
+        v_t: Arc<Vec<E::G2Affine>>,
         v: E::G2Affine,
     ) -> Self {
         Self {
@@ -212,19 +213,19 @@ impl<E: Pairing> KZH4VerifierParam<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
         &self.h_t
     }
-    pub fn get_v_x(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_x(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_x
     }
-    pub fn get_v_y(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_y(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_y
     }
-    pub fn get_v_z(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_z(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_z
     }
-    pub fn get_v_t(&self) -> &Vec<E::G2Affine> {
+    pub fn get_v_t(&self) -> &Arc<Vec<E::G2Affine>> {
         &self.v_t
     }
     pub fn get_v(&self) -> E::G2Affine {
@@ -317,7 +318,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
             rayon::scope(|s| {
                 // ---------------- h_xyzt ----------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(h_xyzt).enumerate().for_each(|(i, slot)| {
+                    h_xyzt.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         let (i_x, i_y, i_z, i_t) =
                             Self::decompose_index(i, degree_y, degree_z, degree_t);
 
@@ -329,7 +330,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
 
                 // ---------------- h_yzt -----------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(h_yzt).enumerate().for_each(|(i, slot)| {
+                    h_yzt.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         let i_y = i / (degree_z * degree_t);
                         let rem = i % (degree_z * degree_t);
                         let i_z = rem / degree_t;
@@ -342,7 +343,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
 
                 // ---------------- h_zt ------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(h_zt).enumerate().for_each(|(i, slot)| {
+                    h_zt.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         let i_z = i / degree_t;
                         let i_t = i % degree_t;
 
@@ -353,35 +354,35 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
 
                 // ---------------- h_t -------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(h_t).enumerate().for_each(|(i, slot)| {
+                    h_t.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         *slot = g.mul(tau_t[i]).into();
                     });
                 });
 
                 // ---------------- v_x -------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(v_x).enumerate().for_each(|(i, slot)| {
+                    v_x.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         *slot = v.mul(tau_x[i]).into();
                     });
                 });
 
                 // ---------------- v_y -------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(v_y).enumerate().for_each(|(i, slot)| {
+                    v_y.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         *slot = v.mul(tau_y[i]).into();
                     });
                 });
 
                 // ---------------- v_z -------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(v_z).enumerate().for_each(|(i, slot)| {
+                    v_z.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         *slot = v.mul(tau_z[i]).into();
                     });
                 });
 
                 // ---------------- v_t -------------------
                 s.spawn(|_| {
-                    cfg_iter_mut!(v_t).enumerate().for_each(|(i, slot)| {
+                    v_t.par_iter_mut().enumerate().for_each(|(i, slot)| {
                         *slot = v.mul(tau_t[i]).into();
                     });
                 });
@@ -432,6 +433,15 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
                 *slot = v.mul(tau_t[i]).into();
             });
         }
+
+        let h_xyzt = Arc::new(h_xyzt);
+        let h_yzt = Arc::new(h_yzt);
+        let h_zt = Arc::new(h_zt);
+        let h_t = Arc::new(h_t);
+        let v_x = Arc::new(v_x);
+        let v_y = Arc::new(v_y);
+        let v_z = Arc::new(v_z);
+        let v_t = Arc::new(v_t);
         Ok(KZH4UniversalParams {
             num_vars_x,
             num_vars_y,

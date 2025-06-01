@@ -325,7 +325,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         );
 
         // making sure D_x is well-formatted
-        let lhs = E::multi_pairing(aux.get_d_x(), verifier_param.get_v_x()).0;
+        let lhs = E::multi_pairing(aux.get_d_x(), verifier_param.get_v_x().as_slice()).0;
         let rhs = E::pairing(commitment.get_commitment(), verifier_param.get_v()).0;
 
         let p1 = lhs == rhs;
@@ -343,7 +343,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         )
         .unwrap();
 
-        let lhs = E::multi_pairing(proof.get_d_z(), verifier_param.get_v_z()).0;
+        let lhs = E::multi_pairing(proof.get_d_z(), verifier_param.get_v_z().as_slice()).0;
         let rhs = E::pairing(new_c, verifier_param.get_v()).0;
 
         let p2 = lhs == rhs;

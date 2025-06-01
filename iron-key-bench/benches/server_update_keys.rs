@@ -82,7 +82,7 @@ pub const PARAMS: &[Params] = &{
         let mut i = 0;
 
         // (n, 0..=n-2, INIT) for n = 3..=26
-        let mut n = 3;
+        let mut n = 27;
         while n <= 33 {
             let mut k = 0;
             while k <= n - 2 {
