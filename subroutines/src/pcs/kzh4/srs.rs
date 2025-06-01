@@ -1,167 +1,233 @@
-
 use crate::{PCSError, StructuredReferenceString};
-use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
+use ark_ec::pairing::Pairing;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, UniformRand};
-use rayon::iter::{
-    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
-    IntoParallelRefMutIterator, ParallelIterator,
-};
+use ark_std::{rand::Rng, UniformRand};
+use std::ops::Mul;
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4UniversalParams<E: Pairing> {
-    nu: usize,
-    mu: usize,
-    h_mat: Vec<E::G1Affine>,
-    h_vec: Vec<E::G1Affine>,
-    v_vec: Vec<E::G2Affine>,
-    minus_v_prime: E::G2Affine,
-    gi: Vec<E::G1Affine>,
+    pub num_vars_x: usize,
+    pub num_vars_y: usize,
+    pub num_vars_z: usize,
+    pub num_vars_t: usize,
+
+    pub h_xyzt: Vec<E::G1Affine>,
+    pub h_yzt: Vec<E::G1Affine>,
+    pub h_zt: Vec<E::G1Affine>,
+    pub h_t: Vec<E::G1Affine>,
+
+    pub v_x: Vec<E::G2Affine>,
+    pub v_y: Vec<E::G2Affine>,
+    pub v_z: Vec<E::G2Affine>,
+    pub v_t: Vec<E::G2Affine>,
+
+    pub v: E::G2Affine,
 }
 
 impl<E: Pairing> KZH4UniversalParams<E> {
-    /// Create a new universal parameter
     pub fn new(
-        nu: usize,
-        mu: usize,
-        h_mat: Vec<E::G1Affine>,
-        h_vec: Vec<E::G1Affine>,
-        v_vec: Vec<E::G2Affine>,
-        minus_v_prime: E::G2Affine,
-        gi: Vec<E::G1Affine>,
+        num_vars_x: usize,
+        num_vars_y: usize,
+        num_vars_z: usize,
+        num_vars_t: usize,
+        h_xyzt: Vec<E::G1Affine>,
+        h_yzt: Vec<E::G1Affine>,
+        h_zt: Vec<E::G1Affine>,
+        h_t: Vec<E::G1Affine>,
+        v_x: Vec<E::G2Affine>,
+        v_y: Vec<E::G2Affine>,
+        v_z: Vec<E::G2Affine>,
+        v_t: Vec<E::G2Affine>,
+        v: E::G2Affine,
     ) -> Self {
         Self {
-            nu,
-            mu,
-            h_mat,
-            h_vec,
-            v_vec,
-            minus_v_prime,
-            gi,
+            num_vars_x,
+            num_vars_y,
+            num_vars_z,
+            num_vars_t,
+            h_xyzt,
+            h_yzt,
+            h_zt,
+            h_t,
+            v_x,
+            v_y,
+            v_z,
+            v_t,
+            v,
         }
     }
-
-    pub fn get_nu(&self) -> usize {
-        self.nu
+    pub fn get_num_vars_x(&self) -> usize {
+        self.num_vars_x
     }
-    pub fn get_mu(&self) -> usize {
-        self.mu
+    pub fn get_num_vars_y(&self) -> usize {
+        self.num_vars_y
     }
-
-    pub fn get_h_mat(&self) -> &Vec<E::G1Affine> {
-        &self.h_mat
+    pub fn get_num_vars_z(&self) -> usize {
+        self.num_vars_z
     }
-    pub fn get_h_vec(&self) -> &Vec<E::G1Affine> {
-        &self.h_vec
+    pub fn get_num_vars_t(&self) -> usize {
+        self.num_vars_t
     }
-    pub fn get_v_vec(&self) -> &Vec<E::G2Affine> {
-        &self.v_vec
+    pub fn get_h_xyzt(&self) -> &Vec<E::G1Affine> {
+        &self.h_xyzt
     }
-    pub fn get_minus_v_prime(&self) -> E::G2Affine {
-        self.minus_v_prime
+    pub fn get_h_yzt(&self) -> &Vec<E::G1Affine> {
+        &self.h_yzt
     }
-    pub fn get_gi(&self) -> &Vec<E::G1Affine> {
-        &self.gi
+    pub fn get_h_zt(&self) -> &Vec<E::G1Affine> {
+        &self.h_zt
+    }
+    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+        &self.h_t
+    }
+    pub fn get_v_x(&self) -> &Vec<E::G2Affine> {
+        &self.v_x
+    }
+    pub fn get_v_y(&self) -> &Vec<E::G2Affine> {
+        &self.v_y
+    }
+    pub fn get_v_z(&self) -> &Vec<E::G2Affine> {
+        &self.v_z
+    }
+    pub fn get_v_t(&self) -> &Vec<E::G2Affine> {
+        &self.v_t
+    }
+    pub fn get_v(&self) -> E::G2Affine {
+        self.v
     }
 }
 
 /// Prover Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4ProverParam<E: Pairing> {
-    nu: usize,
-    mu: usize,
-    h_mat: Vec<E::G1Affine>,
-    h_vec: Vec<E::G1Affine>,
+    num_vars_x: usize,
+    num_vars_y: usize,
+    num_vars_z: usize,
+    num_vars_t: usize,
+    h_xyzt: Vec<E::G1Affine>,
+    h_yzt: Vec<E::G1Affine>,
+    h_zt: Vec<E::G1Affine>,
+    h_t: Vec<E::G1Affine>,
 }
 impl<E: Pairing> KZH4ProverParam<E> {
-    /// Create a new prover parameter
-    pub fn new(nu: usize, mu: usize, h_mat: Vec<E::G1Affine>, h_vec: Vec<E::G1Affine>) -> Self {
+    pub fn new(
+        num_vars_x: usize,
+        num_vars_y: usize,
+        num_vars_z: usize,
+        num_vars_t: usize,
+        h_xyzt: Vec<E::G1Affine>,
+        h_yzt: Vec<E::G1Affine>,
+        h_zt: Vec<E::G1Affine>,
+        h_t: Vec<E::G1Affine>,
+    ) -> Self {
         Self {
-            nu,
-            mu,
-            h_mat,
-            h_vec,
+            num_vars_x,
+            num_vars_y,
+            num_vars_z,
+            num_vars_t,
+            h_xyzt,
+            h_yzt,
+            h_zt,
+            h_t,
         }
     }
-
-    pub fn get_nu(&self) -> usize {
-        self.nu
+    pub fn get_num_vars_x(&self) -> usize {
+        self.num_vars_x
     }
-    pub fn get_mu(&self) -> usize {
-        self.mu
+    pub fn get_num_vars_y(&self) -> usize {
+        self.num_vars_y
     }
-    pub fn get_h_mat(&self) -> &Vec<E::G1Affine> {
-        &self.h_mat
+    pub fn get_num_vars_z(&self) -> usize {
+        self.num_vars_z
     }
-    pub fn get_h_vec(&self) -> &Vec<E::G1Affine> {
-        &self.h_vec
+    pub fn get_num_vars_t(&self) -> usize {
+        self.num_vars_t
+    }
+    pub fn get_h_xyzt(&self) -> &Vec<E::G1Affine> {
+        &self.h_xyzt
+    }
+    pub fn get_h_yzt(&self) -> &Vec<E::G1Affine> {
+        &self.h_yzt
+    }
+    pub fn get_h_zt(&self) -> &Vec<E::G1Affine> {
+        &self.h_zt
+    }
+    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+        &self.h_t
     }
 }
 
 /// Verifier Parameters
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4VerifierParam<E: Pairing> {
-    nu: usize,
-    mu: usize,
-    h_vec: Vec<E::G1Affine>,
-    minus_v_prime: E::G2Affine,
-    v_vec: Vec<E::G2Affine>,
+    num_vars_x: usize,
+    num_vars_y: usize,
+    num_vars_z: usize,
+    num_vars_t: usize,
+    h_t: Vec<E::G1Affine>,
+    v_x: Vec<E::G2Affine>,
+    v_y: Vec<E::G2Affine>,
+    v_z: Vec<E::G2Affine>,
+    v_t: Vec<E::G2Affine>,
+    v: E::G2Affine,
 }
 
 impl<E: Pairing> KZH4VerifierParam<E> {
-    /// Create a new verifier parameter
     pub fn new(
-        nu: usize,
-        mu: usize,
-        h_vec: Vec<E::G1Affine>,
-        minus_v_prime: E::G2Affine,
-        v_vec: Vec<E::G2Affine>,
+        num_vars_x: usize,
+        num_vars_y: usize,
+        num_vars_z: usize,
+        num_vars_t: usize,
+        h_t: Vec<E::G1Affine>,
+        v_x: Vec<E::G2Affine>,
+        v_y: Vec<E::G2Affine>,
+        v_z: Vec<E::G2Affine>,
+        v_t: Vec<E::G2Affine>,
+        v: E::G2Affine,
     ) -> Self {
         Self {
-            nu,
-            mu,
-            h_vec,
-            minus_v_prime,
-            v_vec,
+            num_vars_x,
+            num_vars_y,
+            num_vars_z,
+            num_vars_t,
+            h_t,
+            v_x,
+            v_y,
+            v_z,
+            v_t,
+            v,
         }
     }
 
-    pub fn get_nu(&self) -> usize {
-        self.nu
+    pub fn get_num_vars_x(&self) -> usize {
+        self.num_vars_x
     }
-    pub fn get_mu(&self) -> usize {
-        self.mu
+    pub fn get_num_vars_y(&self) -> usize {
+        self.num_vars_y
     }
-    pub fn get_h_vec(&self) -> &Vec<E::G1Affine> {
-        &self.h_vec
+    pub fn get_num_vars_z(&self) -> usize {
+        self.num_vars_z
     }
-    pub fn get_minus_v_prime(&self) -> E::G2Affine {
-        self.minus_v_prime
+    pub fn get_num_vars_t(&self) -> usize {
+        self.num_vars_t
     }
-    pub fn get_v_vec(&self) -> &Vec<E::G2Affine> {
-        &self.v_vec
+    pub fn get_h_t(&self) -> &Vec<E::G1Affine> {
+        &self.h_t
     }
-
-    pub fn rand(nu: usize, mu: usize, rng: &mut impl Rng) -> Self {
-        let m = 1 << mu;
-        let n = 1 << nu;
-        let rng = &mut ark_std::test_rng();
-        // Sampling generators
-        let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();
-        let v = E::G2::rand(rng);
-        // Sampling trapdoors
-        let tau_vec = (0..n)
-            .map(|_| E::ScalarField::rand(rng))
-            .collect::<Vec<_>>();
-        let alpha = E::ScalarField::rand(rng);
-        // Compute the srs elements
-        let minus_v_prime: E::G2Affine = (-v * alpha).into_affine();
-        let v_vec = v.batch_mul(&tau_vec);
-        let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
-            .map(|g| (*g * alpha).into_affine())
-            .collect::<Vec<_>>();
-
-        Self::new(nu as usize, mu as usize, h_vec, minus_v_prime, v_vec)
+    pub fn get_v_x(&self) -> &Vec<E::G2Affine> {
+        &self.v_x
+    }
+    pub fn get_v_y(&self) -> &Vec<E::G2Affine> {
+        &self.v_y
+    }
+    pub fn get_v_z(&self) -> &Vec<E::G2Affine> {
+        &self.v_z
+    }
+    pub fn get_v_t(&self) -> &Vec<E::G2Affine> {
+        &self.v_t
+    }
+    pub fn get_v(&self) -> E::G2Affine {
+        self.v
     }
 }
 
@@ -171,19 +237,39 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
 
     /// Extract the prover parameters from the public parameters.
     fn extract_prover_param(&self, supported_num_vars: usize) -> Self::ProverParam {
-        assert_eq!(supported_num_vars, self.nu + self.mu);
-        KZH4ProverParam::new(self.nu, self.mu, self.h_mat.clone(), self.h_vec.clone())
+        assert_eq!(
+            supported_num_vars,
+            self.num_vars_x + self.num_vars_y + self.num_vars_z + self.num_vars_t
+        );
+        KZH4ProverParam::new(
+            self.num_vars_x,
+            self.num_vars_y,
+            self.num_vars_z,
+            self.num_vars_t,
+            self.h_xyzt.clone(),
+            self.h_yzt.clone(),
+            self.h_zt.clone(),
+            self.h_t.clone(),
+        )
     }
 
     /// Extract the verifier parameters from the public parameters.
     fn extract_verifier_param(&self, supported_num_vars: usize) -> Self::VerifierParam {
-        assert_eq!(supported_num_vars, self.nu + self.mu);
+        assert_eq!(
+            supported_num_vars,
+            self.num_vars_x + self.num_vars_y + self.num_vars_z + self.num_vars_t
+        );
         KZH4VerifierParam::new(
-            self.nu,
-            self.mu,
-            self.h_vec.clone(),
-            self.minus_v_prime,
-            self.v_vec.clone(),
+            self.num_vars_x,
+            self.num_vars_y,
+            self.num_vars_z,
+            self.num_vars_t,
+            self.h_t.clone(),
+            self.v_x.clone(),
+            self.v_y.clone(),
+            self.v_z.clone(),
+            self.v_t.clone(),
+            self.v.clone(),
         )
     }
 
@@ -198,47 +284,105 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
     }
 
     fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
-        // Dimensions of the polynomials
-        let nu = num_vars / 2;
-        let mu = num_vars - nu;
-        let m = 1 << mu;
-        let n = 1 << nu;
-        // Sampling generators
-        let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();
-        let v = E::G2::rand(rng);
-        // Sampling trapdoors
-        let tau_vec = (0..n)
-            .map(|_| E::ScalarField::rand(rng))
-            .collect::<Vec<_>>();
-        let alpha = E::ScalarField::rand(rng);
-        // Compute the srs elements
-        let minus_v_prime: E::G2Affine = (-v * alpha).into_affine();
-        let v_vec = v.batch_mul(&tau_vec);
-        let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
-            .map(|g| (*g * alpha).into_affine())
-            .collect::<Vec<_>>();
-        let mut h_mat_transpose: Vec<Vec<E::G1Affine>> = vec![Vec::new(); m];
-        cfg_iter_mut!(h_mat_transpose)
-            .enumerate()
-            .for_each(|(i, h)| {
-                *h = generators_1[i].batch_mul(&tau_vec);
-            });
+        let (num_vars_x, num_vars_y, num_vars_z, num_vars_t) =
+            Self::get_num_vars_from_maximum_num_vars(num_vars);
+        let (degree_x, degree_y, degree_z, degree_t) = (
+            1 << num_vars_x,
+            1 << num_vars_y,
+            1 << num_vars_z,
+            1 << num_vars_t,
+        );
 
-        let h_mat: Vec<E::G1Affine> = (0..n)
-            .into_par_iter()
-            .flat_map_iter(|i| {
-                let h = &h_mat_transpose;
-                (0..m).map(move |j| h[j][i])
+        let (g, v) = (E::G1Affine::rand(rng), E::G2Affine::rand(rng));
+        let tau_x: Vec<E::ScalarField> = (0..degree_x).map(|_| E::ScalarField::rand(rng)).collect();
+        let tau_y: Vec<E::ScalarField> = (0..degree_y).map(|_| E::ScalarField::rand(rng)).collect();
+        let tau_z: Vec<E::ScalarField> = (0..degree_z).map(|_| E::ScalarField::rand(rng)).collect();
+        let tau_t: Vec<E::ScalarField> = (0..degree_t).map(|_| E::ScalarField::rand(rng)).collect();
+
+        let h_xyzt: Vec<_> = (0..degree_x * degree_y * degree_z * degree_t)
+            .map(|i| {
+                let (i_x, i_y, i_z, i_t) = Self::decompose_index(i, degree_y, degree_z, degree_t);
+                g.mul(tau_x[i_x] * tau_y[i_y] * tau_z[i_z] * tau_t[i_t])
+                    .into()
             })
             .collect();
-        Ok(KZH4UniversalParams::new(
-            nu,
-            mu,
-            h_mat,
-            h_vec,
-            v_vec,
-            minus_v_prime,
-            generators_1.into_iter().map(|g| g.into_affine()).collect(),
-        ))
+
+        let h_yzt: Vec<_> = (0..degree_y * degree_z * degree_t)
+            .map(|i| {
+                let i_y = i / (degree_z * degree_t);
+                let remainder = i % (degree_z * degree_t);
+                let i_z = remainder / degree_t;
+                let i_t = remainder % degree_t;
+
+                g.mul(tau_y[i_y] * tau_z[i_z] * tau_t[i_t]).into()
+            })
+            .collect();
+
+        let h_zt: Vec<_> = (0..degree_z * degree_t)
+            .map(|i| {
+                let i_z = i / degree_t;
+                let i_t = i % degree_t;
+                g.mul(tau_z[i_z] * tau_t[i_t]).into()
+            })
+            .collect();
+
+        let h_t: Vec<_> = (0..degree_t).map(|i| g.mul(tau_t[i]).into()).collect();
+
+        let v_x: Vec<_> = (0..degree_x).map(|i| v.mul(tau_x[i]).into()).collect();
+        let v_y: Vec<_> = (0..degree_y).map(|i| v.mul(tau_y[i]).into()).collect();
+        let v_z: Vec<_> = (0..degree_z).map(|i| v.mul(tau_z[i]).into()).collect();
+        let v_t: Vec<_> = (0..degree_t).map(|i| v.mul(tau_t[i]).into()).collect();
+        Ok(KZH4UniversalParams {
+            num_vars_x,
+            num_vars_y,
+            num_vars_z,
+            num_vars_t,
+            h_xyzt,
+            h_yzt,
+            h_zt,
+            h_t,
+            v_x,
+            v_y,
+            v_z,
+            v_t,
+            v,
+        })
+    }
+}
+
+impl<E: Pairing> KZH4UniversalParams<E> {
+    fn get_num_vars_from_maximum_num_vars(n: usize) -> (usize, usize, usize, usize) {
+        match n % 4 {
+            0 => (n / 4, n / 4, n / 4, n / 4),
+            1 => (n / 4 + 1, n / 4, n / 4, n / 4),
+            2 => (n / 4 + 1, n / 4 + 1, n / 4, n / 4),
+            3 => (n / 4 + 1, n / 4 + 1, n / 4 + 1, n / 4),
+            _ => unreachable!(),
+        }
+    }
+
+    fn decompose_index(
+        i: usize,
+        degree_y: usize,
+        degree_z: usize,
+        degree_t: usize,
+    ) -> (usize, usize, usize, usize) {
+        // Compute i_z first, as it is the highest order term
+        let i_x = i / (degree_y * degree_z * degree_t);
+
+        // Compute the remainder after removing the contribution of i_z
+        let remainder = i % (degree_y * degree_z * degree_t);
+
+        // Compute i_y next, as it is the middle order term
+        let i_y = remainder / (degree_z * degree_t);
+
+        // Finally, compute i_x as the lowest order term
+        let remainder = remainder % (degree_z * degree_t);
+
+        let i_z = remainder / degree_t;
+
+        let i_t = remainder % degree_t;
+
+        (i_x, i_y, i_z, i_t)
     }
 }
