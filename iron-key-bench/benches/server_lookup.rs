@@ -9,21 +9,21 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification},
 };
-use subroutines::pcs::kzh2::KZH2;
-// Import a version of KZH2 that implements Add and Sub for its auxiliary info
+use subroutines::pcs::kzh4::KZH4;
+// Import a version of KZH4 that implements Add and Sub for its auxiliary info
 
 /// Build a server that has already processed `batch_size` updates.
 fn server_with_updates(
     log_capacity: usize,
 ) -> (
-    IronServer<Bls12_381, KZH2<Bls12_381>, IronLabel>,
-    DummyBB<Bls12_381, KZH2<Bls12_381>>,
+    IronServer<Bls12_381, KZH4<Bls12_381>, IronLabel>,
+    DummyBB<Bls12_381, KZH4<Bls12_381>>,
 ) {
     const BATCH_SIZE: usize = 1;
     let spec = IronSpecification::new(1 << log_capacity);
 
-    let pp = IronKey::<Bls12_381, KZH2<Bls12_381>, IronLabel>::setup(spec).unwrap();
-    let mut server = IronServer::<Bls12_381, KZH2<Bls12_381>, IronLabel>::init(&pp);
+    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(spec).unwrap();
+    let mut server = IronServer::<Bls12_381, KZH4<Bls12_381>, IronLabel>::init(&pp);
     let mut bb = DummyBB::default();
 
     // Build `batch_size` distinct (label, value) pairs.
@@ -38,7 +38,7 @@ fn server_with_updates(
 /// Benchmark `lookup_prove` after different-sized update batches.
 ///
 /// The `args` list controls the batch sizes; adjust freely.
-#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29], max_time = 60)]
+#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
 fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) {
     // Use with_inputs to create a new server for each thread, avoiding Sync
     // requirement

@@ -14,7 +14,7 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification},
 };
-use subroutines::pcs::kzh2::KZH2;
+use subroutines::pcs::kzh4::KZH4;
 
 /// Triplet carried around by Divan.
 #[derive(Copy, Clone, Debug)]
@@ -42,13 +42,13 @@ fn prepare_prover_update_prove_inputs(
     log_update_size: u64,
     log_initial_batch_size: u64,
 ) -> (
-    IronServer<Bls12_381, KZH2<Bls12_381>, IronLabel>,
+    IronServer<Bls12_381, KZH4<Bls12_381>, IronLabel>,
     HashMap<IronLabel, Fr>,
-    DummyBB<Bls12_381, KZH2<Bls12_381>>,
+    DummyBB<Bls12_381, KZH4<Bls12_381>>,
 ) {
     let initial_batch_size = 1 << log_initial_batch_size;
     let system_spec = IronSpecification::new(1 << log_capacity);
-    let pp = IronKey::<Bls12_381, KZH2<Bls12_381>, IronLabel>::setup(system_spec).unwrap();
+    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(system_spec).unwrap();
     let mut server: IronServer<_, _, _> = IronServer::init(&pp);
     let mut bulletin_board = DummyBB::default();
 
@@ -75,15 +75,15 @@ fn prepare_prover_update_prove_inputs(
 
 /// Compile-time list of (log_capacity, log_update_size, 3) triplets for light
 /// tests.
-pub const LIGHT_PARAMS: &[Params] = &{
+pub const PARAMS: &[Params] = &{
     const INIT: u64 = 2;
-    const fn build_light() -> [Params; 460] {
-        let mut out = [Params(1, 0, 0); 460];
+    const fn build_light() -> [Params; 663] {
+        let mut out = [Params(1, 0, 0); 663];
         let mut i = 0;
 
         // (n, 0..=n-2, INIT) for n = 3..=26
         let mut n = 3;
-        while n <= 26 {
+        while n <= 33 {
             let mut k = 0;
             while k <= n - 2 {
                 out[i] = Params(n, k, INIT);
@@ -98,52 +98,13 @@ pub const LIGHT_PARAMS: &[Params] = &{
     build_light()
 };
 
-/// Compile-time list of (log_capacity, log_update_size, 3) triplets for heavy
-/// tests.
-pub const HEAVY_PARAMS: &[Params] = &{
-    const INIT: u64 = 3;
-    const fn build_heavy() -> [Params; 203] {
-        let mut out = [Params(4, 0, 0); 203];
-        let mut i = 0;
-
-        // (n, 0..=n-2, INIT) for n = 27..=33
-        let mut n = 27;
-        while n <= 33 {
-            let mut k = 0;
-            while k <= n - 2 {
-                out[i] = Params(n, k, INIT);
-                i += 1;
-                k += 1;
-            }
-            n += 1;
-        }
-
-        out
-    }
-    build_heavy()
-};
-
 #[divan::bench(
     max_time     = 60,
     sample_count = 1,
     sample_size  = 1,
-    args         = LIGHT_PARAMS
+    args         = PARAMS
 )]
 fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
-    let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
-
-    bencher.bench_local(|| {
-        server.update_keys(&update_batch, &mut bb).unwrap();
-    });
-}
-
-#[divan::bench(
-    max_time     = 60,
-    sample_count = 1,
-    sample_size  = 1,
-    args         = HEAVY_PARAMS
-)]
-fn heavy_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
     let (mut server, update_batch, mut bb) = prepare_prover_update_prove_inputs(cap, upd, init);
 
     bencher.bench_local(|| {

@@ -13,21 +13,21 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification, lookup::IronLookupProof},
 };
-use subroutines::pcs::kzh2::KZH2;
+use subroutines::pcs::kzh4::KZH4;
 use std::collections::HashMap;
 fn prepare_verifier_lookup_intput(
     log_capacity: u64,
     log_initial_batch_size: u64,
 ) -> (
-    IronClient<E, IronLabel, KZH2<E>>,
+    IronClient<E, IronLabel, KZH4<E>>,
     Fr,
-    IronLookupProof<E, KZH2<E>>,
-    DummyBB<E, KZH2<E>>,
+    IronLookupProof<E, KZH4<E>>,
+    DummyBB<E, KZH4<E>>,
 ) {
     let spec = IronSpecification::new(1 << log_capacity);
 
-    let pp = IronKey::<Bls12_381, KZH2<Bls12_381>, IronLabel>::setup(spec).unwrap();
-    let mut server = IronServer::<Bls12_381, KZH2<Bls12_381>, IronLabel>::init(&pp);
+    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(spec).unwrap();
+    let mut server = IronServer::<Bls12_381, KZH4<Bls12_381>, IronLabel>::init(&pp);
     let mut bulletin_board = DummyBB::default();
     let initial_batch_size = 1 << log_initial_batch_size;
     // Build `batch_size` distinct (label, value) pairs.
@@ -49,7 +49,7 @@ fn prepare_verifier_lookup_intput(
     )
 }
 
-#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29], max_time = 60)]
+#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
 fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) {
     // Use with_inputs to create a new server for each thread, avoiding Sync
     // requirement
