@@ -1,7 +1,7 @@
 set datafile separator ","
 
-set xtics 6 nomirror font ",14" 
-set ytics 100 nomirror font ",14"
+set xtics 6 nomirror font ",17" 
+set ytics 100 nomirror font ",17"
 
 set xrange [6:31] 
 set yrange [0.2:*]
@@ -19,9 +19,9 @@ set logscale y 10      # This is for your y-axis (already correct)
 set format y "10^{%L}" # This is for your y-axis (already correct)
 
 set terminal pdfcairo enhanced color font "Helvetica ,15" size 2.5,3 background rgb 'white'
-set xlabel "Registration batch size" offset 0,0,0 font ",13"
-set ylabel "Server registration time (s)" offset 0,0,0 font ",13" 
-set output 'reg_log_capacity_plot_with_threshold.pdf' 
+set xlabel "Registration batch size" offset 0,0,0 font ",17"
+set ylabel "Server registration time (s)" offset 0,0,0 font ",17" 
+set output 'reg_time_vs_batch_size.pdf' 
 
 
 plot 'server_reg_update.csv' using 2:($1==21 ? $4 : 1/0) with lines linewidth 2 title "|D|= 2^{21}", \
@@ -36,9 +36,9 @@ plot 'server_reg_update.csv' using 2:($1==21 ? $4 : 1/0) with lines linewidth 2 
 
 
 
-set xlabel "Key update batch size" offset 0,0,0 font ",13"
-set ylabel "Server key update throughput (#updates/s)" offset 0,0,0 font ",13" 
-set output 'key_log_capacity_plot_with_threshold.pdf' 
+set xlabel "Key update batch size" offset 0,0,0 font ",17"
+set ylabel "Server key update time (s)" offset 0,0,0 font ",17" 
+set output 'key_update_time.pdf' 
 
 set xrange [0:33] 
 set yrange [*:*]
@@ -54,7 +54,8 @@ plot \
 stats 'server_key_update.csv' \
       using 2:( ($1==33)?((2**$2)/$4):1/0 ) name 'T'
 
-set output 'throughput_key_log_capacity_plot_with_threshold.pdf'
+set output 'key_update_throughput.pdf'
+set ylabel "Server key update rate (#update/sec)" offset 0,0,0 font ",17" 
 set xrange [*:33] 
 set yrange [*:T_max_y+400000]
 
@@ -71,11 +72,11 @@ plot \
 #############################################################################
 # --- PLOT 4: Time vs. Dictionary Size (for specific Update Batch Sizes) ---
 #############################################################################
-set output 'time_vs_dictsize_plot.pdf'
+set output 'key_update_time_vs_dict_size.pdf'
 
 
-set xlabel "Dictionary Size" offset 0,0,0 font ",13"
-set ylabel "Server key update time (s)" offset 0,0,0 font ",13"
+set xlabel "Dictionary Size" offset 0,0,0 font ",17"
+set ylabel "Server key update time (s)" offset 0,0,0 font ",17"
 
 set xrange [*:*]    
 set logscale y 10
@@ -105,8 +106,8 @@ plot \
 set output 'reg_time_vs_dict_size.pdf'
 
 
-set xlabel "Dictionary Size" offset 0,0,0 font ",13"
-set ylabel "Server key update time (s)" offset 0,0,0 font ",13"
+set xlabel "Dictionary Size" offset 0,0,0 font ",17"
+set ylabel "Server key update time (s)" offset 0,0,0 font ",17"
 
 set xrange [20:33]    
 set logscale y 10
@@ -140,18 +141,29 @@ set output 'client_lookup.pdf'
 set xlabel "Dictionary size"
 set ylabel "Verifier Lookup, and Persistency check Time (s)"
 
-# Turn off logscales for this basic test to avoid complications
-# set format x "%g" # General numeric format
 set format y "%g"
 set xrange [*:*]
 set yrange [*:*]
-set xtics 8 nomirror font ",14" 
-set ytics 10 nomirror font ",14"
+set xtics 8 nomirror font ",17" 
+set ytics 10 nomirror font ",17"
 
 set key top left
 
 plot 'client_lookup.csv' using 1:($2/1000) with lines lc rgb "#FF0000" linewidth 2 notitle 
+set output 'server_lookup.pdf'
 
+set xlabel "Dictionary size"
+set ylabel "Server lookup Time (s)"
+
+set format y "%g"
+set xrange [*:*]
+set yrange [*:*]
+set xtics 8 nomirror font ",17" 
+set ytics 10 nomirror font ",17"
+
+set key top left
+
+plot 'server_lookup.csv' using 1:($2/1000) with lines lc rgb "#FF0000" linewidth 2 notitle 
 
 set output 'audit.pdf'
 set xlabel "Dictionary size"
@@ -162,8 +174,8 @@ set ylabel "Auditor time (s)"
 set format y "%g"
 set xrange [*:*]
 set yrange [*:*]
-set xtics 8 nomirror font ",14" 
-set ytics 10 nomirror font ",14"
+set xtics 8 nomirror font ",17" 
+set ytics 10 nomirror font ",17"
 
 set key top left
 
