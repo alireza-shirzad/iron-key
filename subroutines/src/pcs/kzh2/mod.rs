@@ -21,18 +21,19 @@ use ark_poly::{
 use ark_std::{
     cfg_chunks, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer,
 };
+
+use srs::KZH2ProverParam;
+use std::{borrow::Borrow, marker::PhantomData};
+use structs::{KZH2AuxInfo, KZH2BatchOpeningProof, KZH2Commitment, KZH2OpeningProof};
+use transcript::IOPTranscript;
+#[cfg(feature = "parallel")]
 use rayon::{
     iter::{
         IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator,
         ParallelIterator,
     },
     prelude::ParallelSlice,
-    vec,
 };
-use srs::KZH2ProverParam;
-use std::{borrow::Borrow, marker::PhantomData};
-use structs::{KZH2AuxInfo, KZH2BatchOpeningProof, KZH2Commitment, KZH2OpeningProof};
-use transcript::IOPTranscript;
 // use batching::{batch_verify_internal, multi_open_internal};
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 
@@ -366,7 +367,7 @@ fn fix_dense_first_k_vars_parallel<F: Field + Send + Sync + Copy>(
     assert!(end <= evals.len(), "Fixed prefix goes out of bounds");
 
     // Clone the slice in parallel
-    evals[start..end].par_iter().copied().collect()
+    cfg_iter!(evals[start..end]).copied().collect()
 }
 
 pub fn fix_first_k_vars_sparse_parallel<F>(

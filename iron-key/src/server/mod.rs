@@ -19,6 +19,7 @@ use arithmetic::VirtualPolynomial;
 use ark_ec::pairing::Pairing;
 use ark_poly::MultilinearExtension;
 use ark_std::{One, Zero, end_timer, start_timer};
+#[cfg(feature = "parallel")]
 use rayon::join;
 use std::{
     collections::HashMap,
@@ -199,6 +200,7 @@ where
         let new_value_mle = self.dictionary.get_value_mle().clone();
 
         let diff_value_mle = &*new_value_mle.borrow() - &*current_value_mle.borrow();
+        #[cfg(feature = "parallel")]
         let (diff_value_com, diff_value_aux) = join(
             || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap(),
             || {
@@ -210,6 +212,15 @@ where
                 .unwrap()
             },
         );
+        #[cfg(not(feature = "parallel"))]
+        let diff_value_com = MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap();
+        #[cfg(not(feature = "parallel"))]
+        let diff_value_aux = MvPCS::comp_aux(
+            self.key.get_pcs_prover_param(),
+            &diff_value_mle,
+            &MvPCS::Commitment::default(),
+        )
+        .unwrap();
 
         let iron_epoch_key_message = match bulletin_board.get_last_key_update_message() {
             // If it's the first time, the diff info is the new info
@@ -253,10 +264,15 @@ where
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
         let label_mle_clone = self.dictionary.get_label_mle().borrow().clone();
         let value_mle_clone = self.dictionary.get_value_mle().borrow().clone();
+        #[cfg(feature = "parallel")]
         let (batched_poly, batched_aux) = join(
             || label_mle_clone + value_mle_clone,
             || last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone(),
         );
+        #[cfg(not(feature = "parallel"))]
+        let batched_poly = label_mle_clone + value_mle_clone;
+        #[cfg(not(feature = "parallel"))]
+        let batched_aux = last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone();
         let update_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
             &batched_poly,

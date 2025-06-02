@@ -19,8 +19,6 @@ ark-ec = { version = "^0.5.0", default-features = false }
 criterion = "0.5.1"
 
 [features]
-# default = [ "parallel", "print-trace" ]
-default = ["parallel"]
 parallel = [ 
     "rayon",
     "ark-std/parallel", 

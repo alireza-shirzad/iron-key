@@ -13,8 +13,8 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification},
 };
-use subroutines::pcs::kzh4::KZH4;
 use std::collections::HashMap;
+use subroutines::pcs::kzh4::KZH4;
 fn prepare_verifier_lookup_intput(
     log_capacity: u64,
     log_first_batch_size: u64,
@@ -52,4 +52,5 @@ fn audit(bencher: Bencher, batch_size: usize) {
     bencher
         .with_inputs(|| prepare_verifier_lookup_intput(batch_size as u64, 2, 2))
         .bench_values(|(auditor, bulltin_board)| auditor.verify_update(&bulltin_board));
+
 }

@@ -143,7 +143,7 @@ where
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize)]
 pub struct IronClientKey<E, MvPCS>
 where
     E: Pairing,

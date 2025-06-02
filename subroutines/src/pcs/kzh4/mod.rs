@@ -20,6 +20,7 @@ use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
 use ark_std::{cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer};
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use srs::KZH4ProverParam;
 use std::{borrow::Borrow, marker::PhantomData};
@@ -214,13 +215,14 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
 
             #[cfg(not(feature = "parallel"))]
             {
+
                 // ───────────── sequential fallback ─────────────
                 let d_x = match polynomial {
                     DenseOrSparseMLE::Dense(poly) => (0..degree_x)
                         .map(|i| {
                             E::G1::msm_unchecked(
                                 prover_param.get_h_yzt(),
-                                Self::get_dense_partial_evaluation_for_boolean_input(
+                                &Self::get_dense_partial_evaluation_for_boolean_input(
                                     poly,
                                     i,
                                     degree_y * degree_z * degree_t,
@@ -255,7 +257,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                         .map(|i| {
                             E::G1::msm_unchecked(
                                 prover_param.get_h_zt(),
-                                Self::get_dense_partial_evaluation_for_boolean_input(
+                                &Self::get_dense_partial_evaluation_for_boolean_input(
                                     poly,
                                     i,
                                     degree_z * degree_t,

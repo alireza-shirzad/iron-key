@@ -14,7 +14,8 @@ use crate::poly_iop::{
 use arithmetic::{fix_variables, VirtualPolynomial};
 use ark_ff::{batch_inversion, PrimeField};
 use ark_poly::DenseMultilinearExtension;
-use ark_std::{cfg_into_iter, end_timer, start_timer, vec::Vec};
+use ark_std::{cfg_into_iter, cfg_iter, end_timer, start_timer, vec::Vec};
+#[cfg(feature = "parallel")]
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use std::sync::Arc;
 
@@ -81,12 +82,10 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)
         //
         // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
-        let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> = self
-            .poly
-            .flattened_ml_extensions
-            .par_iter()
-            .map(|x| x.as_ref().clone())
-            .collect();
+        let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> =
+            cfg_iter!(self.poly.flattened_ml_extensions)
+                .map(|x| x.as_ref().clone())
+                .collect();
 
         if let Some(chal) = challenge {
             if self.round == 0 {
@@ -121,6 +120,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         // f(r_1, ... r_m,, x_{m+1}... x_n)
 
         products_list.iter().for_each(|(coefficient, products)| {
+            #[cfg(feature = "parallel")]
             let mut sum = cfg_into_iter!(0..1 << (self.poly.aux_info.num_variables - self.round))
                 .fold(
                     || {
@@ -138,9 +138,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                                 *step = table[(b << 1) + 1] - table[b << 1];
                             });
                         acc[0] += buf.iter().map(|(eval, _)| eval).product::<F>();
-                        acc[1..].iter_mut().for_each(|acc| {
+                        acc[1..].iter_mut().for_each(|acc_i| {
                             buf.iter_mut().for_each(|(eval, step)| *eval += step as &_);
-                            *acc += buf.iter().map(|(eval, _)| eval).product::<F>();
+                            *acc_i += buf.iter().map(|(eval, _)| eval).product::<F>();
                         });
                         (buf, acc)
                     },
@@ -151,10 +151,34 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                     |mut sum, partial| {
                         sum.iter_mut()
                             .zip(partial.iter())
-                            .for_each(|(sum, partial)| *sum += partial);
+                            .for_each(|(sum_i, partial_i)| *sum_i += partial_i);
                         sum
                     },
                 );
+            #[cfg(not(feature = "parallel"))]
+            let mut sum = {
+                let mut acc = vec![F::zero(); products.len() + 1];
+                for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
+                    let mut buf = vec![(F::zero(), F::zero()); products.len()];
+                    let mut acc_local = vec![F::zero(); products.len() + 1];
+                    buf.iter_mut()
+                        .zip(products.iter())
+                        .for_each(|((eval, step), f)| {
+                            let table = &flattened_ml_extensions[*f];
+                            *eval = table[b << 1];
+                            *step = table[(b << 1) + 1] - table[b << 1];
+                        });
+                    acc_local[0] += buf.iter().map(|(eval, _)| eval).product::<F>();
+                    acc_local[1..].iter_mut().for_each(|acc_i| {
+                        buf.iter_mut().for_each(|(eval, step)| *eval += step as &_);
+                        *acc_i += buf.iter().map(|(eval, _)| eval).product::<F>();
+                    });
+                    acc.iter_mut()
+                        .zip(acc_local.iter())
+                        .for_each(|(sum_i, partial)| *sum_i += partial);
+                }
+                acc
+            };
             sum.iter_mut().for_each(|sum| *sum *= coefficient);
             let extraploation = cfg_into_iter!(0..self.poly.aux_info.max_degree - products.len())
                 .map(|i| {
@@ -170,8 +194,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         });
 
         // update prover's state to the partial evaluated polynomial
-        self.poly.flattened_ml_extensions = flattened_ml_extensions
-            .par_iter()
+        self.poly.flattened_ml_extensions = cfg_iter!(flattened_ml_extensions)
             .map(|x| Arc::new(x.clone()))
             .collect();
 

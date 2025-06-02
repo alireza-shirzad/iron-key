@@ -12,13 +12,11 @@ use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension, Polynomial};
 use ark_serialize::CanonicalSerialize;
 use ark_std::{
-    end_timer,
-    rand::{Rng, RngCore},
-    start_timer,
+    cfg_iter_mut, end_timer, rand::{Rng, RngCore}, start_timer
 };
-use rayon::prelude::*;
 use std::{cmp::max, collections::HashMap, marker::PhantomData, ops::Add, sync::Arc};
-
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
 #[rustfmt::skip]
 /// A virtual polynomial is a sum of products of multilinear polynomials;
 /// where the multilinear polynomials are stored via their multilinear
@@ -411,7 +409,7 @@ fn build_eq_x_r_helper<F: PrimeField>(r: &[F], buf: &mut Vec<F>) -> Result<(), A
         // *buf = res;
 
         let mut res = vec![F::zero(); buf.len() << 1];
-        res.par_iter_mut().enumerate().for_each(|(i, val)| {
+        cfg_iter_mut!(res).enumerate().for_each(|(i, val)| {
             let bi = buf[i >> 1];
             let tmp = r[0] * bi;
             if i & 1 == 0 {

@@ -24,7 +24,7 @@ harness = false
 
 
 [features]
-default = ["std", "parallel"]
+default = ["std"]
 std = ["ark-ff/std", "ark-std/std"]
-print-trace = ["ark-std/print-trace"]
-parallel = ["std", "ark-ff/parallel", "ark-std/parallel", "rayon"]
+print-trace = ["ark-std/print-trace", "subroutines/print-trace", "iron-key/print-trace"]
+parallel = ["std", "iron-key/parallel", "subroutines/parallel", "rayon"]

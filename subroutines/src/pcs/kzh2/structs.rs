@@ -3,6 +3,7 @@ use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup};
 use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
+#[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::{fmt, ops::Add};
 use crate::poly::DenseOrSparseMLE;

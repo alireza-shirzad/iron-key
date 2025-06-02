@@ -1,24 +1,27 @@
 //! Benchmarks `IronServer::update` for many (log_capacity, log_update_size)
-//! pairs.  The tiny “warm-up” batch size is now a real parameter that lives
+//! pairs.  The tiny “warm‐up” batch size is now a real parameter that lives
 //! inside `PARAMS`, but we keep its value fixed at 3 for every entry so it
 //! is **not** swept during the run.
 
 use ark_bls12_381::{Bls12_381 as E, Bls12_381, Fr};
+use ark_serialize::CanonicalSerialize; // <-- import this
 use divan::Bencher;
 use iron_key::{
     VKD, VKDClient, VKDPublicParameters, VKDServer,
     bb::dummybb::DummyBB,
-    client::IronClient,
+    client::{self, IronClient},
     ironkey::IronKey,
     server::IronServer,
     structs::{IronLabel, IronSpecification, lookup::IronLookupProof},
 };
-use subroutines::pcs::kzh4::KZH4;
 use std::collections::HashMap;
+use subroutines::pcs::kzh4::KZH4;
+
 fn prepare_verifier_lookup_intput(
     log_capacity: u64,
     log_initial_batch_size: u64,
 ) -> (
+    usize,
     IronClient<E, IronLabel, KZH4<E>>,
     Fr,
     IronLookupProof<E, KZH4<E>>,
@@ -39,9 +42,12 @@ fn prepare_verifier_lookup_intput(
     let lookup_proof = server
         .lookup_prove(IronLabel::new("1"), &mut bulletin_board)
         .unwrap();
-    let client: IronClient<_, _, _> = IronClient::init(pp.to_client_key(), IronLabel::new("1"));
+    let client_key = pp.to_client_key();
+    let client_key_size = client_key.serialized_size(ark_serialize::Compress::Yes);
+    let client: IronClient<_, _, _> = IronClient::init(client_key, IronLabel::new("1"));
 
     (
+        client_key_size,
         client,
         lookup_proof.get_value(),
         lookup_proof,
@@ -51,11 +57,17 @@ fn prepare_verifier_lookup_intput(
 
 #[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
 fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) {
-    // Use with_inputs to create a new server for each thread, avoiding Sync
-    // requirement
     bencher
         .with_inputs(|| prepare_verifier_lookup_intput(batch_size as u64, 1))
-        .bench_values(|(mut client, value, lookup_proof, bb)| {
+        .bench_values(|(_, mut client, value, lookup_proof, bb)| {
             client.lookup_verify(value, &lookup_proof, &bb).unwrap();
         });
+
+    // 1) Prepare exactly once, just to measure serialized_size:
+    let (client_key_size, _, _, proof, _) = prepare_verifier_lookup_intput(batch_size as u64, 1);
+    println!(
+        "\nLookup proof size: {} Bytes",
+        proof.serialized_size(ark_serialize::Compress::Yes)
+    );
+    println!("Client key size: {} Bytes\n", client_key_size);
 }

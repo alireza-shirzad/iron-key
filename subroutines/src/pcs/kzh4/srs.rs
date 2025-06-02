@@ -1,10 +1,9 @@
 use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, AffineRepr};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter_mut, rand::Rng, UniformRand};
-use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::ops::Mul;
-use std::sync::Arc;
+use ark_std::{rand::Rng, UniformRand};
+use std::{ops::Mul, sync::Arc};
+use ark_std::cfg_iter_mut;
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4UniversalParams<E: Pairing> {

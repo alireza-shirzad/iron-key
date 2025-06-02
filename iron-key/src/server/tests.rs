@@ -8,15 +8,15 @@ use crate::{
     structs::{IronLabel, IronSpecification},
 };
 use ark_bls12_381::{Bls12_381, Fr};
-use subroutines::pcs::kzh2::KZH2;
+use subroutines::pcs::kzh4::KZH4;
 
 #[test]
 fn test_server() {
     const LOG_CAPACITY: usize = 26;
     let system_spec = IronSpecification::new(1 << LOG_CAPACITY);
-    let pp = IronKey::<Bls12_381, KZH2<Bls12_381>, IronLabel>::setup(system_spec).unwrap();
-    let mut server: IronServer<Bls12_381, KZH2<Bls12_381>, IronLabel> = IronServer::init(&pp);
-    let mut bulletin_board = DummyBB::<Bls12_381, KZH2<Bls12_381>>::default();
+    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(system_spec).unwrap();
+    let mut server: IronServer<Bls12_381, KZH4<Bls12_381>, IronLabel> = IronServer::init(&pp);
+    let mut bulletin_board = DummyBB::<Bls12_381, KZH4<Bls12_381>>::default();
 
     let update_batch1: HashMap<IronLabel, Fr> = HashMap::from([
         (IronLabel::new("1"), Fr::from(1)),

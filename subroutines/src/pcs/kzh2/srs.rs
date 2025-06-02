@@ -3,6 +3,7 @@ use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, UniformRand};
+#[cfg(feature = "parallel")]
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
     IntoParallelRefMutIterator, ParallelIterator,

@@ -1,8 +1,12 @@
 use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, Polynomial};
+use ark_serialize::CanonicalSerialize;
 use ark_std::{UniformRand, rand::Rng};
 use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+
+
+#[derive(CanonicalSerialize)]
 pub struct IronLookupProof<E, PC>
 where
     E: Pairing,
