@@ -36,6 +36,8 @@ print-trace = [
 parallel = [
     "std",
     "ark-ff/parallel",
+    "ark-ec/parallel",
+    "ark-serialize/parallel",
     "ark-poly/parallel",
     "ark-std/parallel",
     "arithmetic/parallel",

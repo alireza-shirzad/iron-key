@@ -1,7 +1,7 @@
 use crate::{PCSError, StructuredReferenceString};
-use ark_ec::{pairing::Pairing, AffineRepr};
+use ark_ec::{pairing::Pairing, AffineRepr, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter_mut, rand::Rng, UniformRand};
+use ark_std::{cfg_iter_mut, rand::Rng, UniformRand, Zero};
 use std::{ops::Mul, sync::Arc};
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
@@ -283,7 +283,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
         ))
     }
 
-    fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
+fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
         let (num_vars_x, num_vars_y, num_vars_z, num_vars_t) =
             Self::get_num_vars_from_maximum_num_vars(num_vars);
         let (degree_x, degree_y, degree_z, degree_t) = (
@@ -293,169 +293,166 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
             1 << num_vars_t,
         );
 
-        let (g, v) = (E::G1Affine::rand(rng), E::G2Affine::rand(rng));
+        // Note: Your code uses E::G1::rand(rng) which is likely Projective.
+        // If batch_mul is a method on Affine, you might need g.into() or g_affine = g.into()
+        // For this example, I'm assuming g and v are the correct types expected by batch_mul.
+        // If batch_mul is a method on Projective (as in my placeholder), this is fine.
+        let g_proj = E::G1::rand(rng); // Assuming G1 is Projective type
+        let v_proj = E::G2::rand(rng); // Assuming G2 is Projective type
+
         let tau_x: Vec<E::ScalarField> = (0..degree_x).map(|_| E::ScalarField::rand(rng)).collect();
         let tau_y: Vec<E::ScalarField> = (0..degree_y).map(|_| E::ScalarField::rand(rng)).collect();
         let tau_z: Vec<E::ScalarField> = (0..degree_z).map(|_| E::ScalarField::rand(rng)).collect();
         let tau_t: Vec<E::ScalarField> = (0..degree_t).map(|_| E::ScalarField::rand(rng)).collect();
-        let mut h_xyzt = vec![E::G1Affine::zero(); degree_x * degree_y * degree_z * degree_t];
-        let mut h_yzt = vec![E::G1Affine::zero(); degree_y * degree_z * degree_t];
-        let mut h_zt = vec![E::G1Affine::zero(); degree_z * degree_t];
-        let mut h_t = vec![E::G1Affine::zero(); degree_t];
 
-        let mut v_x = vec![E::G2Affine::zero(); degree_x];
-        let mut v_y = vec![E::G2Affine::zero(); degree_y];
-        let mut v_z = vec![E::G2Affine::zero(); degree_z];
-        let mut v_t = vec![E::G2Affine::zero(); degree_t];
+        // These variables will be assigned the results from the parallel/sequential blocks.
+        let h_xyzt: Vec<E::G1Affine>;
+        let h_yzt: Vec<E::G1Affine>;
+        let h_zt: Vec<E::G1Affine>;
+        let h_t: Vec<E::G1Affine>;
+        let v_x: Vec<E::G2Affine>;
+        let v_y: Vec<E::G2Affine>;
+        let v_z: Vec<E::G2Affine>;
+        let v_t: Vec<E::G2Affine>;
 
-        // ───────────── parallel (Rayon) version ─────────────────────────────────────
+        // Shadow references for captures. Note: these are now for projective types.
+        let g_base_ref = &g_proj;
+        let v_base_ref = &v_proj;
+        let tau_x_s = &tau_x;
+        let tau_y_s = &tau_y;
+        let tau_z_s = &tau_z;
+        let tau_t_s = &tau_t;
+
+
         #[cfg(feature = "parallel")]
         {
             use rayon::prelude::*;
 
-            rayon::scope(|s| {
-                // ---------------- h_xyzt ----------------
-                s.spawn(|_| {
-                    h_xyzt.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        let (i_x, i_y, i_z, i_t) =
-                            Self::decompose_index(i, degree_y, degree_z, degree_t);
-
-                        let scalar = tau_x[i_x] * tau_y[i_y] * tau_z[i_z] * tau_t[i_t];
-
-                        *slot = g.mul(scalar).into();
-                    });
+            // Define closures for each computation. Each returns its respective Vec.
+            let task_h_xyzt = || {
+                let mut scalars = vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
+                scalars.par_iter_mut().enumerate().for_each(|(i, slot)| {
+                    let (i_x, i_y, i_z, i_t) = Self::decompose_index(i, degree_y, degree_z, degree_t);
+                    *slot = tau_x_s[i_x] * tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
                 });
+                g_base_ref.batch_mul(&scalars)
+            };
 
-                // ---------------- h_yzt -----------------
-                s.spawn(|_| {
-                    h_yzt.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        let i_y = i / (degree_z * degree_t);
-                        let rem = i % (degree_z * degree_t);
-                        let i_z = rem / degree_t;
-                        let i_t = rem % degree_t;
-
-                        let scalar = tau_y[i_y] * tau_z[i_z] * tau_t[i_t];
-                        *slot = g.mul(scalar).into();
-                    });
+            let task_h_yzt = || {
+                let mut scalars = vec![E::ScalarField::zero(); degree_y * degree_z * degree_t];
+                scalars.par_iter_mut().enumerate().for_each(|(i, slot)| {
+                    let i_y = i / (degree_z * degree_t);
+                    let rem = i % (degree_z * degree_t);
+                    let i_z = rem / degree_t;
+                    let i_t = rem % degree_t;
+                    *slot = tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
                 });
+                g_base_ref.batch_mul(&scalars)
+            };
 
-                // ---------------- h_zt ------------------
-                s.spawn(|_| {
-                    h_zt.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        let i_z = i / degree_t;
-                        let i_t = i % degree_t;
-
-                        let scalar = tau_z[i_z] * tau_t[i_t];
-                        *slot = g.mul(scalar).into();
-                    });
+            let task_h_zt = || {
+                let mut scalars = vec![E::ScalarField::zero(); degree_z * degree_t];
+                scalars.par_iter_mut().enumerate().for_each(|(i, slot)| {
+                    let i_z = i / degree_t;
+                    let i_t = i % degree_t;
+                    *slot = tau_z_s[i_z] * tau_t_s[i_t];
                 });
+                g_base_ref.batch_mul(&scalars)
+            };
 
-                // ---------------- h_t -------------------
-                s.spawn(|_| {
-                    h_t.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        *slot = g.mul(tau_t[i]).into();
-                    });
-                });
+            let task_h_t = || g_base_ref.batch_mul(tau_t_s);
+            let task_v_x = || v_base_ref.batch_mul(tau_x_s);
+            let task_v_y = || v_base_ref.batch_mul(tau_y_s);
+            let task_v_z = || v_base_ref.batch_mul(tau_z_s);
+            let task_v_t = || v_base_ref.batch_mul(tau_t_s);
 
-                // ---------------- v_x -------------------
-                s.spawn(|_| {
-                    v_x.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        *slot = v.mul(tau_x[i]).into();
-                    });
-                });
-
-                // ---------------- v_y -------------------
-                s.spawn(|_| {
-                    v_y.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        *slot = v.mul(tau_y[i]).into();
-                    });
-                });
-
-                // ---------------- v_z -------------------
-                s.spawn(|_| {
-                    v_z.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        *slot = v.mul(tau_z[i]).into();
-                    });
-                });
-
-                // ---------------- v_t -------------------
-                s.spawn(|_| {
-                    v_t.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                        *slot = v.mul(tau_t[i]).into();
-                    });
-                });
-            });
+            // Use nested rayon::join to execute tasks in parallel and get results.
+            // join(A, join(B, join(C, D))) pattern is common for >2 tasks.
+            let (res_h_xyzt, (res_h_yzt, (res_h_zt, (res_h_t, (res_v_x, (res_v_y, (res_v_z, res_v_t))))))) =
+                rayon::join(task_h_xyzt,
+                    || rayon::join(task_h_yzt,
+                        || rayon::join(task_h_zt,
+                            || rayon::join(task_h_t,
+                                || rayon::join(task_v_x,
+                                    || rayon::join(task_v_y,
+                                        || rayon::join(task_v_z, task_v_t)
+                                    )
+                                )
+                            )
+                        )
+                    )
+                );
+            
+            h_xyzt = res_h_xyzt;
+            h_yzt = res_h_yzt;
+            h_zt = res_h_zt;
+            h_t = res_h_t;
+            v_x = res_v_x;
+            v_y = res_v_y;
+            v_z = res_v_z;
+            v_t = res_v_t;
         }
-
-        // ───────────── sequential fallback (no "parallel" feature) ──────────────────
         #[cfg(not(feature = "parallel"))]
         {
-            cfg_iter_mut!(h_xyzt).enumerate().for_each(|(i, slot)| {
+            // Sequential version
+            let mut scalars_h_xyzt = vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
+            scalars_h_xyzt.iter_mut().enumerate().for_each(|(i, slot)| {
                 let (i_x, i_y, i_z, i_t) = Self::decompose_index(i, degree_y, degree_z, degree_t);
-                *slot = g
-                    .mul(tau_x[i_x] * tau_y[i_y] * tau_z[i_z] * tau_t[i_t])
-                    .into();
+                *slot = tau_x_s[i_x] * tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
             });
+            h_xyzt = g_base_ref.batch_mul(&scalars_h_xyzt);
 
-            cfg_iter_mut!(h_yzt).enumerate().for_each(|(i, slot)| {
+            let mut scalars_h_yzt = vec![E::ScalarField::zero(); degree_y * degree_z * degree_t];
+            scalars_h_yzt.iter_mut().enumerate().for_each(|(i, slot)| {
                 let i_y = i / (degree_z * degree_t);
                 let rem = i % (degree_z * degree_t);
                 let i_z = rem / degree_t;
                 let i_t = rem % degree_t;
-                *slot = g.mul(tau_y[i_y] * tau_z[i_z] * tau_t[i_t]).into();
+                *slot = tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
             });
+            h_yzt = g_base_ref.batch_mul(&scalars_h_yzt);
 
-            cfg_iter_mut!(h_zt).enumerate().for_each(|(i, slot)| {
+            let mut scalars_h_zt = vec![E::ScalarField::zero(); degree_z * degree_t];
+            scalars_h_zt.iter_mut().enumerate().for_each(|(i, slot)| {
                 let i_z = i / degree_t;
                 let i_t = i % degree_t;
-                *slot = g.mul(tau_z[i_z] * tau_t[i_t]).into();
+                *slot = tau_z_s[i_z] * tau_t_s[i_t];
             });
+            h_zt = g_base_ref.batch_mul(&scalars_h_zt);
 
-            cfg_iter_mut!(h_t).enumerate().for_each(|(i, slot)| {
-                *slot = g.mul(tau_t[i]).into();
-            });
-
-            cfg_iter_mut!(v_x).enumerate().for_each(|(i, slot)| {
-                *slot = v.mul(tau_x[i]).into();
-            });
-
-            cfg_iter_mut!(v_y).enumerate().for_each(|(i, slot)| {
-                *slot = v.mul(tau_y[i]).into();
-            });
-
-            cfg_iter_mut!(v_z).enumerate().for_each(|(i, slot)| {
-                *slot = v.mul(tau_z[i]).into();
-            });
-
-            cfg_iter_mut!(v_t).enumerate().for_each(|(i, slot)| {
-                *slot = v.mul(tau_t[i]).into();
-            });
+            h_t = g_base_ref.batch_mul(tau_t_s);
+            v_x = v_base_ref.batch_mul(tau_x_s);
+            v_y = v_base_ref.batch_mul(tau_y_s);
+            v_z = v_base_ref.batch_mul(tau_z_s);
+            v_t = v_base_ref.batch_mul(tau_t_s);
         }
 
-        let h_xyzt = Arc::new(h_xyzt);
-        let h_yzt = Arc::new(h_yzt);
-        let h_zt = Arc::new(h_zt);
-        let h_t = Arc::new(h_t);
-        let v_x = Arc::new(v_x);
-        let v_y = Arc::new(v_y);
-        let v_z = Arc::new(v_z);
-        let v_t = Arc::new(v_t);
+        let h_xyzt_arc = Arc::new(h_xyzt);
+        let h_yzt_arc = Arc::new(h_yzt);
+        let h_zt_arc = Arc::new(h_zt);
+        let h_t_arc = Arc::new(h_t);
+        let v_x_arc = Arc::new(v_x);
+        let v_y_arc = Arc::new(v_y);
+        let v_z_arc = Arc::new(v_z);
+        let v_t_arc = Arc::new(v_t);
+
         Ok(KZH4UniversalParams {
             num_vars_x,
             num_vars_y,
             num_vars_z,
             num_vars_t,
-            h_xyzt,
-            h_yzt,
-            h_zt,
-            h_t,
-            v_x,
-            v_y,
-            v_z,
-            v_t,
-            v,
+            h_xyzt: h_xyzt_arc,
+            h_yzt: h_yzt_arc,
+            h_zt: h_zt_arc,
+            h_t: h_t_arc,
+            v_x: v_x_arc,
+            v_y: v_y_arc,
+            v_z: v_z_arc,
+            v_t: v_t_arc,
+            v: v_proj.into(), // Convert final v to affine if KZH4UniversalParams expects affine
         })
     }
+
 }
 
 impl<E: Pairing> KZH4UniversalParams<E> {

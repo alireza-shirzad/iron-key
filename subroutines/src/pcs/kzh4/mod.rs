@@ -22,6 +22,12 @@ use ark_poly::{
 use ark_std::{cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+// Conditional imports for Rayon
+#[cfg(feature = "parallel")]
+use rayon::join;
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
 use srs::KZH4ProverParam;
 use std::{borrow::Borrow, marker::PhantomData};
 use structs::{KZH4AuxInfo, KZH4BatchOpeningProof, KZH4Commitment, KZH4OpeningProof};
@@ -499,7 +505,9 @@ impl<E: Pairing> KZH4<E> {
             polynomial.evaluate(&point.to_vec()),
         ))
     }
+
     fn open_sparse_internal(
+        // Replace <E: PairingEngine> with actual trait bounds if different
         prover_param: &KZH4ProverParam<E>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -510,10 +518,9 @@ impl<E: Pairing> KZH4<E> {
         ),
         PCSError,
     > {
-        let timer = start_timer!(|| "KZH::OpenInternal-sparse");
-
-        // ───── split the evaluation point into (x, y, z, t) ────────────────────────
-        let split_input = Self::split_input(
+        // Common initial setup
+        let split_input = KZH4::<E>::split_input(
+            // Assuming Self in original was KZH4<E> context
             prover_param.get_num_vars_x(),
             prover_param.get_num_vars_y(),
             prover_param.get_num_vars_z(),
@@ -522,7 +529,6 @@ impl<E: Pairing> KZH4<E> {
             E::ScalarField::ZERO,
         );
 
-        // Basic sanity (mirrors dense routine)
         assert_eq!(
             split_input[0].len(),
             prover_param.get_num_vars_x(),
@@ -539,61 +545,132 @@ impl<E: Pairing> KZH4<E> {
             "wrong length"
         );
 
-        let h_t = prover_param.get_h_t(); // &[E::G1Affine]
-        let deg_t = 1 << prover_param.get_num_vars_t(); // |t|-dimension
-        let num_z = 1 << prover_param.get_num_vars_z(); // |z|-dimension
+        let h_t = prover_param.get_h_t();
+        let deg_t = 1 << prover_param.get_num_vars_t();
+        let num_z = 1 << prover_param.get_num_vars_z();
 
-        // ───── build the vector  d_z  with a *single* MSM per z-assignment ─────────
-        let d_z: Vec<E::G1> = (0..num_z)
-            .map(|i| {
-                // 1. fix x ∥ y variables
-                let xy_fixed = polynomial.fix_variables(
-                    [split_input[0].as_slice(), split_input[1].as_slice()]
-                        .concat()
-                        .as_slice(),
-                );
+        // Conditional compilation for parallel vs. sequential execution
+        #[cfg(feature = "parallel")]
+        {
+            let timer = start_timer!(|| "KZH::OpenInternal-sparse-parallel");
 
-                // 2. sparse slice over the t-hypercube for this z-assignment
-                let slice =
-                    Self::get_sparse_partial_evaluation_for_boolean_input(&xy_fixed, i, deg_t);
+            // These three computations can be done in parallel
+            let (d_z_computation_result, (f_star_computation_result, evaluation_result)) = join(
+                || {
+                    // Closure for d_z computation
+                    (0..num_z)
+                    .into_par_iter() // Parallel iterator
+                    .map(|i| {
+                        let xy_vars_to_fix = [split_input[0].as_slice(), split_input[1].as_slice()].concat();
+                        let xy_fixed = polynomial.fix_variables(xy_vars_to_fix.as_slice());
+                        let slice = KZH4::<E>::get_sparse_partial_evaluation_for_boolean_input(&xy_fixed, i, deg_t);
 
-                if slice.is_empty() {
-                    // all scalars are zero → MSM result is identity
-                    return E::G1::zero();
+                        if slice.is_empty() {
+                            return E::G1::zero();
+                        }
+
+                        let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
+                        let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
+                        for (&local_idx, coeff) in slice.iter() {
+                            bases.push(h_t[local_idx]);
+                            scalars.push(*coeff);
+                        }
+                        E::G1::msm_unchecked(&bases, &scalars)
+                    })
+                    .collect::<Vec<E::G1>>()
+                },
+                || {
+                    // Closure for (f_star_computation and evaluation_computation)
+                    join(
+                        || {
+                            // Closure for f_star computation
+                            let mut vars_to_fix = Vec::with_capacity(
+                                split_input[0].len() + split_input[1].len() + split_input[2].len(),
+                            );
+                            vars_to_fix.extend_from_slice(split_input[0].as_slice());
+                            vars_to_fix.extend_from_slice(split_input[1].as_slice());
+                            vars_to_fix.extend_from_slice(split_input[2].as_slice());
+                            polynomial.fix_variables(vars_to_fix.as_slice())
+                        },
+                        || {
+                            // Closure for evaluation computation
+                            polynomial.evaluate(&point.to_vec())
+                        },
+                    )
+                },
+            );
+
+            let d_z = d_z_computation_result;
+            let f_star = f_star_computation_result;
+            let evaluation = evaluation_result;
+
+            end_timer!(timer);
+
+            Ok((
+                KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Sparse(f_star)),
+                evaluation,
+            ))
+        }
+        #[cfg(not(feature = "parallel"))]
+        {
+            let timer = start_timer!(|| "KZH::OpenInternal-sparse-sequential");
+
+            // ───── build the vector d_z with a *single* MSM per z-assignment ─────────
+            let d_z: Vec<E::G1> = (0..num_z)
+                .map(|i| {
+                    // 1. fix x ∥ y variables
+                    let xy_fixed = polynomial.fix_variables(
+                        [split_input[0].as_slice(), split_input[1].as_slice()]
+                            .concat()
+                            .as_slice(),
+                    );
+
+                    // 2. sparse slice over the t-hypercube for this z-assignment
+                    let slice = KZH4::<E>::get_sparse_partial_evaluation_for_boolean_input(
+                        &xy_fixed, i, deg_t,
+                    );
+
+                    if slice.is_empty() {
+                        // all scalars are zero → MSM result is identity
+                        return E::G1::zero();
+                    }
+
+                    // 3. build trimmed MSM operands
+                    let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
+                    let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
+
+                    for (&local_idx, coeff) in slice.iter() {
+                        bases.push(h_t[local_idx]); // copy the needed basis element
+                        scalars.push(*coeff);
+                    }
+
+                    // 4. compute MSM
+                    E::G1::msm_unchecked(&bases, &scalars)
+                })
+                .collect();
+
+            // ───── fully fix x, y, z to get f★ (still over t variables) ───────────────
+            let f_star = polynomial.fix_variables(
+                {
+                    let mut tmp = Vec::new();
+                    tmp.extend_from_slice(split_input[0].as_slice());
+                    tmp.extend_from_slice(split_input[1].as_slice());
+                    tmp.extend_from_slice(split_input[2].as_slice());
+                    tmp
                 }
+                .as_slice(),
+            );
 
-                // 3. build trimmed MSM operands
-                let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
+            // Compute evaluation (moved before end_timer! for consistency)
+            let evaluation = polynomial.evaluate(&point.to_vec());
 
-                for (&local_idx, coeff) in slice.iter() {
-                    bases.push(h_t[local_idx]); // copy the needed basis element
-                    scalars.push(*coeff);
-                }
+            end_timer!(timer);
 
-                // 4. compute MSM
-                E::G1::msm_unchecked(&bases, &scalars)
-            })
-            .collect();
-
-        // ───── fully fix x, y, z to get f★ (still over t variables) ───────────────
-        let f_star = polynomial.fix_variables(
-            {
-                let mut tmp = Vec::new();
-                tmp.extend_from_slice(split_input[0].as_slice());
-                tmp.extend_from_slice(split_input[1].as_slice());
-                tmp.extend_from_slice(split_input[2].as_slice());
-                tmp
-            }
-            .as_slice(),
-        );
-
-        end_timer!(timer);
-
-        Ok((
-            KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Sparse(f_star)),
-            polynomial.evaluate(&point.to_vec()),
-        ))
+            Ok((
+                KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Sparse(f_star)),
+                evaluation,
+            ))
+        }
     }
     pub fn get_dense_partial_evaluation_for_boolean_input(
         dense_poly: &DenseMultilinearExtension<E::ScalarField>,
