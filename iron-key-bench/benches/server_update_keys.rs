@@ -14,7 +14,7 @@ use iron_key::{
 use once_cell::sync::Lazy;
 use subroutines::pcs::kzh4::KZH4;
 
-const SHARED_LOG_CAPACITY: u64 = 20;
+const SHARED_LOG_CAPACITY: u64 = 23;
 /// Triplet carried around by Divan.
 #[derive(Copy, Clone, Debug)]
 struct Params(
@@ -94,15 +94,14 @@ fn prepare_prover_update_prove_inputs(
 
 pub const PARAMS: &[Params] = &{
     const INIT: u64 = 2;
-    const N_CAPACITY: u64 = 20;
-    const ARRAY_SIZE: usize = (SHARED_LOG_CAPACITY + 1) as usize;
+    const ARRAY_SIZE: usize = (SHARED_LOG_CAPACITY-1) as usize;
 
     const fn build_light() -> [Params; ARRAY_SIZE] {
         let mut out = [Params(0, 0, 0); ARRAY_SIZE];
         let mut i = 0;
         while i < ARRAY_SIZE {
             let k = i as u64;
-            out[i] = Params(N_CAPACITY, k, INIT);
+            out[i] = Params(SHARED_LOG_CAPACITY, k, INIT);
             i += 1;
         }
         out
@@ -112,8 +111,6 @@ pub const PARAMS: &[Params] = &{
 
 #[divan::bench(
     max_time     = 60,
-    sample_count = 1,
-    sample_size  = 1,
     args         = PARAMS
 )]
 fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
