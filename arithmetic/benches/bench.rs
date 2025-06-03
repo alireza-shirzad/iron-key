@@ -8,7 +8,7 @@
 extern crate criterion;
 use ark_poly::Polynomial;
 use arithmetic::fix_variables;
-use ark_bls12_381::Fr;
+use ark_bn254::Fr;
 use ark_ff::Field;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_std::{ops::Range, test_rng};

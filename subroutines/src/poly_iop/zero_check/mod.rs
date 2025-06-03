@@ -127,7 +127,7 @@ mod test {
     use super::ZeroCheck;
     use crate::poly_iop::{errors::PolyIOPErrors, PolyIOP};
     use arithmetic::VirtualPolynomial;
-    use ark_bls12_381::Fr;
+    use ark_bn254::Fr;
     use ark_std::test_rng;
 
     fn test_zerocheck(

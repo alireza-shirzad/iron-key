@@ -77,6 +77,7 @@ where
     type Label = T;
 
     fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
+        println!("Yet another IronKey setup");
         let timer = start_timer!(|| "IronKey::setup");
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();

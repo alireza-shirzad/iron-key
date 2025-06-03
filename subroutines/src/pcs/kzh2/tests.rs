@@ -1,5 +1,5 @@
 // use super::*;
-// use ark_bls12_381::{Bls12_381 as E, Fr};
+// use ark_bn254::{Bn254 as E, Fr};
 // use ark_ec::pairing::Pairing;
 // use ark_std::{UniformRand, rand::Rng, test_rng, vec::Vec};
 // use rayon::vec;

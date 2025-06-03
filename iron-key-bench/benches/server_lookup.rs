@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ark_bls12_381::{Bls12_381, Fr};
+use ark_bn254::{Bn254, Fr};
 use divan::Bencher;
 use iron_key::{
     VKD, VKDServer,
@@ -16,14 +16,14 @@ use subroutines::pcs::kzh4::KZH4;
 fn server_with_updates(
     log_capacity: usize,
 ) -> (
-    IronServer<Bls12_381, KZH4<Bls12_381>, IronLabel>,
-    DummyBB<Bls12_381, KZH4<Bls12_381>>,
+    IronServer<Bn254, KZH4<Bn254>, IronLabel>,
+    DummyBB<Bn254, KZH4<Bn254>>,
 ) {
     const BATCH_SIZE: usize = 1;
     let spec = IronSpecification::new(1 << log_capacity);
 
-    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(spec).unwrap();
-    let mut server = IronServer::<Bls12_381, KZH4<Bls12_381>, IronLabel>::init(&pp);
+    let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec).unwrap();
+    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(&pp);
     let mut bb = DummyBB::default();
 
     // Build `batch_size` distinct (label, value) pairs.

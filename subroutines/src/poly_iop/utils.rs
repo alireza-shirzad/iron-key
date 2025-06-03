@@ -19,7 +19,7 @@ macro_rules! to_bytes {
 
 #[cfg(test)]
 mod test {
-    use ark_bls12_381::Fr;
+    use ark_bn254::Fr;
     use ark_serialize::CanonicalSerialize;
     use ark_std::One;
 

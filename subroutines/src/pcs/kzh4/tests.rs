@@ -1,10 +1,10 @@
 use super::*;
-use ark_bls12_381::{Bls12_381 as E, Fr};
+use ark_bn254::{Bn254 as E, Fr};
 use ark_ec::pairing::Pairing;
 use ark_std::{rand::Rng, test_rng, vec::Vec, UniformRand};
-use rayon::vec;
 use std::sync::Arc;
-
+#[cfg(feature = "parallel")]
+use rayon::vec;
 fn test_single_helper<R: Rng>(
     params: &KZH4UniversalParams<E>,
     poly: &DenseOrSparseMLE<Fr>,

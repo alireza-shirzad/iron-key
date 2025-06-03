@@ -22,7 +22,7 @@ rayon = { workspace = true, optional = true }
 thiserror = { workspace = true }
 sha2 = "0.10"
 [dev-dependencies]
-ark-bls12-381 = { workspace = true }
+ark-bn254 = { workspace = true }
 fake = { version = "4.3.0" }
 
 [features]

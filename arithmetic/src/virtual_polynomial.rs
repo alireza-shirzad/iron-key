@@ -438,7 +438,7 @@ pub fn bit_decompose(input: u64, num_var: usize) -> Vec<bool> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ark_bls12_381::Fr;
+    use ark_bn254::Fr;
     use ark_ff::UniformRand;
     use ark_std::test_rng;
 

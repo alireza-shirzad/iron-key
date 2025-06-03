@@ -5,7 +5,7 @@
 
 use std::{collections::HashMap, fmt};
 
-use ark_bls12_381::{Bls12_381, Fr};
+use ark_bn254::{Bn254, Fr};
 use divan::Bencher;
 use iron_key::{
     VKD, VKDServer,
@@ -42,13 +42,13 @@ fn prepare_prover_update_prove_inputs(
     log_update_size: u64,
     log_initial_batch_size: u64,
 ) -> (
-    IronServer<Bls12_381, KZH4<Bls12_381>, IronLabel>,
+    IronServer<Bn254, KZH4<Bn254>, IronLabel>,
     HashMap<IronLabel, Fr>,
-    DummyBB<Bls12_381, KZH4<Bls12_381>>,
+    DummyBB<Bn254, KZH4<Bn254>>,
 ) {
     let initial_batch_size = 1 << log_initial_batch_size;
     let system_spec = IronSpecification::new(1 << log_capacity);
-    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(system_spec).unwrap();
+    let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(system_spec).unwrap();
     let mut server: IronServer<_, _, _> = IronServer::init(&pp);
     let mut bulletin_board = DummyBB::default();
 

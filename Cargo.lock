@@ -51,7 +51,7 @@ checksum = "e16d2d3311acee920a9eb8d33b8cbc1787ce4a264e85f964c2404b969bdcd487"
 name = "arithmetic"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
+ "ark-bn254",
  "ark-ec",
  "ark-ff",
  "ark-poly",
@@ -64,14 +64,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-bls12-381"
+name = "ark-bn254"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3df4dcc01ff89867cd86b0da835f23c3f02738353aaee7dde7495af71363b8d5"
+checksum = "d69eab57e8d2663efa5c63135b2af4f396d66424f88954c21104125ab6b3e6bc"
 dependencies = [
  "ark-ec",
  "ark-ff",
- "ark-serialize",
  "ark-std",
 ]
 
@@ -578,7 +577,7 @@ name = "iron-key"
 version = "0.1.0"
 dependencies = [
  "arithmetic",
- "ark-bls12-381",
+ "ark-bn254",
  "ark-ec",
  "ark-ff",
  "ark-poly",
@@ -599,7 +598,7 @@ name = "iron-key-bench"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "ark-bls12-381",
+ "ark-bn254",
  "ark-ec",
  "ark-ff",
  "ark-poly",
@@ -607,6 +606,7 @@ dependencies = [
  "ark-std",
  "divan",
  "iron-key",
+ "once_cell",
  "rand 0.9.1",
  "rayon",
  "sha2",
@@ -1008,7 +1008,7 @@ name = "subroutines"
 version = "0.1.0"
 dependencies = [
  "arithmetic",
- "ark-bls12-381",
+ "ark-bn254",
  "ark-ec",
  "ark-ff",
  "ark-poly",

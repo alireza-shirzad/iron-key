@@ -4,7 +4,7 @@ mod kzh;
 mod server_lookup;
 mod server_update_keys;
 mod server_update_reg;
-use ark_bls12_381::Fr;
+use ark_bn254::Fr;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;
 use sha2::{Digest, Sha256};

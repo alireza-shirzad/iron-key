@@ -1,4 +1,4 @@
-// use ark_bls12_381::{Bls12_381, Fr};
+// use ark_bn254::{Bn254, Fr};
 // use ark_ff::{UniformRand, Zero};
 // use ark_poly::DenseMultilinearExtension;
 // use ark_serialize::CanonicalDeserialize;
@@ -21,7 +21,7 @@
 //         srs::{KZH2ProverParam, KZH2UniversalParams},
 //     },
 // };
-// fn prepare_prover_inputs() -> (KZH2ProverParam<Bls12_381>, DenseMultilinearExtension<Fr>) {
+// fn prepare_prover_inputs() -> (KZH2ProverParam<Bn254>, DenseMultilinearExtension<Fr>) {
 //     const LOG_CAPACITY: usize = 25;
 //     const LOG_DENSITY: usize = 20;
 //     let srs_path = current_dir()
@@ -31,11 +31,11 @@
 //     BufReader::new(File::open(&srs_path).unwrap())
 //         .read_to_end(&mut buffer)
 //         .unwrap();
-//     let srs = KZH2UniversalParams::<Bls12_381>::deserialize_uncompressed_unchecked(&buffer[..])
+//     let srs = KZH2UniversalParams::<Bn254>::deserialize_uncompressed_unchecked(&buffer[..])
 //         .unwrap_or_else(|_| {
 //             panic!("Failed to deserialize SRS from {:?}", srs_path);
 //         });
-//     let (pk, vk) = KZH2::<Bls12_381>::trim(srs, None, Some(LOG_CAPACITY)).unwrap();
+//     let (pk, vk) = KZH2::<Bn254>::trim(srs, None, Some(LOG_CAPACITY)).unwrap();
 //     let mut evals = vec![Fr::from(0); 1 << LOG_CAPACITY];
 //     let mut t_rng = rand::rng();
 //     // Sample k unique positions from the vector
@@ -66,6 +66,6 @@
 //     bencher
 //         .with_inputs(prepare_prover_inputs)
 //         .bench_values(|(pk, polynomial)| {
-//             KZH2::<Bls12_381>::commit(pk, &polynomial).unwrap();
+//             KZH2::<Bn254>::commit(pk, &polynomial).unwrap();
 //         });
 // }

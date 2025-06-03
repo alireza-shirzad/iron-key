@@ -14,9 +14,10 @@ ark-serialize = { workspace = true }
 subroutines = { path = "../subroutines" }
 rand = { workspace = true }
 sha2 = { workspace = true }
-ark-bls12-381 = { workspace = true }
+ark-bn254 = { workspace = true }
 rayon = { workspace = true, optional = true }
 anyhow = "1.0.97"
+once_cell = "1.18" # Or the latest version
 
 [[bench]]
 name = "bench"

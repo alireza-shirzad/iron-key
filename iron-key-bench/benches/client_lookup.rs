@@ -3,7 +3,7 @@
 //! inside `PARAMS`, but we keep its value fixed at 3 for every entry so it
 //! is **not** swept during the run.
 
-use ark_bls12_381::{Bls12_381 as E, Bls12_381, Fr};
+use ark_bn254::{Bn254 as E, Bn254, Fr};
 use ark_serialize::CanonicalSerialize; // <-- import this
 use divan::Bencher;
 use iron_key::{
@@ -29,8 +29,8 @@ fn prepare_verifier_lookup_intput(
 ) {
     let spec = IronSpecification::new(1 << log_capacity);
 
-    let pp = IronKey::<Bls12_381, KZH4<Bls12_381>, IronLabel>::setup(spec).unwrap();
-    let mut server = IronServer::<Bls12_381, KZH4<Bls12_381>, IronLabel>::init(&pp);
+    let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec).unwrap();
+    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(&pp);
     let mut bulletin_board = DummyBB::default();
     let initial_batch_size = 1 << log_initial_batch_size;
     // Build `batch_size` distinct (label, value) pairs.

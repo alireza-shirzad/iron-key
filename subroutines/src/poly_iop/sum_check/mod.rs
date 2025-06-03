@@ -212,7 +212,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 mod test {
 
     use super::*;
-    use ark_bls12_381::Fr;
+    use ark_bn254::Fr;
     use ark_ff::UniformRand;
     use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
     use ark_std::test_rng;

@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 arithmetic = { path = "../arithmetic" }
-ark-bls12-381 = { version = "0.5.0", default-features = false, features = [
+ark-bn254 = { version = "0.5.0", default-features = false, features = [
     "curve",
 ] }
 ark-ec = { version = "^0.5.0", default-features = false }
