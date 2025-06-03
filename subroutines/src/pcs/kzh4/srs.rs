@@ -1,9 +1,8 @@
 use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, AffineRepr};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{rand::Rng, UniformRand};
+use ark_std::{cfg_iter_mut, rand::Rng, UniformRand};
 use std::{ops::Mul, sync::Arc};
-use ark_std::cfg_iter_mut;
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4UniversalParams<E: Pairing> {
@@ -69,29 +68,29 @@ impl<E: Pairing> KZH4UniversalParams<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_xyzt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_xyzt
+    pub fn get_h_xyzt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_xyzt.clone()
     }
-    pub fn get_h_yzt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_yzt
+    pub fn get_h_yzt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_yzt.clone()
     }
-    pub fn get_h_zt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_zt
+    pub fn get_h_zt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_zt.clone()
     }
-    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_t
+    pub fn get_h_t(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_t.clone()
     }
-    pub fn get_v_x(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_x
+    pub fn get_v_x(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_x.clone()
     }
-    pub fn get_v_y(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_y
+    pub fn get_v_y(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_y.clone()
     }
-    pub fn get_v_z(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_z
+    pub fn get_v_z(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_z.clone()
     }
-    pub fn get_v_t(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_t
+    pub fn get_v_t(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_t.clone()
     }
     pub fn get_v(&self) -> E::G2Affine {
         self.v
@@ -144,17 +143,17 @@ impl<E: Pairing> KZH4ProverParam<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_xyzt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_xyzt
+    pub fn get_h_xyzt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_xyzt.clone()
     }
-    pub fn get_h_yzt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_yzt
+    pub fn get_h_yzt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_yzt.clone()
     }
-    pub fn get_h_zt(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_zt
+    pub fn get_h_zt(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_zt.clone()
     }
-    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_t
+    pub fn get_h_t(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_t.clone()
     }
 }
 
@@ -212,20 +211,20 @@ impl<E: Pairing> KZH4VerifierParam<E> {
     pub fn get_num_vars_t(&self) -> usize {
         self.num_vars_t
     }
-    pub fn get_h_t(&self) -> &Arc<Vec<E::G1Affine>> {
-        &self.h_t
+    pub fn get_h_t(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_t.clone()
     }
-    pub fn get_v_x(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_x
+    pub fn get_v_x(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_x.clone()
     }
-    pub fn get_v_y(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_y
+    pub fn get_v_y(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_y.clone()
     }
-    pub fn get_v_z(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_z
+    pub fn get_v_z(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_z.clone()
     }
-    pub fn get_v_t(&self) -> &Arc<Vec<E::G2Affine>> {
-        &self.v_t
+    pub fn get_v_t(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_t.clone()
     }
     pub fn get_v(&self) -> E::G2Affine {
         self.v
@@ -270,7 +269,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
             self.v_y.clone(),
             self.v_z.clone(),
             self.v_t.clone(),
-            self.v.clone(),
+            self.v,
         )
     }
 

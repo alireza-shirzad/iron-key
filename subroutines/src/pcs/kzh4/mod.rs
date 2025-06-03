@@ -82,7 +82,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                 let commit_timer = start_timer!(|| "KZH::Commit");
                 let prover_param: &KZH4ProverParam<E> = prover_param.borrow();
 
-                let com = E::G1::msm_unchecked(prover_param.get_h_xyzt(), &polynomial.evaluations);
+                let com = E::G1::msm_unchecked(&prover_param.get_h_xyzt(), &polynomial.evaluations);
                 end_timer!(commit_timer);
                 Ok(KZH4Commitment::new(com.into(), polynomial.num_vars()))
             },
@@ -133,7 +133,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                                 .into_par_iter()
                                 .map(|i| {
                                     E::G1::msm_unchecked(
-                                        prover_param.get_h_yzt(),
+                                        &prover_param.get_h_yzt(),
                                         &Self::get_dense_partial_evaluation_for_boolean_input(
                                             poly,
                                             i,
@@ -175,7 +175,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                                 .into_par_iter()
                                 .map(|i| {
                                     E::G1::msm_unchecked(
-                                        prover_param.get_h_zt(),
+                                        &prover_param.get_h_zt(),
                                         &Self::get_dense_partial_evaluation_for_boolean_input(
                                             poly,
                                             i,
@@ -215,7 +215,6 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
 
             #[cfg(not(feature = "parallel"))]
             {
-
                 // ───────────── sequential fallback ─────────────
                 let d_x = match polynomial {
                     DenseOrSparseMLE::Dense(poly) => (0..degree_x)
@@ -412,7 +411,7 @@ impl<E: Pairing> KZH4<E> {
                     .into_par_iter()               // data-parallel loop
                     .map(|i| {
                         E::G1::msm_unchecked(
-                            prover_param.get_h_t(),
+                            &prover_param.get_h_t(),
                             Self::get_dense_partial_evaluation_for_boolean_input(
                                 &polynomial.fix_variables(
                                     [split_input[0].as_slice(), split_input[1].as_slice()]
