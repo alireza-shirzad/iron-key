@@ -110,7 +110,7 @@ pub const PARAMS: &[Params] = &{
 };
 
 #[divan::bench(
-    max_time     = 60,
+    max_time     = 10,
     args         = PARAMS
 )]
 fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
