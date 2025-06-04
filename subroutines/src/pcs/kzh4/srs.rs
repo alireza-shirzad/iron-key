@@ -21,7 +21,7 @@ pub struct KZH4UniversalParams<E: Pairing> {
     pub v_z: Arc<Vec<E::G2Affine>>,
     pub v_t: Arc<Vec<E::G2Affine>>,
 
-    pub v: E::G2Affine,
+    pub minus_v: E::G2Affine,
 }
 
 impl<E: Pairing> KZH4UniversalParams<E> {
@@ -38,7 +38,7 @@ impl<E: Pairing> KZH4UniversalParams<E> {
         v_y: Arc<Vec<E::G2Affine>>,
         v_z: Arc<Vec<E::G2Affine>>,
         v_t: Arc<Vec<E::G2Affine>>,
-        v: E::G2Affine,
+        minus_v: E::G2Affine,
     ) -> Self {
         Self {
             num_vars_x,
@@ -53,7 +53,7 @@ impl<E: Pairing> KZH4UniversalParams<E> {
             v_y,
             v_z,
             v_t,
-            v,
+            minus_v,
         }
     }
     pub fn get_num_vars_x(&self) -> usize {
@@ -92,8 +92,8 @@ impl<E: Pairing> KZH4UniversalParams<E> {
     pub fn get_v_t(&self) -> Arc<Vec<E::G2Affine>> {
         self.v_t.clone()
     }
-    pub fn get_v(&self) -> E::G2Affine {
-        self.v
+    pub fn get_minus_v(&self) -> E::G2Affine {
+        self.minus_v
     }
 }
 
@@ -169,7 +169,7 @@ pub struct KZH4VerifierParam<E: Pairing> {
     v_y: Arc<Vec<E::G2Affine>>,
     v_z: Arc<Vec<E::G2Affine>>,
     v_t: Arc<Vec<E::G2Affine>>,
-    v: E::G2Affine,
+    minus_v: E::G2Affine,
 }
 
 impl<E: Pairing> KZH4VerifierParam<E> {
@@ -183,7 +183,7 @@ impl<E: Pairing> KZH4VerifierParam<E> {
         v_y: Arc<Vec<E::G2Affine>>,
         v_z: Arc<Vec<E::G2Affine>>,
         v_t: Arc<Vec<E::G2Affine>>,
-        v: E::G2Affine,
+        minus_v: E::G2Affine,
     ) -> Self {
         Self {
             num_vars_x,
@@ -195,7 +195,7 @@ impl<E: Pairing> KZH4VerifierParam<E> {
             v_y,
             v_z,
             v_t,
-            v,
+            minus_v,
         }
     }
 
@@ -226,8 +226,8 @@ impl<E: Pairing> KZH4VerifierParam<E> {
     pub fn get_v_t(&self) -> Arc<Vec<E::G2Affine>> {
         self.v_t.clone()
     }
-    pub fn get_v(&self) -> E::G2Affine {
-        self.v
+    pub fn get_minus_v(&self) -> E::G2Affine {
+        self.minus_v
     }
 }
 
@@ -269,7 +269,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
             self.v_y.clone(),
             self.v_z.clone(),
             self.v_t.clone(),
-            self.v,
+            self.minus_v,
         )
     }
 
@@ -449,7 +449,7 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
             v_y: v_y_arc,
             v_z: v_z_arc,
             v_t: v_t_arc,
-            v: v_proj.into(), // Convert final v to affine if KZH4UniversalParams expects affine
+            minus_v: (-v_proj).into(), // Convert final v to affine if KZH4UniversalParams expects affine
         })
     }
 

@@ -129,11 +129,11 @@ pub const PARAMS: &[Params] = &{
 
     const fn build_light() -> [Params; PARAMS_ARRAY_SIZE] {
         // Adjusted size based on calculation
-        let mut out = [Params(0, 0, 0); PARAMS_ARRAY_SIZE]; // Initialize with dummy
+        let mut out = [Params(4, 0, 0); PARAMS_ARRAY_SIZE]; // Initialize with dummy
         let mut i = 0;
 
         let mut n = 3; // log_capacity
-        while n <= 33 {
+        while n <= 32 {
             let mut k = 0; // log_update_size
             // k <= n - 2 means k can go up to n-2.
             // Number of values for k is (n-2) - 0 + 1 = n-1.

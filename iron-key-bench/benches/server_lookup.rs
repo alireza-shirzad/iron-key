@@ -48,7 +48,7 @@ fn server_with_updates(
     IronServer<Bn254, KZH4<Bn254>, IronLabel>,
     DummyBB<Bn254, KZH4<Bn254>>,
 ) {
-    const BATCH_SIZE: usize = 1; // This BATCH_SIZE is for the initial updates, not log_capacity
+    let  batch_size: usize = 1<< (log_capacity-1); // This BATCH_SIZE is for the initial updates, not log_capacity
 
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
@@ -59,15 +59,15 @@ fn server_with_updates(
 
     // Build `BATCH_SIZE` distinct (label, value) pairs for initial server state.
     // Note: Using a constant BATCH_SIZE = 1 here for these updates.
-    let updates: HashMap<IronLabel, Fr> = (1..=BATCH_SIZE)
+    let updates: HashMap<IronLabel, Fr> = (1..=batch_size)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
 
-    // Perform initial updates if required by the benchmark scenario
-    if BATCH_SIZE > 0 { // Only update if BATCH_SIZE is meaningful
+    // // Perform initial updates if required by the benchmark scenario
+    // if batch_size > 0 { // Only update if BATCH_SIZE is meaningful
         server.update_reg(&updates, &mut bb).unwrap(); // Assuming update_reg is part of your server's API
         server.update_keys(&updates, &mut bb).unwrap();
-    }
+    // }
     
     (server, bb)
 }
