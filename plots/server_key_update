@@ -403,3 +403,5 @@
 │     ├─ [log(capacity)=29, log(|update|)=25, log(init-update)=3]  1.541 m       │ 1.541 m       │ 1.541 m       │ 1.541 m       │ 1       │ 1
 │     ├─ [log(capacity)=29, log(|update|)=26, log(init-update)=3]  3.405 m       │ 3.405 m       │ 3.405 m       │ 3.405 m       │ 1       │ 1
 │     ├─ [log(capacity)=29, log(|update|)=27, log(init-update)=3]  7.569 m       │ 7.569 m       │ 7.569 m       │ 7.569 m       │ 1       │ 1
+|     ├─ [log(capacity)=32, log(|update|)=29, log(init-update)=2]  37.32 m       │ 37.32 m       │ 37.32 m       │ 37.32 m       │ 1       │ 1 
+|     |- [log(capacity)=32, log(|update|)=30, log(init-update)=2]  1.436 h       │ 1.436 h       │ 1.436 h       │ 1.436 h       │ 1       │ 1
