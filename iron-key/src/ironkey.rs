@@ -77,7 +77,6 @@ where
     type Label = T;
 
     fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
-        println!("Yet another IronKey setup");
         let timer = start_timer!(|| "IronKey::setup");
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();
@@ -86,6 +85,7 @@ where
             .unwrap()
             .join(format!("../srs/srs_{}.bin", num_vars));
         let srs = if srs_path.exists() {
+            eprintln!("Loading SRS");
             let mut buffer = Vec::new();
             BufReader::new(File::open(&srs_path).unwrap())
                 .read_to_end(&mut buffer)
@@ -94,6 +94,7 @@ where
                 panic!("Failed to deserialize SRS from {:?}", srs_path);
             })
         } else {
+            eprintln!("Computing SRS");
             let mut rng = test_rng();
             let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
             let mut serialized = Vec::new();

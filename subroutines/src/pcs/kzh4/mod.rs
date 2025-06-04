@@ -112,6 +112,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             },
         }
     }
+
     fn comp_aux(
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
@@ -119,182 +120,108 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
     ) -> Result<Self::Aux, PCSError> {
         let prover_param = prover_param.borrow();
 
+        // degrees of each variable block
         let degree_x = 1 << prover_param.get_num_vars_x();
         let degree_y = 1 << prover_param.get_num_vars_y();
         let degree_z = 1 << prover_param.get_num_vars_z();
         let degree_t = 1 << prover_param.get_num_vars_t();
 
-        // ─── compute d_x and d_y in parallel when Rayon is available ────────────
-        #[cfg(feature = "parallel")]
-        use rayon::prelude::*;
-
-        let (d_x, d_y) = {
-            #[cfg(feature = "parallel")]
-            {
-                rayon::join(
-                    || {
-                        // ---------- d_x ----------
-                        match polynomial {
-                            DenseOrSparseMLE::Dense(poly) => (0..degree_x)
-                                .into_par_iter()
-                                .map(|i| {
-                                    E::G1::msm_unchecked(
-                                        &prover_param.get_h_yzt(),
-                                        &Self::get_dense_partial_evaluation_for_boolean_input(
-                                            poly,
-                                            i,
-                                            degree_y * degree_z * degree_t,
-                                        ),
-                                    )
-                                    .into()
-                                })
-                                .collect::<Vec<_>>(),
-                            DenseOrSparseMLE::Sparse(poly) => (0..degree_x)
-                                .into_par_iter()
-                                .map(|i| {
-                                    let slice =
-                                        Self::get_sparse_partial_evaluation_for_boolean_input(
-                                            poly,
-                                            i,
-                                            degree_y * degree_z * degree_t,
-                                        );
-                                    if slice.is_empty() {
-                                        return E::G1Affine::zero();
-                                    }
-
-                                    let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                                    let mut scalars =
-                                        Vec::<E::ScalarField>::with_capacity(slice.len());
-                                    for (&idx, coeff) in slice.iter() {
-                                        bases.push(prover_param.get_h_yzt()[idx]);
-                                        scalars.push(*coeff);
-                                    }
-                                    E::G1::msm_unchecked(&bases, &scalars).into()
-                                })
-                                .collect(),
-                        }
-                    },
-                    || {
-                        // ---------- d_y ----------
-                        match polynomial {
-                            DenseOrSparseMLE::Dense(poly) => (0..degree_x * degree_y)
-                                .into_par_iter()
-                                .map(|i| {
-                                    E::G1::msm_unchecked(
-                                        &prover_param.get_h_zt(),
-                                        &Self::get_dense_partial_evaluation_for_boolean_input(
-                                            poly,
-                                            i,
-                                            degree_z * degree_t,
-                                        ),
-                                    )
-                                    .into()
-                                })
-                                .collect::<Vec<_>>(),
-                            DenseOrSparseMLE::Sparse(poly) => (0..degree_x * degree_y)
-                                .into_par_iter()
-                                .map(|i| {
-                                    let slice =
-                                        Self::get_sparse_partial_evaluation_for_boolean_input(
-                                            poly,
-                                            i,
-                                            degree_z * degree_t,
-                                        );
-                                    if slice.is_empty() {
-                                        return E::G1Affine::zero();
-                                    }
-
-                                    let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                                    let mut scalars =
-                                        Vec::<E::ScalarField>::with_capacity(slice.len());
-                                    for (&idx, coeff) in slice.iter() {
-                                        bases.push(prover_param.get_h_zt()[idx]);
-                                        scalars.push(*coeff);
-                                    }
-                                    E::G1::msm_unchecked(&bases, &scalars).into()
-                                })
-                                .collect(),
-                        }
-                    },
+        // helper closures ────────────────────────────────────────────────────────
+        let eval_dx = |i: usize| -> E::G1Affine {
+            match polynomial {
+                DenseOrSparseMLE::Dense(poly) => E::G1::msm_unchecked(
+                    &prover_param.get_h_yzt(),
+                    &Self::get_dense_partial_evaluation_for_boolean_input(
+                        poly,
+                        i,
+                        degree_y * degree_z * degree_t,
+                    ),
                 )
-            }
-
-            #[cfg(not(feature = "parallel"))]
-            {
-                // ───────────── sequential fallback ─────────────
-                let d_x = match polynomial {
-                    DenseOrSparseMLE::Dense(poly) => (0..degree_x)
-                        .map(|i| {
-                            E::G1::msm_unchecked(
-                                prover_param.get_h_yzt(),
-                                &Self::get_dense_partial_evaluation_for_boolean_input(
-                                    poly,
-                                    i,
-                                    degree_y * degree_z * degree_t,
-                                ),
-                            )
-                            .into()
-                        })
-                        .collect::<Vec<_>>(),
-                    DenseOrSparseMLE::Sparse(poly) => (0..degree_x)
-                        .map(|i| {
-                            let slice = Self::get_sparse_partial_evaluation_for_boolean_input(
-                                poly,
-                                i,
-                                degree_y * degree_z * degree_t,
-                            );
-                            if slice.is_empty() {
-                                return E::G1Affine::zero();
-                            }
-                            let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                            let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
-                            for (&idx, coeff) in slice.iter() {
-                                bases.push(prover_param.get_h_yzt()[idx]);
-                                scalars.push(*coeff);
-                            }
-                            E::G1::msm_unchecked(&bases, &scalars).into()
-                        })
-                        .collect(),
-                };
-
-                let d_y = match polynomial {
-                    DenseOrSparseMLE::Dense(poly) => (0..degree_x * degree_y)
-                        .map(|i| {
-                            E::G1::msm_unchecked(
-                                prover_param.get_h_zt(),
-                                &Self::get_dense_partial_evaluation_for_boolean_input(
-                                    poly,
-                                    i,
-                                    degree_z * degree_t,
-                                ),
-                            )
-                            .into()
-                        })
-                        .collect::<Vec<_>>(),
-                    DenseOrSparseMLE::Sparse(poly) => (0..degree_x * degree_y)
-                        .map(|i| {
-                            let slice = Self::get_sparse_partial_evaluation_for_boolean_input(
-                                poly,
-                                i,
-                                degree_z * degree_t,
-                            );
-                            if slice.is_empty() {
-                                return E::G1Affine::zero();
-                            }
-                            let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                            let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
-                            for (&idx, coeff) in slice.iter() {
-                                bases.push(prover_param.get_h_zt()[idx]);
-                                scalars.push(*coeff);
-                            }
-                            E::G1::msm_unchecked(&bases, &scalars).into()
-                        })
-                        .collect(),
-                };
-
-                (d_x, d_y)
+                .into(),
+                DenseOrSparseMLE::Sparse(poly) => {
+                    let slice = Self::get_sparse_partial_evaluation_for_boolean_input(
+                        poly,
+                        i,
+                        degree_y * degree_z * degree_t,
+                    );
+                    if slice.is_empty() {
+                        return E::G1Affine::zero();
+                    }
+                    let (mut bases, mut scalars) = (
+                        Vec::with_capacity(slice.len()),
+                        Vec::with_capacity(slice.len()),
+                    );
+                    for (idx, coeff) in slice {
+                        bases.push(prover_param.get_h_yzt()[idx]);
+                        scalars.push(coeff);
+                    }
+                    E::G1::msm_unchecked(&bases, &scalars).into()
+                },
             }
         };
+
+        let eval_dy = |i: usize| -> E::G1Affine {
+            match polynomial {
+                DenseOrSparseMLE::Dense(poly) => E::G1::msm_unchecked(
+                    &prover_param.get_h_zt(),
+                    &Self::get_dense_partial_evaluation_for_boolean_input(
+                        poly,
+                        i,
+                        degree_z * degree_t,
+                    ),
+                )
+                .into(),
+                DenseOrSparseMLE::Sparse(poly) => {
+                    let slice = Self::get_sparse_partial_evaluation_for_boolean_input(
+                        poly,
+                        i,
+                        degree_z * degree_t,
+                    );
+                    if slice.is_empty() {
+                        return E::G1Affine::zero();
+                    }
+                    let (mut bases, mut scalars) = (
+                        Vec::with_capacity(slice.len()),
+                        Vec::with_capacity(slice.len()),
+                    );
+                    for (idx, coeff) in slice {
+                        bases.push(prover_param.get_h_zt()[idx]);
+                        scalars.push(coeff);
+                    }
+                    E::G1::msm_unchecked(&bases, &scalars).into()
+                },
+            }
+        };
+
+        // allocate result buffers
+        let mut d_x = vec![E::G1Affine::zero(); degree_x];
+        let mut d_y = vec![E::G1Affine::zero(); degree_x * degree_y];
+
+        // fill them (parallel feature ⇒ two nested levels of parallelism)
+        #[cfg(feature = "parallel")]
+        join(
+            || {
+                cfg_iter_mut!(d_x)
+                    .enumerate()
+                    .for_each(|(i, slot)| *slot = eval_dx(i));
+            },
+            || {
+                cfg_iter_mut!(d_y)
+                    .enumerate()
+                    .for_each(|(i, slot)| *slot = eval_dy(i));
+            },
+        );
+
+        #[cfg(not(feature = "parallel"))]
+        {
+            cfg_iter_mut!(d_x)
+                .enumerate()
+                .for_each(|(i, slot)| *slot = eval_dx(i));
+
+            cfg_iter_mut!(d_y)
+                .enumerate()
+                .for_each(|(i, slot)| *slot = eval_dy(i));
+        }
 
         Ok(KZH4AuxInfo::new(d_x, d_y))
     }
@@ -304,14 +231,88 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         polynomial: &Self::Polynomial,
         point: &Self::Point,
     ) -> Result<(KZH4OpeningProof<E>, Self::Evaluation), PCSError> {
-        match polynomial {
-            DenseOrSparseMLE::Dense(poly) => {
-                Self::open_dense_internal(prover_param.borrow(), poly, point)
-            },
-            DenseOrSparseMLE::Sparse(poly) => {
-                Self::open_sparse_internal(prover_param.borrow(), poly, point)
-            },
-        }
+        let prover_param = prover_param.borrow();
+        let len = prover_param.get_num_vars_x()
+            + prover_param.get_num_vars_y()
+            + prover_param.get_num_vars_z()
+            + prover_param.get_num_vars_t();
+
+        assert_eq!(polynomial.num_vars(), len);
+
+        let split_input = Self::split_input(
+            prover_param.get_num_vars_x(),
+            prover_param.get_num_vars_y(),
+            prover_param.get_num_vars_z(),
+            prover_param.get_num_vars_t(),
+            point,
+            E::ScalarField::ZERO,
+        );
+
+        let d_z = (0..prover_param.get_num_vars_z())
+            .map(|i| match polynomial {
+                DenseOrSparseMLE::Dense(dense_poly) => {
+                    let scalars = Self::get_dense_partial_evaluation_for_boolean_input(
+                        &dense_poly.fix_variables(
+                            [split_input[0].as_slice(), split_input[1].as_slice()]
+                                .concat()
+                                .as_slice(),
+                        ),
+                        i,
+                        prover_param.get_num_vars_t(),
+                    );
+                    E::G1::msm_unchecked(prover_param.get_h_t().as_slice(), &scalars)
+                },
+                DenseOrSparseMLE::Sparse(sparse_poly) => {
+                    let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
+                        &sparse_poly.fix_variables(
+                            [split_input[0].as_slice(), split_input[1].as_slice()]
+                                .concat()
+                                .as_slice(),
+                        ),
+                        i,
+                        prover_param.get_num_vars_t(),
+                    );
+                    let indices = scalars_map.keys().cloned().collect::<Vec<_>>();
+                    let mut bases = vec![E::G1Affine::zero(); indices.len()];
+                    cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
+                        *base = prover_param.get_h_t()[indices[i]];
+                    });
+                    let scalars = scalars_map.values().cloned().collect::<Vec<_>>();
+                    E::G1::msm_unchecked(&bases, &scalars)
+                },
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(
+            split_input[0].len(),
+            prover_param.get_num_vars_x(),
+            "wrong length"
+        );
+        assert_eq!(
+            split_input[1].len(),
+            prover_param.get_num_vars_y(),
+            "wrong length"
+        );
+        assert_eq!(
+            split_input[2].len(),
+            prover_param.get_num_vars_z(),
+            "wrong length"
+        );
+
+        // compute the partial evaluation of the polynomial
+        let f_star = polynomial.fix_variables(
+            {
+                let mut res = Vec::new();
+                res.extend_from_slice(split_input[0].as_slice());
+                res.extend_from_slice(split_input[1].as_slice());
+                res.extend_from_slice(split_input[2].as_slice());
+                res
+            }
+            .as_slice(),
+        );
+        let evaluation = f_star.evaluate(&split_input[3]);
+
+        Ok((KZH4OpeningProof::new(d_z, f_star), evaluation))
     }
 
     fn verify(
@@ -384,294 +385,6 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
 }
 
 impl<E: Pairing> KZH4<E> {
-    fn open_dense_internal(
-        prover_param: &KZH4ProverParam<E>,
-        polynomial: &DenseMultilinearExtension<E::ScalarField>,
-        point: &[E::ScalarField],
-    ) -> Result<
-        (
-            KZH4OpeningProof<E>,
-            <KZH4<E> as PolynomialCommitmentScheme<E>>::Evaluation,
-        ),
-        PCSError,
-    > {
-        let timer = start_timer!(|| "KZH::OpenInternal");
-
-        let split_input = Self::split_input(
-            prover_param.get_num_vars_x(),
-            prover_param.get_num_vars_y(),
-            prover_param.get_num_vars_z(),
-            prover_param.get_num_vars_t(),
-            point,
-            E::ScalarField::ZERO,
-        );
-
-        let (d_z, f_star) = {
-            #[cfg(feature = "parallel")]
-            {
-                // Rayon’s `join` runs the two closures on separate threads.
-                rayon::join(
-                    || {
-                        // ---- compute d_z (parallel over the z-hypercube) -----------
-                        (0..(1 << prover_param.get_num_vars_z()))
-                    .into_par_iter()               // data-parallel loop
-                    .map(|i| {
-                        E::G1::msm_unchecked(
-                            &prover_param.get_h_t(),
-                            Self::get_dense_partial_evaluation_for_boolean_input(
-                                &polynomial.fix_variables(
-                                    [split_input[0].as_slice(), split_input[1].as_slice()]
-                                        .concat()
-                                        .as_slice(),
-                                ),
-                                i,
-                                1 << prover_param.get_num_vars_t(),
-                            )
-                            .as_slice(),
-                        )
-                    })
-                    .collect::<Vec<_>>()
-                    },
-                    || {
-                        // ---- compute f_star (independent of d_z) -------------------
-                        polynomial.fix_variables(
-                            {
-                                let mut tmp = Vec::new();
-                                tmp.extend_from_slice(split_input[0].as_slice());
-                                tmp.extend_from_slice(split_input[1].as_slice());
-                                tmp.extend_from_slice(split_input[2].as_slice());
-                                tmp
-                            }
-                            .as_slice(),
-                        )
-                    },
-                )
-            }
-
-            #[cfg(not(feature = "parallel"))]
-            {
-                // ---- sequential fallback ------------------------------------------
-                let d_z = (0..(1 << prover_param.get_num_vars_z()))
-                    .map(|i| {
-                        E::G1::msm_unchecked(
-                            prover_param.get_h_t(),
-                            Self::get_dense_partial_evaluation_for_boolean_input(
-                                &polynomial.fix_variables(
-                                    [split_input[0].as_slice(), split_input[1].as_slice()]
-                                        .concat()
-                                        .as_slice(),
-                                ),
-                                i,
-                                1 << prover_param.get_num_vars_t(),
-                            )
-                            .as_slice(),
-                        )
-                    })
-                    .collect::<Vec<_>>();
-
-                let f_star = polynomial.fix_variables(
-                    {
-                        let mut tmp = Vec::new();
-                        tmp.extend_from_slice(split_input[0].as_slice());
-                        tmp.extend_from_slice(split_input[1].as_slice());
-                        tmp.extend_from_slice(split_input[2].as_slice());
-                        tmp
-                    }
-                    .as_slice(),
-                );
-
-                (d_z, f_star)
-            }
-        };
-
-        debug_assert_eq!(
-            split_input[0].len(),
-            prover_param.get_num_vars_x(),
-            "wrong length"
-        );
-        debug_assert_eq!(
-            split_input[1].len(),
-            prover_param.get_num_vars_y(),
-            "wrong length"
-        );
-        debug_assert_eq!(
-            split_input[2].len(),
-            prover_param.get_num_vars_z(),
-            "wrong length"
-        );
-        end_timer!(timer);
-        Ok((
-            KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Dense(f_star)),
-            polynomial.evaluate(&point.to_vec()),
-        ))
-    }
-
-    fn open_sparse_internal(
-        // Replace <E: PairingEngine> with actual trait bounds if different
-        prover_param: &KZH4ProverParam<E>,
-        polynomial: &SparseMultilinearExtension<E::ScalarField>,
-        point: &[E::ScalarField],
-    ) -> Result<
-        (
-            KZH4OpeningProof<E>,
-            <KZH4<E> as PolynomialCommitmentScheme<E>>::Evaluation,
-        ),
-        PCSError,
-    > {
-        // Common initial setup
-        let split_input = KZH4::<E>::split_input(
-            // Assuming Self in original was KZH4<E> context
-            prover_param.get_num_vars_x(),
-            prover_param.get_num_vars_y(),
-            prover_param.get_num_vars_z(),
-            prover_param.get_num_vars_t(),
-            point,
-            E::ScalarField::ZERO,
-        );
-
-        assert_eq!(
-            split_input[0].len(),
-            prover_param.get_num_vars_x(),
-            "wrong length"
-        );
-        assert_eq!(
-            split_input[1].len(),
-            prover_param.get_num_vars_y(),
-            "wrong length"
-        );
-        assert_eq!(
-            split_input[2].len(),
-            prover_param.get_num_vars_z(),
-            "wrong length"
-        );
-
-        let h_t = prover_param.get_h_t();
-        let deg_t = 1 << prover_param.get_num_vars_t();
-        let num_z = 1 << prover_param.get_num_vars_z();
-
-        // Conditional compilation for parallel vs. sequential execution
-        #[cfg(feature = "parallel")]
-        {
-            let timer = start_timer!(|| "KZH::OpenInternal-sparse-parallel");
-
-            // These three computations can be done in parallel
-            let (d_z_computation_result, (f_star_computation_result, evaluation_result)) = join(
-                || {
-                    // Closure for d_z computation
-                    (0..num_z)
-                    .into_par_iter() // Parallel iterator
-                    .map(|i| {
-                        let xy_vars_to_fix = [split_input[0].as_slice(), split_input[1].as_slice()].concat();
-                        let xy_fixed = polynomial.fix_variables(xy_vars_to_fix.as_slice());
-                        let slice = KZH4::<E>::get_sparse_partial_evaluation_for_boolean_input(&xy_fixed, i, deg_t);
-
-                        if slice.is_empty() {
-                            return E::G1::zero();
-                        }
-
-                        let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                        let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
-                        for (&local_idx, coeff) in slice.iter() {
-                            bases.push(h_t[local_idx]);
-                            scalars.push(*coeff);
-                        }
-                        E::G1::msm_unchecked(&bases, &scalars)
-                    })
-                    .collect::<Vec<E::G1>>()
-                },
-                || {
-                    // Closure for (f_star_computation and evaluation_computation)
-                    join(
-                        || {
-                            // Closure for f_star computation
-                            let mut vars_to_fix = Vec::with_capacity(
-                                split_input[0].len() + split_input[1].len() + split_input[2].len(),
-                            );
-                            vars_to_fix.extend_from_slice(split_input[0].as_slice());
-                            vars_to_fix.extend_from_slice(split_input[1].as_slice());
-                            vars_to_fix.extend_from_slice(split_input[2].as_slice());
-                            polynomial.fix_variables(vars_to_fix.as_slice())
-                        },
-                        || {
-                            // Closure for evaluation computation
-                            polynomial.evaluate(&point.to_vec())
-                        },
-                    )
-                },
-            );
-
-            let d_z = d_z_computation_result;
-            let f_star = f_star_computation_result;
-            let evaluation = evaluation_result;
-
-            end_timer!(timer);
-
-            Ok((
-                KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Sparse(f_star)),
-                evaluation,
-            ))
-        }
-        #[cfg(not(feature = "parallel"))]
-        {
-            let timer = start_timer!(|| "KZH::OpenInternal-sparse-sequential");
-
-            // ───── build the vector d_z with a *single* MSM per z-assignment ─────────
-            let d_z: Vec<E::G1> = (0..num_z)
-                .map(|i| {
-                    // 1. fix x ∥ y variables
-                    let xy_fixed = polynomial.fix_variables(
-                        [split_input[0].as_slice(), split_input[1].as_slice()]
-                            .concat()
-                            .as_slice(),
-                    );
-
-                    // 2. sparse slice over the t-hypercube for this z-assignment
-                    let slice = KZH4::<E>::get_sparse_partial_evaluation_for_boolean_input(
-                        &xy_fixed, i, deg_t,
-                    );
-
-                    if slice.is_empty() {
-                        // all scalars are zero → MSM result is identity
-                        return E::G1::zero();
-                    }
-
-                    // 3. build trimmed MSM operands
-                    let mut bases = Vec::<E::G1Affine>::with_capacity(slice.len());
-                    let mut scalars = Vec::<E::ScalarField>::with_capacity(slice.len());
-
-                    for (&local_idx, coeff) in slice.iter() {
-                        bases.push(h_t[local_idx]); // copy the needed basis element
-                        scalars.push(*coeff);
-                    }
-
-                    // 4. compute MSM
-                    E::G1::msm_unchecked(&bases, &scalars)
-                })
-                .collect();
-
-            // ───── fully fix x, y, z to get f★ (still over t variables) ───────────────
-            let f_star = polynomial.fix_variables(
-                {
-                    let mut tmp = Vec::new();
-                    tmp.extend_from_slice(split_input[0].as_slice());
-                    tmp.extend_from_slice(split_input[1].as_slice());
-                    tmp.extend_from_slice(split_input[2].as_slice());
-                    tmp
-                }
-                .as_slice(),
-            );
-
-            // Compute evaluation (moved before end_timer! for consistency)
-            let evaluation = polynomial.evaluate(&point.to_vec());
-
-            end_timer!(timer);
-
-            Ok((
-                KZH4OpeningProof::new(d_z, DenseOrSparseMLE::Sparse(f_star)),
-                evaluation,
-            ))
-        }
-    }
     pub fn get_dense_partial_evaluation_for_boolean_input(
         dense_poly: &DenseMultilinearExtension<E::ScalarField>,
         index: usize,
@@ -685,17 +398,16 @@ impl<E: Pairing> KZH4<E> {
         index: usize,
         n: usize,
     ) -> BTreeMap<usize, E::ScalarField> {
-        let start = n * index; // first global index we want
-        let end = start + n; // one-past-last global index
+        let start = n * index; // first global idx we need
+        let end = start + n; // one-past-last idx
 
-        // Collect every (global_idx, value) that lives in [start, end),
-        // shift the index so that it becomes 0-based inside the slice.
         sparse_poly
         .evaluations
-        .range(start..end)              // &BTreeMap` supports range queries
-        .map(|(global_idx, value)| {
+        // `start .. end` is start-inclusive, end-exclusive – same as the dense slice
+        .range(start .. end)
+        .map(|(&global_idx, &val)| {
             let local_idx = global_idx - start; // 0 ≤ local_idx < n
-            (local_idx, *value)
+            (local_idx, val)
         })
         .collect()
     }
