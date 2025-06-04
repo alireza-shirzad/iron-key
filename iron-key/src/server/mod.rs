@@ -26,7 +26,7 @@ use std::{
     ops::{Add, Sub},
     sync::Arc,
 };
-use subroutines::{poly::DenseOrSparseMLE, PolyIOP, PolynomialCommitmentScheme, ZeroCheck};
+use subroutines::{PolyIOP, PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
 pub struct IronServer<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -130,6 +130,7 @@ where
                 // The new aux is the saved one plus the diff aux --> Save the aux
                 let last_label_aux = last_reg_message.get_label_aux();
                 let new_label_aux = last_label_aux.clone() + diff_label_aux;
+                let batched_aux = last_label_aux.clone() + last_label_aux.clone();
                 // Intiate the transcipt for the zerocheck
                 let mut transcript =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
@@ -168,6 +169,7 @@ where
                     self.key.get_pcs_prover_param(),
                     &batched_poly,
                     &zerocheck_proof.point,
+                    &batched_aux,
                 );
                 let iron_update_proof =
                     IronUpdateProof::new(zerocheck_proof, zerocheck_aux, update_proof.unwrap().0);
@@ -213,7 +215,8 @@ where
             },
         );
         #[cfg(not(feature = "parallel"))]
-        let diff_value_com = MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap();
+        let diff_value_com =
+            MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap();
         #[cfg(not(feature = "parallel"))]
         let diff_value_aux = MvPCS::comp_aux(
             self.key.get_pcs_prover_param(),
@@ -272,11 +275,13 @@ where
         #[cfg(not(feature = "parallel"))]
         let batched_poly = label_mle_clone + value_mle_clone;
         #[cfg(not(feature = "parallel"))]
-        let batched_aux = last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone();
+        let batched_aux =
+            last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone();
         let update_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
             &batched_poly,
             &index_boolean,
+            &batched_aux,
         )
         .unwrap();
         Ok(IronLookupProof::new(

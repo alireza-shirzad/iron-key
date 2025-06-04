@@ -1,5 +1,6 @@
 pub mod srs;
 pub mod structs;
+use arithmetic::eq_eval;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 #[cfg(test)]
@@ -29,7 +30,7 @@ use rayon::join;
 use rayon::prelude::*;
 
 use srs::KZH4ProverParam;
-use std::{borrow::Borrow, marker::PhantomData};
+use std::{borrow::Borrow, marker::PhantomData, ops::Neg};
 use structs::{KZH4AuxInfo, KZH4BatchOpeningProof, KZH4Commitment, KZH4OpeningProof};
 // use batching::{batch_verify_internal, multi_open_internal};
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
@@ -160,7 +161,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             }
         };
 
-        let eval_dy = |i: usize| -> E::G1Affine {
+        let eval_dxy = |i: usize| -> E::G1Affine {
             match polynomial {
                 DenseOrSparseMLE::Dense(poly) => E::G1::msm_unchecked(
                     &prover_param.get_h_zt(),
@@ -195,7 +196,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
 
         // allocate result buffers
         let mut d_x = vec![E::G1Affine::zero(); degree_x];
-        let mut d_y = vec![E::G1Affine::zero(); degree_x * degree_y];
+        let mut d_xy = vec![E::G1Affine::zero(); degree_x * degree_y];
 
         // fill them (parallel feature ⇒ two nested levels of parallelism)
         #[cfg(feature = "parallel")]
@@ -206,9 +207,9 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                     .for_each(|(i, slot)| *slot = eval_dx(i));
             },
             || {
-                cfg_iter_mut!(d_y)
+                cfg_iter_mut!(d_xy)
                     .enumerate()
-                    .for_each(|(i, slot)| *slot = eval_dy(i));
+                    .for_each(|(i, slot)| *slot = eval_dxy(i));
             },
         );
 
@@ -220,16 +221,17 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
 
             cfg_iter_mut!(d_y)
                 .enumerate()
-                .for_each(|(i, slot)| *slot = eval_dy(i));
+                .for_each(|(i, slot)| *slot = eval_dxy(i));
         }
 
-        Ok(KZH4AuxInfo::new(d_x, d_y))
+        Ok(KZH4AuxInfo::new(d_x, d_xy))
     }
 
     fn open(
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
+        aux: &Self::Aux,
     ) -> Result<(KZH4OpeningProof<E>, Self::Evaluation), PCSError> {
         let prover_param = prover_param.borrow();
         let len = prover_param.get_num_vars_x()
@@ -260,7 +262,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                         i,
                         prover_param.get_num_vars_t(),
                     );
-                    E::G1::msm_unchecked(prover_param.get_h_t().as_slice(), &scalars)
+                    E::G1::msm_unchecked(prover_param.get_h_t().as_slice(), &scalars).into()
                 },
                 DenseOrSparseMLE::Sparse(sparse_poly) => {
                     let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
@@ -278,7 +280,26 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                         *base = prover_param.get_h_t()[indices[i]];
                     });
                     let scalars = scalars_map.values().cloned().collect::<Vec<_>>();
-                    E::G1::msm_unchecked(&bases, &scalars)
+                    E::G1::msm_unchecked(&bases, &scalars).into()
+                },
+            })
+            .collect::<Vec<_>>();
+        let d_y = (0..1 << prover_param.get_num_vars_y())
+            .map(|i| match polynomial {
+                DenseOrSparseMLE::Dense(_) => {
+                    let evals_vec = EqPolynomial::new(split_input[0].clone()).evals();
+                    let scalars = evals_vec.as_slice();
+                    let bases = &aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i
+                        ..(1 << prover_param.get_num_vars_x()) * i
+                            + (1 << prover_param.get_num_vars_x())];
+                    E::G1::msm_unchecked(bases, &scalars).into()
+                },
+                DenseOrSparseMLE::Sparse(_) => {
+                    // TODO: Check if this is correct
+                    let bit_index = split_input[0].iter().fold(0usize, |acc, b| {
+                        acc << 1 | if *b == E::ScalarField::ONE { 1 } else { 0 }
+                    });
+                    aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index].into()
                 },
             })
             .collect::<Vec<_>>();
@@ -312,7 +333,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         );
         let evaluation = f_star.evaluate(&split_input[3]);
 
-        Ok((KZH4OpeningProof::new(d_z, f_star), evaluation))
+        Ok((KZH4OpeningProof::new(d_y, d_z, f_star), evaluation))
     }
 
     fn verify(
@@ -332,57 +353,75 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             E::ScalarField::ZERO,
         );
 
-        // making sure D_x is well-formatted
+        // First pairing check
         let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d_x());
         let v_x = verifier_param.get_v_x();
         let g2_pairing_elements =
             std::iter::once(verifier_param.get_minus_v()).chain(v_x.iter().copied());
 
         let p1 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
+        ///////////////////////////////////////
 
-        let concatenated: Vec<E::ScalarField> = split_input[0]
+        // Second pairing check
+
+        let new_c = E::G1::msm(
+            aux.get_d_x().to_vec().as_slice(),
+            EqPolynomial::new(split_input[0].clone()).evals().as_slice(),
+        )
+        .unwrap()
+        .into();
+
+        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_y());
+        let v_y = verifier_param.get_v_y();
+        let g2_pairing_elements =
+            std::iter::once(verifier_param.get_minus_v()).chain(v_y.iter().copied());
+
+        let p2 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
+
+        ///////////////////////////////////////////////////////////////////////////
+
+        // Third pairing check
+
+        let new_c = E::G1::msm(
+            proof.get_d_y().to_vec().as_slice(),
+            EqPolynomial::new(split_input[1].clone()).evals().as_slice(),
+        )
+        .unwrap()
+        .into();
+
+        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_z());
+        let v_z = verifier_param.get_v_z();
+        let g2_pairing_elements =
+            std::iter::once(verifier_param.get_minus_v()).chain(v_z.iter().copied());
+
+        let p3 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
+
+        // hyrax style opening check
+
+        let bases: Vec<E::G1Affine> = verifier_param
+            .get_h_t()
             .iter()
-            .chain(split_input[1].iter())
+            .chain(proof.get_d_z().iter())
             .cloned()
             .collect();
+        let scalars = proof
+            .get_f_star()
+            .to_evaluations()
+            .iter()
+            .cloned()
+            .chain(
+                EqPolynomial::new(split_input[2].clone())
+                    .evals()
+                    .into_iter()
+                    .map(|v| v.neg()),
+            )
+            .collect::<Vec<_>>();
+        let p4 = E::G1::msm_unchecked(&bases, &scalars) == E::G1::zero();
 
-        // making sure D_y is well formatted
-        let new_c = E::G1::msm(
-            aux.get_d_y().to_vec().as_slice(),
-            EqPolynomial::new(concatenated).evals().as_slice(),
-        )
-        .unwrap();
-
-        let lhs = E::multi_pairing(proof.get_d_z(), verifier_param.get_v_z().as_slice()).0;
-        let rhs = E::pairing(new_c, verifier_param.get_minus_v()).0;
-
-        let p2 = lhs == rhs;
-
-        // making sure f^star is well formatter
-        let lhs = E::G1::msm_unchecked(
-            verifier_param.get_h_t().as_slice(),
-            proof.get_f_star().to_evaluations().as_slice(),
-        );
-
-        let rhs = E::G1::msm(
-            proof
-                .get_d_z()
-                .iter()
-                .map(|e| (*e).into())
-                .collect::<Vec<_>>()
-                .as_slice(),
-            EqPolynomial::new(split_input[2].clone()).evals().as_slice(),
-        )
-        .unwrap();
-
-        let p3 = lhs == rhs;
-
-        // dbg!(split_input[3].len());
-        // dbg!(proof.get_f_star().num_vars());
-        // making sure the output of f_star and the given output are consistent
-        let p4 = proof.get_f_star().evaluate(&split_input[3]) == *value;
-        // Ok(p1 && p2 && p3 && p4)
-        Ok(true)
+        // Evaluation check
+        let p5 = proof.get_f_star().evaluate(&split_input[3]) == *value;
+        Ok(p1 && p2 && p3 && p4 && p5)
+        // Ok(true)
     }
 }
 

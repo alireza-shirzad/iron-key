@@ -103,6 +103,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
+        aux: &Self::Aux,
     ) -> Result<(Self::Proof, Self::Evaluation), PCSError>;
 
     /// Input a list of multilinear extensions, and a same number of points, and

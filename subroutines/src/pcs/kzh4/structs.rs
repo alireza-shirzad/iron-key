@@ -4,9 +4,9 @@ use crate::poly::DenseOrSparseMLE;
 use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
-use std::ops::Add;
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+use std::ops::Add;
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -83,18 +83,18 @@ impl<E: Pairing> KZH4Commitment<E> {
 #[derive(Debug, Derivative, CanonicalSerialize, CanonicalDeserialize, Clone, PartialEq, Eq)]
 pub struct KZH4AuxInfo<E: Pairing> {
     d_x: Vec<E::G1Affine>,
-    d_y: Vec<E::G1Affine>,
+    d_xy: Vec<E::G1Affine>,
 }
 
 impl<E: Pairing> KZH4AuxInfo<E> {
-    pub fn new(d_x: Vec<E::G1Affine>, d_y: Vec<E::G1Affine>) -> Self {
-        Self { d_x, d_y }
+    pub fn new(d_x: Vec<E::G1Affine>, d_xy: Vec<E::G1Affine>) -> Self {
+        Self { d_x, d_xy }
     }
     pub fn get_d_x(&self) -> Vec<E::G1Affine> {
         self.d_x.clone()
     }
-    pub fn get_d_y(&self) -> Vec<E::G1Affine> {
-        self.d_y.clone()
+    pub fn get_d_xy(&self) -> Vec<E::G1Affine> {
+        self.d_xy.clone()
     }
 }
 
@@ -102,7 +102,7 @@ impl<E: Pairing> Default for KZH4AuxInfo<E> {
     fn default() -> Self {
         KZH4AuxInfo {
             d_x: vec![E::G1Affine::zero(); 0],
-            d_y: vec![E::G1Affine::zero(); 0],
+            d_xy: vec![E::G1Affine::zero(); 0],
         }
     }
 }
@@ -113,10 +113,10 @@ impl<E: Pairing> Add for KZH4AuxInfo<E> {
     fn add(self, rhs: Self) -> Self::Output {
         // sanity-checks (optional)
         assert_eq!(self.d_x.len(), rhs.d_x.len());
-        assert_eq!(self.d_y.len(), rhs.d_y.len());
+        assert_eq!(self.d_xy.len(), rhs.d_xy.len());
 
         let len_x = self.d_x.len();
-        let len_y = self.d_y.len();
+        let len_y = self.d_xy.len();
         let mut all = vec![E::G1Affine::zero(); len_x + len_y];
 
         // --- single parallel loop -------------------------------------------------
@@ -127,16 +127,16 @@ impl<E: Pairing> Add for KZH4AuxInfo<E> {
             } else {
                 // second quarter → d_y
                 let j = idx - len_x;
-                (self.d_y[j] + rhs.d_y[j]).into()
+                (self.d_xy[j] + rhs.d_xy[j]).into()
             };
         });
         // --------------------------------------------------------------------------
 
         // split back *without copying*.
-        let  d_y = all.split_off(len_x); // tail part
+        let d_xy = all.split_off(len_x); // tail part
         let d_x = all; // head part
 
-        Self { d_x, d_y }
+        Self { d_x, d_xy }
     }
 }
 
@@ -146,10 +146,10 @@ impl<E: Pairing> Sub for KZH4AuxInfo<E> {
     fn sub(self, rhs: Self) -> Self::Output {
         // sanity-checks (optional)
         assert_eq!(self.d_x.len(), rhs.d_x.len());
-        assert_eq!(self.d_y.len(), rhs.d_y.len());
+        assert_eq!(self.d_xy.len(), rhs.d_xy.len());
 
         let len_x = self.d_x.len();
-        let len_y = self.d_y.len();
+        let len_y = self.d_xy.len();
         let mut all = vec![E::G1Affine::zero(); len_x + len_y];
 
         // --- single parallel loop -------------------------------------------------
@@ -160,16 +160,16 @@ impl<E: Pairing> Sub for KZH4AuxInfo<E> {
             } else {
                 // second quarter → d_y
                 let j = idx - len_x;
-                (self.d_y[j] - rhs.d_y[j]).into()
+                (self.d_xy[j] - rhs.d_xy[j]).into()
             };
         });
         // --------------------------------------------------------------------------
 
         // split back *without copying*.
-        let d_y = all.split_off(len_x); // tail part
+        let d_xy = all.split_off(len_x); // tail part
         let d_x = all; // head part
 
-        Self { d_x, d_y }
+        Self { d_x, d_xy }
     }
 }
 
@@ -180,21 +180,26 @@ impl<E: Pairing> Sub for KZH4AuxInfo<E> {
 /// proof of opening
 pub struct KZH4OpeningProof<E: Pairing> {
     /// Evaluation of quotients
-    d_z: Vec<E::G1>,
+    d_y: Vec<E::G1Affine>,
+    d_z: Vec<E::G1Affine>,
     f_star: DenseOrSparseMLE<E::ScalarField>,
 }
 
 impl<E: Pairing> KZH4OpeningProof<E> {
     /// Create a new opening proof
-    pub fn new(d_z: Vec<E::G1>, f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
-        Self { d_z, f_star }
+    pub fn new(d_y: Vec<E::G1Affine>, d_z: Vec<E::G1Affine>, f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
+        Self { d_y, d_z, f_star }
     }
 
     /// Get the evaluation of quotients
-    pub fn get_d_z(&self) -> Vec<E::G1> {
+    pub fn get_d_z(&self) -> Vec<E::G1Affine> {
         self.d_z.clone()
     }
 
+    /// Get the evaluation of quotients
+    pub fn get_d_y(&self) -> Vec<E::G1Affine> {
+        self.d_y.clone()
+    }
     /// Get the f_star
     pub fn get_f_star(&self) -> DenseOrSparseMLE<E::ScalarField> {
         self.f_star.clone()
@@ -204,6 +209,7 @@ impl<E: Pairing> KZH4OpeningProof<E> {
 impl<E: Pairing> Default for KZH4OpeningProof<E> {
     fn default() -> Self {
         KZH4OpeningProof {
+            d_y: vec![],
             d_z: vec![],
             f_star: DenseOrSparseMLE::zero(),
         }
