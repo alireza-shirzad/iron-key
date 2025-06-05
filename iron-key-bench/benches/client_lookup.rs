@@ -90,7 +90,7 @@ fn prepare_verifier_lookup_intput(
     )
 }
 
-#[divan::bench(args = [12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
+#[divan::bench(args = [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
 fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) { // batch_size is log_capacity here
     let current_log_capacity = batch_size as u64;
     let log_initial_batch_size = 1_u64; // Fixed for these benchmarks

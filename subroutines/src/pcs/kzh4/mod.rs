@@ -219,7 +219,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                 .enumerate()
                 .for_each(|(i, slot)| *slot = eval_dx(i));
 
-            cfg_iter_mut!(d_y)
+            cfg_iter_mut!(d_xy)
                 .enumerate()
                 .for_each(|(i, slot)| *slot = eval_dxy(i));
         }

@@ -1,56 +1,137 @@
-//! Benchmarks `IronServer::update` for many (log_capacity, log_update_size)
-//! pairs.  The tiny “warm-up” batch size is now a real parameter that lives
-//! inside `PARAMS`, but we keep its value fixed at 3 for every entry so it
-//! is **not** swept during the run.
-
 use ark_bn254::{Bn254 as E, Bn254, Fr};
+use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
-    VKD, VKDAuditor, VKDPublicParameters, VKDServer,
+    VKD,
+    VKDAuditor,
+    VKDPublicParameters,
+    VKDServer, // VKDPublicParameters might be related or an alias
     auditor::IronAuditor,
     bb::dummybb::DummyBB,
-    ironkey::IronKey,
+    ironkey::IronKey, // For IronKey::setup
     server::IronServer,
+    structs::pp::IronPublicParameters, // Crucial import for the actual PP type
     structs::{IronLabel, IronSpecification},
 };
-use std::collections::HashMap;
-use subroutines::pcs::kzh4::KZH4;
+use once_cell::sync::Lazy; // For caching
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex}, // For caching
+};
+use subroutines::pcs::kzh2::KZH2;
+
+// Type alias for the Public Parameters
+type AppPublicParameters = IronPublicParameters<E, KZH2<E>>;
+
+// Static cache for public parameters, keyed by log_capacity (u64)
+static PP_CACHE: Lazy<Mutex<HashMap<u64, Arc<AppPublicParameters>>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+/// Helper function to get or create AppPublicParameters for a given
+/// log_capacity
+fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
+    let mut cache = PP_CACHE.lock().unwrap_or_else(|e| e.into_inner());
+    cache
+        .entry(log_capacity)
+        .or_insert_with(|| {
+            eprintln!(
+                "Cache miss: Creating new IronPublicParameters for log_capacity = {}",
+                log_capacity
+            );
+            let spec = IronSpecification::new(1 << log_capacity);
+            // IronKey::<..., IronLabel> specifies generics for the IronKey struct itself,
+            // its `setup` method returns Result<IronPublicParameters<E, Pcs>, _>
+            let pp = IronKey::<Bn254, KZH2<Bn254>, IronLabel>::setup(spec)
+                .expect("Failed to setup IronPublicParameters");
+            Arc::new(pp)
+        })
+        .clone()
+}
+
 fn prepare_verifier_lookup_intput(
+    // Renaming to prepare_audit_input might be more descriptive
     log_capacity: u64,
     log_first_batch_size: u64,
     log_second_batch_size: u64,
-) -> (IronAuditor<E, IronLabel, KZH4<E>>, DummyBB<E, KZH4<E>>) {
-    let spec = IronSpecification::new(1 << log_capacity);
+) -> (IronAuditor<E, IronLabel, KZH2<E>>, DummyBB<E, KZH2<E>>) {
+    // Get PP from cache or create it if it's not there for the given log_capacity
+    let pp_arc = get_or_create_pp(log_capacity);
+    let pp_ref = &*pp_arc; // pp_ref is &AppPublicParameters
 
-    let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec).unwrap();
-    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(&pp);
+    let mut server = IronServer::<Bn254, KZH2<Bn254>, IronLabel>::init(pp_ref);
     let mut bulletin_board = DummyBB::default();
     let first_batch_size = 1 << log_first_batch_size;
-    let second_batch_size = 1 << log_second_batch_size;
-    // Build `batch_size` distinct (label, value) pairs.
+    let second_batch_elements = 1 << log_second_batch_size; // Number of elements in the second batch
+
+    // Build first batch
     let updates1: HashMap<IronLabel, Fr> = (1..=first_batch_size)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
-    server.update_reg(&updates1, &mut bulletin_board).unwrap();
-    server.update_keys(&updates1, &mut bulletin_board).unwrap();
 
-    let updates2: HashMap<IronLabel, Fr> = ((first_batch_size + 1)..=(second_batch_size + 1))
-        .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
+    if first_batch_size > 0 {
+        server.update_reg(&updates1, &mut bulletin_board).unwrap();
+        server.update_keys(&updates1, &mut bulletin_board).unwrap();
+    }
+
+    // Build second batch, ensuring labels are distinct from the first batch
+    // The original range `((first_batch_size + 1)..=(second_batch_size + 1))`
+    // with log_second_batch_size=2 (so second_batch_size=4) would be
+    // `(4+1)..=(4+1)` => `5..=5`. If the intention is a second batch of
+    // `second_batch_elements` items:
+    let updates2: HashMap<IronLabel, Fr> = (1..=second_batch_elements)
+        .map(|i_in_batch| {
+            let actual_index = first_batch_size + i_in_batch; // Make labels distinct
+            (
+                IronLabel::new(&actual_index.to_string()),
+                Fr::from(actual_index as u64),
+            )
+        })
         .collect();
-    server.update_reg(&updates2, &mut bulletin_board).unwrap();
-    server.update_keys(&updates2, &mut bulletin_board).unwrap();
 
-    let auditor: IronAuditor<_, _, _> = IronAuditor::init(pp.to_auditor_key());
+    if second_batch_elements > 0 {
+        server.update_reg(&updates2, &mut bulletin_board).unwrap();
+        server.update_keys(&updates2, &mut bulletin_board).unwrap();
+    }
+
+    // Assuming IronPublicParameters (pp_ref) has a method to_auditor_key()
+    let auditor_key = pp_ref.to_auditor_key();
+    let auditor: IronAuditor<_, _, _> = IronAuditor::init(auditor_key);
 
     (auditor, bulletin_board)
 }
 
-#[divan::bench(args = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
+#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
 fn audit(bencher: Bencher, batch_size: usize) {
-    // Use with_inputs to create a new server for each thread, avoiding Sync
-    // requirement
-    bencher
-        .with_inputs(|| prepare_verifier_lookup_intput(batch_size as u64, 2, 2))
-        .bench_values(|(auditor, bulltin_board)| auditor.verify_update(&bulltin_board));
+    // batch_size here is effectively log_capacity
+    let current_log_capacity = batch_size as u64;
+    let log_first_batch_size = 2_u64; // e.g., 4 elements
+    let log_second_batch_size = 2_u64; // e.g., 4 elements in the second batch
 
+    bencher
+        .with_inputs(|| {
+            prepare_verifier_lookup_intput(
+                // Consider renaming this function if its role is broader
+                current_log_capacity,
+                log_first_batch_size,
+                log_second_batch_size,
+            )
+        })
+        .bench_values(|(auditor, bulletin_board)| {
+            // Corrected typo from bulltin_board
+            auditor.verify_update(&bulletin_board) // Assuming this is the method you want to benchmark
+        });
+    let (_, bulletin_board) = prepare_verifier_lookup_intput(current_log_capacity, 2, 2);
+    println!(
+        "\n[log_capacity={}] Reg proof size: {} Bytes",
+        current_log_capacity,
+        bulletin_board
+            .get_last_reg_update_message()
+            .unwrap()
+            .serialized_size(ark_serialize::Compress::Yes)
+    );
+}
+
+// Ensure main function is present for Divan if this is the main benchmark file
+fn main() {
+    divan::main();
 }

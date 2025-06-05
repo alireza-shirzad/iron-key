@@ -1,8 +1,9 @@
-
 use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, UniformRand};
+use ark_std::{
+    cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, UniformRand,
+};
 #[cfg(feature = "parallel")]
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
@@ -225,11 +226,20 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
                 *h = generators_1[i].batch_mul(&tau_vec);
             });
 
-        let h_mat: Vec<E::G1Affine> = (0..n)
-            .into_par_iter()
+        #[cfg(feature = "parallel")]
+        let h_mat: Vec<E::G1Affine> = cfg_into_iter!(0..n)
             .flat_map_iter(|i| {
                 let h = &h_mat_transpose;
                 (0..m).map(move |j| h[j][i])
+            })
+            .collect();
+        #[cfg(not(feature = "parallel"))]
+        let h_mat: Vec<E::G1Affine> = (0..n) // std::ops::Range is an iterator
+            .flat_map(|i| {
+                (0..m).map({
+                    let value = h_mat_transpose.clone();
+                    move |j| value[j][i]
+                })
             })
             .collect();
         Ok(KZH2UniversalParams::new(

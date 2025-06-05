@@ -1,5 +1,5 @@
 mod errors;
-// pub mod kzh2;
+pub mod kzh2;
 pub mod kzh4;
 pub mod prelude;
 mod structs;

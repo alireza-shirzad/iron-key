@@ -22,10 +22,6 @@ use ark_std::{
     cfg_chunks, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer,
 };
 
-use srs::KZH2ProverParam;
-use std::{borrow::Borrow, marker::PhantomData};
-use structs::{KZH2AuxInfo, KZH2BatchOpeningProof, KZH2Commitment, KZH2OpeningProof};
-use transcript::IOPTranscript;
 #[cfg(feature = "parallel")]
 use rayon::{
     iter::{
@@ -34,6 +30,10 @@ use rayon::{
     },
     prelude::ParallelSlice,
 };
+use srs::KZH2ProverParam;
+use std::{borrow::Borrow, marker::PhantomData};
+use structs::{KZH2AuxInfo, KZH2BatchOpeningProof, KZH2Commitment, KZH2OpeningProof};
+use transcript::IOPTranscript;
 // use batching::{batch_verify_internal, multi_open_internal};
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
 
@@ -181,6 +181,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
+        aux: &Self::Aux,
     ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
         match polynomial {
             DenseOrSparseMLE::Dense(poly) => {
@@ -205,52 +206,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         evals: &[E::ScalarField],
         transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(KZH2BatchOpeningProof<E>, Self::Evaluation), PCSError> {
-        let num = polynomials.len();
-        let challenges = transcript
-            .get_and_append_challenge_vectors(b"pc_opening", num)
-            .unwrap();
-        match polynomials[0] {
-            DenseOrSparseMLE::Dense(_) => {
-                let target_poly = polynomials.iter().zip(challenges.iter()).fold(
-                    DenseMultilinearExtension::zero(),
-                    |acc, (poly, challenge)| match poly {
-                        DenseOrSparseMLE::Dense(dense_poly) => {
-                            let mut scaled = dense_poly.clone();
-                            cfg_iter_mut!(scaled.evaluations).for_each(|eval| {
-                                *eval *= challenge;
-                            });
-                            acc + scaled
-                        },
-                        DenseOrSparseMLE::Sparse(_) => {
-                            panic!("Expected dense polynomial")
-                        },
-                    },
-                );
-                let proof =
-                    Self::open(prover_param, &DenseOrSparseMLE::Dense(target_poly), point).unwrap();
-                Ok((KZH2BatchOpeningProof::new(proof.0), proof.1))
-            },
-            DenseOrSparseMLE::Sparse(_) => {
-                let target_poly = polynomials.iter().zip(challenges.iter()).fold(
-                    SparseMultilinearExtension::zero(),
-                    |acc, (poly, challenge)| match poly {
-                        DenseOrSparseMLE::Dense(_) => {
-                            panic!("Expected sparse polynomial")
-                        },
-                        DenseOrSparseMLE::Sparse(sparse_poly) => {
-                            let mut scaled = sparse_poly.clone();
-                            scaled.evaluations.values_mut().for_each(|eval| {
-                                *eval *= challenge;
-                            });
-                            acc + scaled
-                        },
-                    },
-                );
-                let proof = Self::open(prover_param, &DenseOrSparseMLE::Sparse(target_poly), point)
-                    .unwrap();
-                Ok((KZH2BatchOpeningProof::new(proof.0), proof.1))
-            },
-        }
+        todo!()
     }
 
     fn verify(
@@ -391,8 +347,7 @@ where
     let mask = (1usize << shift_bits) - 1; // lower (n-k)-bit mask
 
     // Filter & re-index in parallel
-    let filtered: Vec<(usize, F)> = sparse
-        .par_iter()
+    let filtered: Vec<(usize, F)> = cfg_iter!(sparse)
         .filter_map(|(&idx, &val)| {
             // First k bits must match the prefix ---------------------------
             if (idx >> shift_bits) == shift_index {

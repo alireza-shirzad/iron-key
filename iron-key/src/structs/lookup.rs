@@ -3,8 +3,7 @@ use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, Polynomial};
 use ark_serialize::CanonicalSerialize;
 use ark_std::{UniformRand, rand::Rng};
-use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
-
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 
 #[derive(CanonicalSerialize)]
 pub struct IronLookupProof<E, PC>
@@ -21,6 +20,36 @@ where
     batched_opening_proof: PC::Proof,
     batched_aux: PC::Aux,
 }
+
+// impl<E, PC> ark_serialize::CanonicalSerialize for IronLookupProof<E, PC>
+// where
+//     E: Pairing,
+//     PC: PolynomialCommitmentScheme<
+//             E,
+//             Polynomial = DenseOrSparseMLE<E::ScalarField>,
+//             Point = Vec<<E as Pairing>::ScalarField>,
+//         >,
+// {
+//     fn serialized_size(&self, compress: ark_serialize::Compress) -> usize {
+//         self.index.serialized_size(compress)
+//             + self.value.serialized_size(compress)
+//             + self.batched_opening_proof.serialized_size(compress)
+//     }
+
+//     fn serialize_with_mode<W: std::io::Write>(
+//         &self,
+//         mut writer: W,
+//         compress: ark_serialize::Compress,
+//     ) -> Result<(), ark_serialize::SerializationError> {
+//         self.index.serialize_with_mode(&mut writer, compress)?;
+//         self.value.serialize_with_mode(&mut writer, compress)?;
+//         self.batched_opening_proof
+//             .serialize_with_mode(&mut writer, compress)?;
+//         self.batched_aux
+//             .serialize_with_mode(&mut writer, compress)?;
+//         Ok(())
+//     }
+// }
 
 impl<E, PC> IronLookupProof<E, PC>
 where

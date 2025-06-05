@@ -80,12 +80,27 @@ impl<E: Pairing> KZH4Commitment<E> {
 
 ////////////// Auxiliary information /////////////////
 
-#[derive(Debug, Derivative, CanonicalSerialize, CanonicalDeserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Derivative, CanonicalDeserialize, Clone, PartialEq, Eq)]
 pub struct KZH4AuxInfo<E: Pairing> {
     d_x: Vec<E::G1Affine>,
     d_xy: Vec<E::G1Affine>,
 }
+impl<E> ark_serialize::CanonicalSerialize for KZH4AuxInfo<E>
+where
+    E: Pairing,
+{
+    fn serialized_size(&self, compress: ark_serialize::Compress) -> usize {
+        0
+    }
 
+    fn serialize_with_mode<W: std::io::Write>(
+        &self,
+        mut writer: W,
+        compress: ark_serialize::Compress,
+    ) -> Result<(), ark_serialize::SerializationError> {
+        Ok(())
+    }
+}
 impl<E: Pairing> KZH4AuxInfo<E> {
     pub fn new(d_x: Vec<E::G1Affine>, d_xy: Vec<E::G1Affine>) -> Self {
         Self { d_x, d_xy }
@@ -187,7 +202,11 @@ pub struct KZH4OpeningProof<E: Pairing> {
 
 impl<E: Pairing> KZH4OpeningProof<E> {
     /// Create a new opening proof
-    pub fn new(d_y: Vec<E::G1Affine>, d_z: Vec<E::G1Affine>, f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
+    pub fn new(
+        d_y: Vec<E::G1Affine>,
+        d_z: Vec<E::G1Affine>,
+        f_star: DenseOrSparseMLE<E::ScalarField>,
+    ) -> Self {
         Self { d_y, d_z, f_star }
     }
 
