@@ -266,11 +266,8 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                 },
                 DenseOrSparseMLE::Sparse(sparse_poly) => {
                     let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
-                        &sparse_poly.fix_variables(
-                            [split_input[0].as_slice(), split_input[1].as_slice()]
-                                .concat()
-                                .as_slice(),
-                        ),
+                        //TODO: Fix this
+                        &sparse_poly,
                         i,
                         prover_param.get_num_vars_t(),
                     );
