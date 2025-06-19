@@ -156,6 +156,7 @@ pub fn fix_variables<F: Field>(
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
+
 fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let mut res = vec![F::zero(); 1 << (nv - 1)];
 

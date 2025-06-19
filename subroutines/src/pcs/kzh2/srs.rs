@@ -219,6 +219,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
         let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
             .map(|g| (*g * alpha).into_affine())
             .collect::<Vec<_>>();
+
         let mut h_mat_transpose: Vec<Vec<E::G1Affine>> = vec![Vec::new(); m];
         cfg_iter_mut!(h_mat_transpose)
             .enumerate()
