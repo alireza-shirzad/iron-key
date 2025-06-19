@@ -1,12 +1,12 @@
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup};
 
+use crate::poly::DenseOrSparseMLE;
 use ark_serialize::{self, CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::{fmt, ops::Add};
-use crate::poly::DenseOrSparseMLE;
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -166,31 +166,6 @@ impl<E: Pairing> Default for KZH2OpeningProof<E> {
     fn default() -> Self {
         KZH2OpeningProof {
             f_star: DenseOrSparseMLE::zero(),
-        }
-    }
-}
-
-#[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]
-pub struct KZH2BatchOpeningProof<E: Pairing> {
-    batch_proof: KZH2OpeningProof<E>,
-}
-
-impl<E: Pairing> KZH2BatchOpeningProof<E> {
-    /// Create a new batch opening proof
-    pub fn new(batch_proof: KZH2OpeningProof<E>) -> Self {
-        Self { batch_proof }
-    }
-
-    /// Get the batch opening proof
-    pub fn get_batch_proof(&self) -> KZH2OpeningProof<E> {
-        self.batch_proof.clone()
-    }
-}
-
-impl<E: Pairing> Default for KZH2BatchOpeningProof<E> {
-    fn default() -> Self {
-        KZH2BatchOpeningProof {
-            batch_proof: KZH2OpeningProof::default(),
         }
     }
 }

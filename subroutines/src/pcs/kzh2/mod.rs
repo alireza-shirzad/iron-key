@@ -32,7 +32,7 @@ use rayon::{
 };
 use srs::KZH2ProverParam;
 use std::{borrow::Borrow, marker::PhantomData};
-use structs::{KZH2AuxInfo, KZH2BatchOpeningProof, KZH2Commitment, KZH2OpeningProof};
+use structs::{KZH2AuxInfo, KZH2Commitment, KZH2OpeningProof};
 use transcript::IOPTranscript;
 // use batching::{batch_verify_internal, multi_open_internal};
 /// KZG Polynomial Commitment Scheme on multilinear polynomials.
@@ -55,7 +55,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     // Commitments and proofs
     type Commitment = KZH2Commitment<E>;
     type Proof = KZH2OpeningProof<E>;
-    type BatchProof = KZH2BatchOpeningProof<E>;
+    type BatchProof = KZH2OpeningProof<E>;
     type Aux = KZH2AuxInfo<E>;
 
     fn gen_srs_for_testing<R: Rng>(rng: &mut R, log_size: usize) -> Result<Self::SRS, PCSError> {
@@ -81,32 +81,8 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSError> {
         match poly {
-            DenseOrSparseMLE::Dense(polynomial) => {
-                let commit_timer = start_timer!(|| "KZH::Commit");
-                let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-
-                let com = E::G1::msm_unchecked(prover_param.get_h_mat(), &polynomial.evaluations);
-                end_timer!(commit_timer);
-                Ok(KZH2Commitment::new(com.into(), polynomial.num_vars()))
-            },
-            DenseOrSparseMLE::Sparse(sparse_poly) => {
-                let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-                let len = sparse_poly.evaluations.len();
-                let mut bases = vec![E::G1Affine::zero(); len];
-                cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
-                    *base = prover_param.get_h_mat()[i];
-                });
-                let scalars = sparse_poly
-                    .evaluations
-                    .iter()
-                    .map(|(_, &v)| v)
-                    .collect::<Vec<_>>();
-                let com = E::G1::msm_unchecked(&bases, &scalars);
-                Ok(KZH2Commitment::new(
-                    com.into_affine(),
-                    sparse_poly.num_vars(),
-                ))
-            },
+            DenseOrSparseMLE::Dense(polynomial) => Self::commit_dense(prover_param, polynomial),
+            DenseOrSparseMLE::Sparse(sparse_poly) => Self::commit_sparse(prover_param, sparse_poly),
         }
     }
 
@@ -116,64 +92,8 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         _com: &Self::Commitment,
     ) -> Result<Self::Aux, PCSError> {
         match polynomial {
-            DenseOrSparseMLE::Dense(poly) => {
-                let timer = start_timer!(|| "KZH::CompAux(Dense)");
-                let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-                let mut d = vec![E::G1Affine::zero(); 1 << prover_param.get_nu()];
-                let evaluations = poly.evaluations.clone();
-                cfg_iter_mut!(d)
-                    .zip(cfg_chunks!(evaluations, 1 << prover_param.get_mu()))
-                    .for_each(|(d, f)| {
-                        *d = E::G1::msm_unchecked(prover_param.get_h_vec(), f).into_affine();
-                    });
-                end_timer!(timer);
-                Ok(KZH2AuxInfo::new(d))
-            },
-            DenseOrSparseMLE::Sparse(poly) => {
-                let timer = start_timer!(|| "KZH::CompAux(Sparse)");
-                let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-
-                let nu = prover_param.get_nu();
-                let mu = prover_param.get_mu();
-                let msk = (1usize << mu) - 1; // mask for μ low bits
-                let n_chunks = 1usize << nu; // 2^ν chunks
-
-                // ── step 1: bucket the sparse entries per chunk ────────────────────────────
-                let mut chunk_bases: Vec<Vec<E::G1Affine>> = vec![Vec::new(); n_chunks];
-                let mut chunk_scalars: Vec<Vec<<E as Pairing>::ScalarField>> =
-                    vec![Vec::new(); n_chunks];
-
-                for (&idx, &val) in poly.evaluations.iter() {
-                    // (optional) skip zeros if they could be present
-                    if val.is_zero() {
-                        continue;
-                    }
-
-                    let chunk = idx >> mu;
-                    let inner = idx & msk;
-
-                    chunk_bases[chunk].push(prover_param.get_h_vec()[inner]);
-                    chunk_scalars[chunk].push(val);
-                }
-
-                // ── step 2: run an MSM for every chunk in parallel ────────────────────────
-                let mut d = vec![E::G1Affine::zero(); n_chunks];
-
-                cfg_iter_mut!(d).enumerate().for_each(|(chunk, d_i)| {
-                    let bases = &chunk_bases[chunk];
-                    let scalars = &chunk_scalars[chunk];
-
-                    if scalars.is_empty() {
-                        // the whole slice is zero → commitment = identity
-                        *d_i = E::G1Affine::zero();
-                    } else {
-                        *d_i = E::G1::msm_unchecked(bases, scalars).into_affine();
-                    }
-                });
-
-                end_timer!(timer);
-                Ok(KZH2AuxInfo::new(d))
-            },
+            DenseOrSparseMLE::Dense(poly) => Self::comp_aux_dense(prover_param, poly),
+            DenseOrSparseMLE::Sparse(poly) => Self::comp_aux_sparse(prover_param, poly),
         }
     }
 
@@ -184,28 +104,18 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         aux: &Self::Aux,
     ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
         match polynomial {
-            DenseOrSparseMLE::Dense(poly) => {
-                let open_timer = start_timer!(|| "KZH::Open");
-                let (f_star, z0) = open_dense_internal(prover_param.borrow(), poly, point)?;
-                end_timer!(open_timer);
-                Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Dense(f_star)), z0))
-            },
-            DenseOrSparseMLE::Sparse(poly) => {
-                let open_timer = start_timer!(|| "KZH::Open");
-                let (f_star, z0) = open_sparse_internal(prover_param.borrow(), poly, point)?;
-                end_timer!(open_timer);
-                Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
-            },
+            DenseOrSparseMLE::Dense(poly) => Self::open_dense(prover_param, poly, point, aux),
+            DenseOrSparseMLE::Sparse(poly) => Self::open_sparse(prover_param, poly, point, aux),
         }
     }
 
     fn multi_open(
         prover_param: impl Borrow<Self::ProverParam>,
-        polynomials: &[Self::Polynomial],
+        polynomials: &[&Self::Polynomial],
         point: &<Self::Polynomial as Polynomial<E::ScalarField>>::Point,
-        evals: &[E::ScalarField],
+        aux: &[Self::Aux],
         transcript: &mut IOPTranscript<E::ScalarField>,
-    ) -> Result<(KZH2BatchOpeningProof<E>, Self::Evaluation), PCSError> {
+    ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
         todo!()
     }
 
@@ -255,11 +165,148 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     fn batch_verify(
         _verifier_param: &Self::VerifierParam,
         _commitments: &[Self::Commitment],
-        _points: &[Self::Point],
+        _auxs: &[Self::Aux],
+        _points: &Self::Point,
         _batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
         todo!()
+    }
+}
+impl<E: Pairing> KZH2<E> {
+    pub fn commit_dense(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        poly: &DenseMultilinearExtension<E::ScalarField>,
+    ) -> Result<KZH2Commitment<E>, PCSError> {
+        let commit_timer = start_timer!(|| "KZH::Commit");
+        let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+
+        let com = E::G1::msm_unchecked(prover_param.get_h_mat(), &poly.evaluations);
+        end_timer!(commit_timer);
+        Ok(KZH2Commitment::new(com.into(), poly.num_vars()))
+    }
+
+    pub fn commit_sparse(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
+    ) -> Result<KZH2Commitment<E>, PCSError> {
+        let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        let len = sparse_poly.evaluations.len();
+        let mut bases = vec![E::G1Affine::zero(); len];
+        cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
+            *base = prover_param.get_h_mat()[i];
+        });
+        let scalars = sparse_poly
+            .evaluations
+            .iter()
+            .map(|(_, &v)| v)
+            .collect::<Vec<_>>();
+        let com = E::G1::msm_unchecked(&bases, &scalars);
+        Ok(KZH2Commitment::new(
+            com.into_affine(),
+            sparse_poly.num_vars(),
+        ))
+    }
+
+    fn open_dense(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        polynomial: &DenseMultilinearExtension<E::ScalarField>,
+        point: &Vec<E::ScalarField>,
+        _aux: &KZH2AuxInfo<E>,
+    ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
+        let open_timer = start_timer!(|| "KZH::Open");
+        let (f_star, z0) = open_dense_internal(prover_param.borrow(), polynomial, point)?;
+        end_timer!(open_timer);
+        Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Dense(f_star)), z0))
+    }
+
+    fn open_sparse(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        polynomial: &SparseMultilinearExtension<E::ScalarField>,
+        point: &Vec<E::ScalarField>,
+        _aux: &KZH2AuxInfo<E>,
+    ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
+        let timer = start_timer!(|| "KZH::OpenInternal");
+        let prover_param = prover_param.borrow();
+        let (x0, y0) = point.split_at(prover_param.get_nu());
+        let new_evals = fix_first_k_vars_sparse_parallel::<E::ScalarField>(
+            &polynomial.evaluations,
+            polynomial.num_vars as u32,
+            x0,
+        );
+        let poly_fixed_at_x0 =
+            SparseMultilinearExtension::from_evaluations(prover_param.get_mu(), &new_evals);
+        let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
+        end_timer!(timer);
+        Ok((
+            KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(poly_fixed_at_x0)),
+            z0,
+        ))
+    }
+
+    fn comp_aux_dense(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        polynomial: &DenseMultilinearExtension<E::ScalarField>,
+    ) -> Result<KZH2AuxInfo<E>, PCSError> {
+        let timer = start_timer!(|| "KZH::CompAux(Dense)");
+        let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        let mut d = vec![E::G1Affine::zero(); 1 << prover_param.get_nu()];
+        let evaluations = polynomial.evaluations.clone();
+        cfg_iter_mut!(d)
+            .zip(cfg_chunks!(evaluations, 1 << prover_param.get_mu()))
+            .for_each(|(d, f)| {
+                *d = E::G1::msm_unchecked(prover_param.get_h_vec(), f).into_affine();
+            });
+        end_timer!(timer);
+        Ok(KZH2AuxInfo::new(d))
+    }
+
+    fn comp_aux_sparse(
+        prover_param: impl Borrow<KZH2ProverParam<E>>,
+        polynomial: &SparseMultilinearExtension<E::ScalarField>,
+    ) -> Result<KZH2AuxInfo<E>, PCSError> {
+        let timer = start_timer!(|| "KZH::CompAux(Sparse)");
+        let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+
+        let nu = prover_param.get_nu();
+        let mu = prover_param.get_mu();
+        let msk = (1usize << mu) - 1; // mask for μ low bits
+        let n_chunks = 1usize << nu; // 2^ν chunks
+
+        // ── step 1: bucket the sparse entries per chunk ────────────────────────────
+        let mut chunk_bases: Vec<Vec<E::G1Affine>> = vec![Vec::new(); n_chunks];
+        let mut chunk_scalars: Vec<Vec<<E as Pairing>::ScalarField>> = vec![Vec::new(); n_chunks];
+
+        for (&idx, &val) in polynomial.evaluations.iter() {
+            // (optional) skip zeros if they could be present
+            if val.is_zero() {
+                continue;
+            }
+
+            let chunk = idx >> mu;
+            let inner = idx & msk;
+
+            chunk_bases[chunk].push(prover_param.get_h_vec()[inner]);
+            chunk_scalars[chunk].push(val);
+        }
+
+        // ── step 2: run an MSM for every chunk in parallel ────────────────────────
+        let mut d = vec![E::G1Affine::zero(); n_chunks];
+
+        cfg_iter_mut!(d).enumerate().for_each(|(chunk, d_i)| {
+            let bases = &chunk_bases[chunk];
+            let scalars = &chunk_scalars[chunk];
+
+            if scalars.is_empty() {
+                // the whole slice is zero → commitment = identity
+                *d_i = E::G1Affine::zero();
+            } else {
+                *d_i = E::G1::msm_unchecked(bases, scalars).into_affine();
+            }
+        });
+
+        end_timer!(timer);
+        Ok(KZH2AuxInfo::new(d))
     }
 }
 
@@ -273,25 +320,6 @@ fn open_dense_internal<E: Pairing>(
     let new_evals = fix_dense_first_k_vars_parallel(polynomial.evaluations.as_slice(), x0);
     let poly_fixed_at_x0 =
         DenseMultilinearExtension::from_evaluations_vec(prover_param.get_mu(), new_evals);
-    let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
-    end_timer!(timer);
-    Ok((poly_fixed_at_x0, z0))
-}
-
-fn open_sparse_internal<E: Pairing>(
-    prover_param: &KZH2ProverParam<E>,
-    polynomial: &SparseMultilinearExtension<E::ScalarField>,
-    point: &[E::ScalarField],
-) -> Result<(SparseMultilinearExtension<E::ScalarField>, E::ScalarField), PCSError> {
-    let timer = start_timer!(|| "KZH::OpenInternal");
-    let (x0, y0) = point.split_at(prover_param.get_nu());
-    let new_evals = fix_first_k_vars_sparse_parallel::<E::ScalarField>(
-        &polynomial.evaluations,
-        polynomial.num_vars as u32,
-        x0,
-    );
-    let poly_fixed_at_x0 =
-        SparseMultilinearExtension::from_evaluations(prover_param.get_mu(), &new_evals);
     let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
     end_timer!(timer);
     Ok((poly_fixed_at_x0, z0))

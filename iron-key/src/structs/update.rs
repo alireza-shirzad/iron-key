@@ -16,7 +16,7 @@ where
 {
     zerocheck_proof: IOPProof<E::ScalarField>,
     zerocheck_aux: VPAuxInfo<E::ScalarField>,
-    opening_proof: MvPCS::Proof,
+    opening_proof: MvPCS::BatchProof,
 }
 
 impl<E, MvPCS> IronUpdateProof<E, MvPCS>
@@ -32,7 +32,7 @@ where
     pub fn new(
         zerocheck_proof: IOPProof<E::ScalarField>,
         zerocheck_aux: VPAuxInfo<E::ScalarField>,
-        opening_proof: MvPCS::Proof,
+        opening_proof: MvPCS::BatchProof,
     ) -> Self {
         Self {
             zerocheck_proof,
@@ -47,7 +47,7 @@ where
     pub fn get_zerocheck_aux(&self) -> &VPAuxInfo<E::ScalarField> {
         &self.zerocheck_aux
     }
-    pub fn get_opening_proof(&self) -> &MvPCS::Proof {
+    pub fn get_opening_proof(&self) -> &MvPCS::BatchProof {
         &self.opening_proof
     }
 }

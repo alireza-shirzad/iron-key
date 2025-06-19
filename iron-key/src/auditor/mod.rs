@@ -8,7 +8,7 @@ use std::{
 use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
 use ark_poly::DenseMultilinearExtension;
-use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme, ZeroCheck};
+use subroutines::{PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
 
 use crate::{
     VKDAuditor, VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -103,23 +103,26 @@ where
                     .unwrap();
                 let last_label_commitment = last_reg.get_label_commitment();
                 let second_last_label_commitment = second_last_reg.get_label_commitment();
-                let batch_commitment =
-                    last_label_commitment.clone() + second_last_label_commitment.clone();
+
                 let last_label_aux = last_reg.get_label_aux();
                 let second_last_label_aux = second_last_reg.get_label_aux();
-                let batch_aux = last_label_aux.clone() + second_last_label_aux.clone();
+                let auxs = [last_label_aux.clone(), second_last_label_aux.clone()];
+                let commitments = [
+                    last_label_commitment.clone(),
+                    second_last_label_commitment.clone(),
+                ];
                 let opening_proof = last_reg
                     .get_update_proof()
                     .as_ref()
                     .unwrap()
                     .get_opening_proof();
-                MvPCS::verify(
+                MvPCS::batch_verify(
                     self.key.get_pcs_verifier_param(),
-                    &batch_commitment,
+                    &commitments,
+                    &auxs,
                     &zerocheck_proof.point,
-                    &zerocheck_proof.expected_evaluation,
-                    &batch_aux,
                     opening_proof,
+                    &mut transcript,
                 )
                 .unwrap()
             },

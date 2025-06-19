@@ -42,7 +42,14 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// Batch proofs
     type BatchProof: CanonicalSerialize + CanonicalDeserialize + Clone + Debug + Eq;
     /// Auxiliary output
-    type Aux: Clone + CanonicalSerialize + CanonicalDeserialize + Debug + PartialEq + Eq + Send + Sync;
+    type Aux: Clone
+        + CanonicalSerialize
+        + CanonicalDeserialize
+        + Debug
+        + PartialEq
+        + Eq
+        + Send
+        + Sync;
 
     /// Build SRS for testing.
     ///
@@ -110,9 +117,9 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     /// a transcript, compute a multi-opening for all the polynomials.
     fn multi_open(
         _prover_param: impl Borrow<Self::ProverParam>,
-        _polynomials: &[Self::Polynomial],
+        _polynomials: &[&Self::Polynomial],
         _point: &Self::Point,
-        _evals: &[Self::Evaluation],
+        _aux: &[Self::Aux],
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
         // the reason we use unimplemented!() is to enable developers to implement the
@@ -136,7 +143,8 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
     fn batch_verify(
         _verifier_param: &Self::VerifierParam,
         _commitments: &[Self::Commitment],
-        _points: &[Self::Point],
+        _auxs: &[Self::Aux],
+        _point: &Self::Point,
         _batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {

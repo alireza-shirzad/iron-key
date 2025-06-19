@@ -116,48 +116,47 @@ where
         )
         .unwrap();
 
+        // Check if the bulletin board has a reg message
         let iron_epoch_reg_message = match bulletin_board.get_last_reg_update_message() {
             // If it's the first time, the diff info is the new info
             None => {
                 // Send the commitment
                 IronEpochRegMessage::new(diff_label_com, None, diff_label_aux.clone())
             },
+            // If it's not the first time, we need to do a zerocheck
             Some(last_reg_message) => {
                 // Get the last label commitment
                 let last_label_comm = last_reg_message.get_label_commitment();
+                // Get the last label aux
+                let last_label_aux = last_reg_message.get_label_aux();
                 // The new commitment is the last one plus the diff
                 let new_label_comm = last_label_comm.clone() + diff_label_com;
-                // The new aux is the saved one plus the diff aux --> Save the aux
-                let last_label_aux = last_reg_message.get_label_aux();
+                // The new aux is the last one plus the diff
                 let new_label_aux = last_label_aux.clone() + diff_label_aux;
-                let batched_aux = last_label_aux.clone() + last_label_aux.clone();
                 // Intiate the transcipt for the zerocheck
                 let mut transcript =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
                 transcript.append_message(b"iron-key", b"iron-key").unwrap();
-
-                // let opening_chall =
-                // transcript.get_and_append_challenge(b"iron-key").unwrap();
-                let mut batched_poly = DenseOrSparseMLE::zero();
-                batched_poly += &*new_label_mle.borrow();
-                // batched_poly = &batched_poly * opening_chall;
-                batched_poly += &*current_label_mle.borrow();
                 // Build the target virtual polynomial to do the zerocheck on
                 let mut target_virtual_poly =
                     VirtualPolynomial::new(current_label_mle.borrow().num_vars());
-                let current_label_mle = Arc::new(current_label_mle.borrow().to_dense());
-                let new_label_mle = Arc::new(new_label_mle.borrow().to_dense());
+                // Building the target virtual polynomial
+                // TODO: Make this zerocheck to operate on sparse polynomials
+                let current_label_mle_arc = Arc::new(current_label_mle.borrow().to_dense());
+                let new_label_mle_arc = Arc::new(new_label_mle.borrow().to_dense());
                 target_virtual_poly
                     .add_mle_list(
-                        [current_label_mle.clone(), current_label_mle.clone()],
+                        [current_label_mle_arc.clone(), current_label_mle_arc.clone()],
                         E::ScalarField::one(),
                     )
                     .unwrap();
                 target_virtual_poly
-                    .add_mle_list([current_label_mle, new_label_mle], -E::ScalarField::one())
+                    .add_mle_list(
+                        [current_label_mle_arc, new_label_mle_arc],
+                        -E::ScalarField::one(),
+                    )
                     .unwrap();
-
-                let zerocheck_aux = target_virtual_poly.aux_info.clone();
+                // Performing the zerocheck
                 let zerocheck_proof =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::prove(
                         &target_virtual_poly,
@@ -165,14 +164,21 @@ where
                     )
                     .unwrap();
 
-                let update_proof = MvPCS::open(
+                // Gathering the polynomials and auxes for opening the polynomials
+                let polys = &[&*new_label_mle.borrow(), &*current_label_mle.borrow()];
+                let auxes = vec![new_label_aux.clone(), last_label_aux.clone()];
+                let update_proof = MvPCS::multi_open(
                     self.key.get_pcs_prover_param(),
-                    &batched_poly,
+                    polys,
                     &zerocheck_proof.point,
-                    &batched_aux,
+                    &auxes,
+                    &mut transcript,
                 );
-                let iron_update_proof =
-                    IronUpdateProof::new(zerocheck_proof, zerocheck_aux, update_proof.unwrap().0);
+                let iron_update_proof: IronUpdateProof<E, MvPCS> = IronUpdateProof::new(
+                    zerocheck_proof,
+                    target_virtual_poly.aux_info.clone(),
+                    update_proof.unwrap().0,
+                );
                 IronEpochRegMessage::new(new_label_comm, Some(iron_update_proof), new_label_aux)
             },
         };
