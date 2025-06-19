@@ -137,14 +137,14 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         let p1 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
         // Check 2: Hyrax Check
         // let eq_x0_mle = build_eq_x_r(x0)?;
-        let eq_x0_mle = EqPolynomial::new(x0.to_vec().iter().rev().copied().collect());
+        let eq_x0_mle = build_eq_x_r(x0).unwrap();
         // TODO: Fix the to_evaluations
         let scalars: Vec<E::ScalarField> = proof
             .get_f_star()
             .to_evaluations()
             .iter()
             .copied()
-            .chain(eq_x0_mle.evals().iter().map(|&x| -x))
+            .chain(eq_x0_mle.evaluations.iter().map(|&x| -x))
             .collect();
         let bases: Vec<E::G1Affine> = verifier_param
             .get_h_vec()
@@ -153,14 +153,9 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             .chain(aux.get_d().iter().copied())
             .collect();
         let p2 = E::G1::msm(&bases, &scalars).unwrap().is_zero();
-        // TODO: fix this
-        // assert!(p2);
 
         // Check 3: Evaluate polynomial at point
         let p3 = proof.get_f_star().evaluate(&y0.to_vec()) == *value;
-        assert!(p1);
-        assert!(p3);
-        assert!(p2);
         let res = p1 && p2 && p3;
         Ok(res)
     }
