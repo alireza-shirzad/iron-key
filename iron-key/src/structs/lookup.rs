@@ -17,8 +17,8 @@ where
 {
     index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
     value: E::ScalarField,
-    batched_opening_proof: PC::Proof,
-    batched_aux: PC::Aux,
+    batched_opening_proof: PC::BatchProof,
+    auxes: Vec<PC::Aux>,
 }
 
 // impl<E, PC> ark_serialize::CanonicalSerialize for IronLookupProof<E, PC>
@@ -63,14 +63,14 @@ where
     pub fn new(
         index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: E::ScalarField,
-        batched_opening_proof: PC::Proof,
-        batched_aux: PC::Aux,
+        batched_opening_proof: PC::BatchProof,
+        auxes: Vec<PC::Aux>,
     ) -> Self {
         Self {
             index,
             value,
             batched_opening_proof,
-            batched_aux,
+            auxes,
         }
     }
 
@@ -80,10 +80,10 @@ where
     pub fn get_value(&self) -> E::ScalarField {
         self.value
     }
-    pub fn get_batched_opening_proof(&self) -> &PC::Proof {
+    pub fn get_batched_opening_proof(&self) -> &PC::BatchProof {
         &self.batched_opening_proof
     }
-    pub fn get_batched_aux(&self) -> &PC::Aux {
-        &self.batched_aux
+    pub fn get_auxes(&self) -> &[PC::Aux] {
+        &self.auxes
     }
 }

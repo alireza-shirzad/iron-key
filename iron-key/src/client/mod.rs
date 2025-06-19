@@ -8,7 +8,8 @@ use std::{
 use ark_ec::pairing::Pairing;
 
 use ark_poly::Polynomial;
-use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
+use transcript::IOPTranscript;
 
 use crate::{
     VKDClient, VKDDictionary, VKDLabel, VKDResult,
@@ -88,16 +89,19 @@ where
         // TODO: Fix this for real scenarios
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
-        let batched_commitment = last_keys_message.get_value_commitment().clone()
-            + last_reg_message.get_label_commitment().clone();
-        let batched_value = value + self.label.to_field();
-        MvPCS::verify(
+        let commitments = [
+            last_keys_message.get_value_commitment().clone(),
+            last_reg_message.get_label_commitment().clone(),
+        ];
+        let auxes = proof.get_auxes();
+        let mut transcript = IOPTranscript::new(b"lookup");
+        MvPCS::batch_verify(
             self.key.get_pcs_verifier_param(),
-            &batched_commitment,
+            &commitments,
+            auxes,
             &proof.get_index(),
-            &batched_value,
-            proof.get_batched_aux(),
             proof.get_batched_opening_proof(),
+            &mut transcript,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
         let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(

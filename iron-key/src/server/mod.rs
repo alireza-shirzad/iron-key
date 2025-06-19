@@ -104,14 +104,29 @@ where
         // Now save the new label MLE
         let new_label_mle = self.dictionary.get_label_mle();
         // Compute the difference MLE
-        let diff_label_mle = &*new_label_mle.borrow() - &*current_label_mle.borrow();
+        let diff_label_mle: DenseOrSparseMLE<<E as Pairing>::ScalarField> =
+            &*new_label_mle.borrow() - &*current_label_mle.borrow();
         // Commit to the diff commitment
+
+        #[cfg(feature = "parallel")]
+        let (diff_label_com, diff_label_aux) = join(
+            || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_label_mle).unwrap(),
+            || {
+                MvPCS::comp_aux(
+                    self.key.get_pcs_prover_param(),
+                    &diff_label_mle,
+                    &MvPCS::Commitment::default(),
+                )
+                .unwrap()
+            },
+        );
+        #[cfg(not(feature = "parallel"))]
         let diff_label_com =
             MvPCS::commit(self.key.get_pcs_prover_param(), &diff_label_mle).unwrap();
         // Compute the diff aux
         let diff_label_aux = MvPCS::comp_aux(
             self.key.get_pcs_prover_param(),
-            &*new_label_mle.borrow(),
+            &diff_label_mle,
             &diff_label_com,
         )
         .unwrap();
@@ -203,11 +218,15 @@ where
         {
             self.authenticate_batch(update_batch)?;
         }
+        // Save the current value MLE
         let current_value_mle = self.dictionary.get_value_mle().clone();
+        // Insert the batch to the dictionary
         self.dictionary.insert_batch(update_batch)?;
+        // Now save the new value MLE
         let new_value_mle = self.dictionary.get_value_mle().clone();
-
+        // Compute the difference MLE
         let diff_value_mle = &*new_value_mle.borrow() - &*current_value_mle.borrow();
+        // Compute the commtment and the aux to the diff
         #[cfg(feature = "parallel")]
         let (diff_value_com, diff_value_aux) = join(
             || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap(),
@@ -231,6 +250,7 @@ where
         )
         .unwrap();
 
+        // Check if the bulletin board has a key message
         let iron_epoch_key_message = match bulletin_board.get_last_key_update_message() {
             // If it's the first time, the diff info is the new info
             None => IronEpochKeyMessage::new(
@@ -239,6 +259,8 @@ where
                 diff_value_com,
                 diff_value_aux,
             ),
+            // If there's already a key message, we need to accumulate the diff to the rlc
+            // polynomial
             Some(last_key_message) => {
                 let last_value_comm = last_key_message.get_value_commitment();
                 let new_value_comm = last_value_comm.clone() + diff_value_com.clone();
@@ -273,28 +295,27 @@ where
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
         let label_mle_clone = self.dictionary.get_label_mle().borrow().clone();
         let value_mle_clone = self.dictionary.get_value_mle().borrow().clone();
-        #[cfg(feature = "parallel")]
-        let (batched_poly, batched_aux) = join(
-            || label_mle_clone + value_mle_clone,
-            || last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone(),
-        );
-        #[cfg(not(feature = "parallel"))]
-        let batched_poly = label_mle_clone + value_mle_clone;
-        #[cfg(not(feature = "parallel"))]
-        let batched_aux =
-            last_reg_message.get_label_aux().clone() + last_keys_message.get_value_aux().clone();
-        let update_proof = MvPCS::open(
+        let polys = [&label_mle_clone, &value_mle_clone];
+        let auxes = [
+            last_reg_message.get_label_aux().clone(),
+            last_keys_message.get_value_aux().clone(),
+        ]
+        .to_vec();
+        let mut transcript =
+            <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
+        let update_proof = MvPCS::multi_open(
             self.key.get_pcs_prover_param(),
-            &batched_poly,
+            &polys,
             &index_boolean,
-            &batched_aux,
+            &auxes,
+            &mut transcript,
         )
         .unwrap();
         Ok(IronLookupProof::new(
             index_boolean,
             update_proof.1,
             update_proof.0,
-            batched_aux,
+            auxes,
         ))
     }
 
