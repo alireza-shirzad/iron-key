@@ -254,7 +254,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             .map(|i| match polynomial {
                 DenseOrSparseMLE::Dense(dense_poly) => {
                     let scalars = Self::get_dense_partial_evaluation_for_boolean_input(
-                        &dense_poly.fix_variables(
+                        &dense_poly.fix_first_variables(
                             [split_input[0].as_slice(), split_input[1].as_slice()]
                                 .concat()
                                 .as_slice(),
@@ -318,7 +318,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         );
 
         // compute the partial evaluation of the polynomial
-        let f_star = polynomial.fix_variables(
+        let f_star = polynomial.fix_first_variables(
             {
                 let mut res = Vec::new();
                 res.extend_from_slice(split_input[0].as_slice());

@@ -7,11 +7,11 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
-use arithmetic::{build_eq_x_r, fix_last_variables, fix_variables};
+use arithmetic::{build_eq_x_r, fix_last_variables, fix_last_variables_sparse};
 use ark_ec::{
-    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup, ScalarMul,
+    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
-use ark_ff::{AdditiveGroup, Field, Zero};
+use ark_ff::Zero;
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
@@ -19,16 +19,10 @@ use ark_poly::{
 use rayon::iter::IntoParallelIterator;
 
 use crate::pcs::{kzh2::srs::KZH2UniversalParams, StructuredReferenceString};
-use ark_std::{
-    cfg_chunks, cfg_into_iter, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng,
-    start_timer, UniformRand,
-};
+use ark_std::{cfg_chunks, cfg_iter_mut, end_timer, rand::Rng, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::{
-    iter::{
-        IndexedParallelIterator, IntoParallelRefIterator, IntoParallelRefMutIterator,
-        ParallelIterator,
-    },
+    iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator},
     prelude::ParallelSlice,
 };
 use std::{borrow::Borrow, marker::PhantomData};
@@ -230,14 +224,13 @@ impl<E: Pairing> KZH2<E> {
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
         // TODO: Make this free for boolean points
-        // let open_timer = start_timer!(|| "KZH::Open");
-        // let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-        // let (x0, y0) = point.split_at(prover_param.get_nu());
-        // let f_star = fix_last_variables(polynomial, x0);
-        // let z0 = fix_last_variables(&f_star, y0).evaluations[0];
-        // end_timer!(open_timer);
-        // Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
-        todo!()
+        let open_timer = start_timer!(|| "KZH::Open");
+        let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        let (x0, y0) = point.split_at(prover_param.get_nu());
+        let f_star = fix_last_variables_sparse(polynomial, x0);
+        let z0 = fix_last_variables_sparse(&f_star, y0).evaluations[&0];
+        end_timer!(open_timer);
+        Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
     }
 
     fn comp_aux_dense(
@@ -308,76 +301,6 @@ impl<E: Pairing> KZH2<E> {
     }
 }
 
-fn fix_dense_first_k_vars_parallel<F: Field + Send + Sync + Copy>(
-    evals: &[F],
-    fixed: &[F],
-) -> Vec<F> {
-    let total_vars = evals.len().trailing_zeros();
-    let k = fixed.len() as u32;
-
-    assert_eq!(
-        evals.len(),
-        1 << total_vars,
-        "Input length must be a power of two"
-    );
-    assert!(k <= total_vars, "Cannot fix more variables than exist");
-
-    // Compute shift from fixed bits: bits represent a prefix
-    let shift_index = fixed.iter().enumerate().fold(0usize, |acc, (i, &bit)| {
-        acc | ((bit.is_one() as usize) << (k - 1 - (i as u32)))
-    });
-
-    let remaining = 1 << (total_vars - k);
-    let start = shift_index << (total_vars - k);
-    let end = start + remaining;
-
-    assert!(end <= evals.len(), "Fixed prefix goes out of bounds");
-
-    // Clone the slice in parallel
-    cfg_iter!(evals[start..end]).copied().collect()
-}
-
-pub fn fix_first_k_vars_sparse_parallel<F>(
-    sparse: &BTreeMap<usize, F>,
-    total_vars: u32,
-    fixed: &[F],
-) -> Vec<(usize, F)>
-where
-    F: Field + Send + Sync + Copy,
-{
-    let k = fixed.len() as u32;
-    assert!(k <= total_vars, "Cannot fix more variables than exist");
-
-    // Build the k-bit prefix that encodes the fixed assignment
-    let shift_index = fixed.iter().enumerate().fold(0usize, |acc, (i, &bit)| {
-        acc | ((bit.is_one() as usize) << (k - 1 - (i as u32)))
-    });
-
-    // Pre-compute helpers
-    let shift_bits = (total_vars - k) as usize; // how many bits remain
-    let mask = (1usize << shift_bits) - 1; // lower (n-k)-bit mask
-
-    // Filter & re-index in parallel
-    let filtered: Vec<(usize, F)> = cfg_iter!(sparse)
-        .filter_map(|(&idx, &val)| {
-            // First k bits must match the prefix ---------------------------
-            if (idx >> shift_bits) == shift_index {
-                // Keep the lower (n-k) bits as the new index
-                Some((idx & mask, val))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    // // Move into a BTreeMap (keeps the ordering & deduplicates if needed)
-    // let mut result = BTreeMap::new();
-    // for (idx, val) in filtered {
-    //     result.insert(idx, val);
-    // }
-    filtered
-}
-
 fn verify_internal<E: Pairing>(
     verifier_param: &KZH2VerifierParam<E>,
     commitment: &KZH2Commitment<E>,
@@ -386,134 +309,4 @@ fn verify_internal<E: Pairing>(
     proof: &KZH2OpeningProof<E>,
 ) -> Result<bool, PCSError> {
     todo!()
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct EqPolynomial<F: Field + Copy> {
-    pub r: Vec<F>,
-}
-
-impl<F: Field + Copy> EqPolynomial<F> {
-    /// Creates a new EqPolynomial from a vector `w`
-    pub fn new(r: Vec<F>) -> Self {
-        EqPolynomial { r }
-    }
-
-    /// Evaluates the polynomial eq_w(r) = prod_{i} (w_i * r_i + (F::ONE - w_i)
-    /// * (F::ONE - r_i))
-    pub fn evaluate(&self, rx: &[F]) -> F {
-        assert_eq!(self.r.len(), rx.len());
-        (0..rx.len())
-            .map(|i| self.r[i] * rx[i] + (F::one() - self.r[i]) * (F::one() - rx[i]))
-            .product()
-    }
-
-    pub fn evals(&self) -> Vec<F> {
-        let ell = self.r.len();
-
-        let mut evals: Vec<F> = vec![F::one(); 1 << ell];
-        let mut size = 1;
-        for j in 0..ell {
-            // in each iteration, we double the size of chis
-            size *= 2;
-            for i in (0..size).rev().step_by(2) {
-                // copy each element from the prior iteration twice
-                let scalar = evals[i / 2];
-                evals[i] = scalar * self.r[j];
-                evals[i - 1] = scalar - evals[i];
-            }
-        }
-        evals
-    }
-
-    pub fn compute_factored_lens(ell: usize) -> (usize, usize) {
-        (ell / 2, ell - ell / 2)
-    }
-
-    pub fn compute_factored_evals(&self) -> (Vec<F>, Vec<F>) {
-        let ell = self.r.len();
-        let (left_num_vars, _right_num_vars) = Self::compute_factored_lens(ell);
-
-        let L = EqPolynomial::new(self.r[..left_num_vars].to_vec()).evals();
-        let R = EqPolynomial::new(self.r[left_num_vars..ell].to_vec()).evals();
-
-        (L, R)
-    }
-}
-
-#[test]
-fn test() {
-    use ark_bn254::Fr as F;
-    let f = DenseMultilinearExtension::from_evaluations_vec(
-        3,
-        vec![
-            F::from(0),
-            F::from(1),
-            F::from(2),
-            F::from(3),
-            F::from(4),
-            F::from(5),
-            F::from(6),
-            F::from(7),
-        ],
-    );
-    let f_fixed = fix_last_variables(&f, &[F::from(0)]);
-    dbg!(f_fixed.evaluations);
-
-    // test for single point evaluation
-    // let w = vec![F::ZERO, F::ONE, F::ONE];
-    // let vec_w: Vec<_> = w.iter().rev().copied().collect();
-    // let eq_poly = build_eq_x_r(&vec_w[..]).unwrap();
-    // dbg!(eq_poly.to_evaluations());
-
-    // // test for single point evaluation
-    // let w = vec![F::ZERO, F::ONE, F::ONE];
-    // let eq_poly = EqPolynomial::new(w);
-    // dbg!(eq_poly.evals());
-    // // test for single point evaluation
-    // let w = vec![F::ZERO, F::ONE, F::ZERO];
-    // let r = vec![F::ZERO, F::ONE, F::ZERO];
-    // let eq_poly = build_eq_x_r(&w).unwrap();
-    // let result = eq_poly.evaluate(&r);
-    // assert_eq!(result, F::ONE);
-
-    // // test for range evaluation
-    // let r = vec![F::ONE, F::ZERO, F::ONE];
-
-    // let results: Vec<F> = build_eq_x_r(&r).unwrap().to_evaluations();
-    // assert_eq!(results.len(), 8);
-    // assert_eq!(
-    //     results,
-    //     vec![
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ONE,
-    //         F::ZERO,
-    //         F::ZERO
-    //     ]
-    // );
-
-    // // test for range evaluation
-    // let r = [F::ZERO, F::ZERO, F::ONE];
-    // let results: Vec<F> =
-    // build_eq_x_r(&r.iter().rev().copied().collect::<Vec<F>>())
-    //     .unwrap()
-    //     .to_evaluations();
-    // assert_eq!(results.len(), 8);
-    // assert_eq!(
-    //     results,
-    //     vec![
-    //         F::ZERO,
-    //         F::ONE,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO,
-    //         F::ZERO
-    //     ]
-    // );
 }

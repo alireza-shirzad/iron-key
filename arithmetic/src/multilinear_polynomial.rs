@@ -134,10 +134,10 @@ pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
 
 pub fn evaluate_opt<F: Field>(poly: &DenseMultilinearExtension<F>, point: &[F]) -> F {
     assert_eq!(poly.num_vars, point.len());
-    fix_variables(poly, point).evaluations[0]
+    fix_first_variables(poly, point).evaluations[0]
 }
 
-pub fn fix_variables<F: Field>(
+pub fn fix_first_variables<F: Field>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
 ) -> DenseMultilinearExtension<F> {
@@ -175,10 +175,10 @@ fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F>
 
 pub fn evaluate_no_par<F: Field>(poly: &DenseMultilinearExtension<F>, point: &[F]) -> F {
     assert_eq!(poly.num_vars, point.len());
-    fix_variables_no_par(poly, point).evaluations[0]
+    fix_first_variables_no_par(poly, point).evaluations[0]
 }
 
-fn fix_variables_no_par<F: Field>(
+fn fix_first_variables_no_par<F: Field>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
 ) -> DenseMultilinearExtension<F> {
@@ -224,30 +224,9 @@ pub fn merge_polynomials<F: PrimeField>(
     )))
 }
 
-pub fn fix_last_variables_no_par<F: PrimeField>(
-    poly: &DenseMultilinearExtension<F>,
-    partial_point: &[F],
-) -> DenseMultilinearExtension<F> {
-    let mut res = fix_last_variable_no_par(poly, partial_point.last().unwrap());
-    for p in partial_point.iter().rev().skip(1) {
-        res = fix_last_variable_no_par(&res, p);
-    }
-    res
-}
 
-fn fix_last_variable_no_par<F: PrimeField>(
-    poly: &DenseMultilinearExtension<F>,
-    partial_point: &F,
-) -> DenseMultilinearExtension<F> {
-    let nv = poly.num_vars();
-    let half_len = 1 << (nv - 1);
-    let mut res = vec![F::zero(); half_len];
-    for (i, e) in res.iter_mut().enumerate().take(half_len) {
-        *e = poly.evaluations[i]
-            + *partial_point * (poly.evaluations[i + half_len] - poly.evaluations[i]);
-    }
-    DenseMultilinearExtension::from_evaluations_vec(nv - 1, res)
-}
+
+
 pub fn fix_last_variables<F: PrimeField>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
@@ -277,7 +256,7 @@ pub fn fix_last_variables<F: PrimeField>(
 /// The evaluation of the new polynomial `f_star` at a point `y_idx` is computed
 /// as: f_star(y_idx) = sum_{x_idx} f(x_idx, y_idx) * L_{x_idx}(partial_point)
 /// where `f` is the original polynomial and `L` is the Lagrange basis.
-fn fix_first_variables_sparse<F: Field>(
+pub fn fix_last_variables_sparse<F: Field>(
     poly: &SparseMultilinearExtension<F>,
     // This is x0, the point for the first `nu` variables
     partial_point_x: &[F],

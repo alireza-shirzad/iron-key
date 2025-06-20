@@ -4,7 +4,11 @@ use ark_std::{test_rng, vec::Vec, UniformRand};
 
 fn test_single_helper(nv: usize, is_sparse: bool) -> Result<(), PCSError> {
     let mut rng = test_rng();
-    let poly = DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng));
+    let poly = if is_sparse {
+        DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
+    } else {
+        DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng))
+    };
     let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)?;
     let (ck, vk) = KZH2::trim(params, None, Some(nv))?;
     let point: Vec<_> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
@@ -23,5 +27,13 @@ fn test_dense() -> Result<(), PCSError> {
     test_single_helper(3, false)?;
     test_single_helper(4, false)?;
     test_single_helper(5, false)?;
+    Ok(())
+}
+#[test]
+fn test_sparse() -> Result<(), PCSError> {
+    // test_single_helper(2, true)?;
+    // test_single_helper(3, true)?;
+    test_single_helper(4, true)?;
+    // test_single_helper(5, true)?;
     Ok(())
 }
