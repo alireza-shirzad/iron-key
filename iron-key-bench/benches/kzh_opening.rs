@@ -123,12 +123,12 @@ fn prepare_open_inputs(
 // Compile-time list of parameters to benchmark.
 // We test nv from 10 to 32, for the three specified cases.
 pub const PARAMS: &[BenchParams] = &{
-    const fn build_params() -> [BenchParams; (32 - 10 + 1) * 3] {
+    const fn build_params() -> [BenchParams; (32 - 10 + 1) * 4] {
         let mut out = [BenchParams {
             nv: 0,
             is_sparse: false,
             is_boolean_point: false,
-        }; (32 - 10 + 1) * 3];
+        }; (32 - 10 + 1) * 4];
         let mut i = 0;
         let mut nv = 10;
         while nv <= 32 {
@@ -139,14 +139,21 @@ pub const PARAMS: &[BenchParams] = &{
                 is_boolean_point: false,
             };
             i += 1;
-            // Case 2: Sparse, Random Point
+            // Case 2: Dense, Boolean Point
+            out[i] = BenchParams {
+                nv,
+                is_sparse: false,
+                is_boolean_point: true,
+            };
+            i += 1;
+            // Case 3: Sparse, Random Point
             out[i] = BenchParams {
                 nv,
                 is_sparse: true,
                 is_boolean_point: false,
             };
             i += 1;
-            // Case 3: Sparse, Boolean Point
+            // Case 4: Sparse, Boolean Point
             out[i] = BenchParams {
                 nv,
                 is_sparse: true,

@@ -200,16 +200,53 @@ pub fn fix_last_variables<F: PrimeField>(
         partial_point.len() <= poly.num_vars,
         "invalid size of partial point"
     );
-    let nv = poly.num_vars;
-    let mut poly = poly.evaluations.to_vec();
-    let dim = partial_point.len();
-    // evaluate single variable of partial point from left to right
-    for (i, point) in partial_point.iter().rev().enumerate().take(dim) {
-        poly = fix_last_variable_helper(&poly, nv - i, point);
-    }
 
-    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
+    let is_boolean_point = partial_point.iter().all(|&x| x.is_zero() || x.is_one());
+    let nu = partial_point.len();
+    let mu = poly.num_vars - nu;
+
+    if is_boolean_point {
+        // --- OPTIMIZED PATH for boolean points ---
+        // This corresponds to selecting a slice from the evaluations vector.
+
+        // Convert the boolean point to its integer representation.
+        // We assume the point's variables are ordered from LSB to MSB
+        // corresponding to the last `nu` variables.
+        let mut target_x_index = 0;
+        for (i, &bit) in partial_point.iter().enumerate() {
+            if bit.is_one() {
+                target_x_index |= 1 << i;
+            }
+        }
+        
+        // The new polynomial's evaluations are a slice of the original.
+        // The size of the slice is the number of evaluations for a mu-variate polynomial.
+        let slice_size = 1 << mu;
+        
+        // The starting point of the slice is determined by the integer value
+        // of the boolean point.
+        let start = target_x_index * slice_size;
+        let end = start + slice_size;
+        
+        let new_evals = &poly.evaluations[start..end];
+
+        DenseMultilinearExtension::<F>::from_evaluations_slice(mu, new_evals)
+
+    } else {
+        // --- GENERAL PATH for non-boolean (random) points ---
+        // This is the original, more expensive implementation.
+
+        let mut current_evals = poly.evaluations.to_vec();
+        
+        // Evaluate single variable of partial point from right to left (MSB to LSB).
+        for (i, point) in partial_point.iter().rev().enumerate() {
+            current_evals = fix_last_variable_helper(&current_evals, poly.num_vars - i, point);
+        }
+
+        DenseMultilinearExtension::<F>::from_evaluations_slice(mu, &current_evals[..1 << mu])
+    }
 }
+
 
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let half_len = 1 << (nv - 1);
