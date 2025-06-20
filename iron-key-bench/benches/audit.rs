@@ -34,8 +34,8 @@ fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
     cache
         .entry(log_capacity)
         .or_insert_with(|| {
-            eprintln!(
-                "Cache miss: Creating new IronPublicParameters for log_capacity = {}",
+            println!(
+                "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
             let spec = IronSpecification::new(1 << log_capacity);

@@ -1,4 +1,4 @@
-mod srs;
+pub mod srs;
 pub mod structs;
 #[cfg(test)]
 mod tests;
@@ -158,7 +158,6 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             DenseOrSparseMLE::Sparse(f_star) => evaluate_last_sparse(&f_star, y0) == *value,
         };
         end_timer!(check3_timer);
-        dbg!(p1, p2, p3);
         let res = p1 && p2 && p3;
         end_timer!(verify_timer);
         Ok(res)
@@ -243,7 +242,12 @@ impl<E: Pairing> KZH2<E> {
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
         let f_star = fix_last_variables_sparse(polynomial, x0);
-        let z0 = fix_last_variables_sparse(&f_star, y0).evaluations[&0];
+        let binding = fix_last_variables_sparse(&f_star, y0);
+        let z0 = binding
+            .evaluations
+            .get(&0)
+            .cloned()
+            .unwrap_or(E::ScalarField::zero());
         end_timer!(open_timer);
         Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
     }

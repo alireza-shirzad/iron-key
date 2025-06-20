@@ -1,6 +1,7 @@
 mod audit;
 mod client_lookup;
 mod kzh;
+mod kzh_opening;
 mod server_lookup;
 mod server_update_keys;
 mod server_update_reg;

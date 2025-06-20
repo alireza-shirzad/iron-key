@@ -27,6 +27,16 @@ fn test_dense() -> Result<(), PCSError> {
     test_single_helper(3, false)?;
     test_single_helper(4, false)?;
     test_single_helper(5, false)?;
+    test_single_helper(6, false)?;
+    test_single_helper(7, false)?;
+    test_single_helper(8, false)?;
+    test_single_helper(9, false)?;
+    test_single_helper(10, false)?;
+    test_single_helper(11, false)?;
+    test_single_helper(12, false)?;
+    test_single_helper(13, false)?;
+    test_single_helper(14, false)?;
+    test_single_helper(15, false)?;
     Ok(())
 }
 #[test]
@@ -36,5 +46,13 @@ fn test_sparse() -> Result<(), PCSError> {
     test_single_helper(4, true)?;
     test_single_helper(5, true)?;
     test_single_helper(6, true)?;
+    test_single_helper(8, true)?;
+    test_single_helper(9, true)?;
+    test_single_helper(10, true)?;
+    test_single_helper(11, true)?;
+    test_single_helper(12, true)?;
+    test_single_helper(13, true)?;
+    test_single_helper(14, true)?;
+    test_single_helper(15, true)?;
     Ok(())
 }
