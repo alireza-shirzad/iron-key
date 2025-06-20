@@ -31,9 +31,10 @@ fn test_dense() -> Result<(), PCSError> {
 }
 #[test]
 fn test_sparse() -> Result<(), PCSError> {
-    // test_single_helper(2, true)?;
-    // test_single_helper(3, true)?;
+    test_single_helper(2, true)?;
+    test_single_helper(3, true)?;
     test_single_helper(4, true)?;
-    // test_single_helper(5, true)?;
+    test_single_helper(5, true)?;
+    test_single_helper(6, true)?;
     Ok(())
 }

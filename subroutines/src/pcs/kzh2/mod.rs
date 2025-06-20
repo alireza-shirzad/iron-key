@@ -14,7 +14,7 @@ use arithmetic::{
 use ark_ec::{
     pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
-use ark_ff::Zero;
+use ark_ff::{One, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
@@ -239,7 +239,6 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        // TODO: Make this free for boolean points
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());

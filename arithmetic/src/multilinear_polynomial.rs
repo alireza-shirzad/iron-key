@@ -234,54 +234,67 @@ pub fn fix_last_variables_sparse<F: Field>(
     // This is x0, the point for the last `nu` variables
     partial_point_x: &[F],
 ) -> SparseMultilinearExtension<F> {
+    let is_boolean_point = partial_point_x.iter().all(|&x| x.is_zero() || x.is_one());
     let nu = partial_point_x.len();
     assert!(nu <= poly.num_vars, "Invalid size of partial point");
     let mu = poly.num_vars - nu;
 
     let mut new_evals: BTreeMap<usize, F> = BTreeMap::new();
 
-    // Iterate over all evaluations in the original sparse polynomial.
-    for (&full_index, &value) in &poly.evaluations {
-        // Decompose the full index. The variables for the new, smaller polynomial
-        // correspond to the lower `mu` bits. The variables being fixed correspond
-        // to the upper `nu` bits.
-        let y_index = full_index & ((1 << mu) - 1); // Lower `mu` bits become the new index.
-        let x_index = full_index >> mu; // Upper `nu` bits are for the fixed part.
+    if is_boolean_point {
+        // OPTIMIZED PATH for boolean points (zeros and ones).
+        // This is a simple selection/filtering operation, no field arithmetic needed.
 
-        // Calculate the evaluation of the Lagrange basis polynomial for x_index
-        // at the provided partial_point_x.
-        let mut lagrange_eval = F::one();
-        for i in 0..nu {
-            // Point's vars are ordered from most-significant to least-significant
-            let point_val_at_i = partial_point_x[i];
-            // Bit of x_index are also ordered from most-significant to least-significant
-            let bit_of_x_idx = (x_index >> (nu - 1 - i)) & 1;
-
-            if bit_of_x_idx == 1 {
-                lagrange_eval *= point_val_at_i;
-            } else {
-                lagrange_eval *= F::one() - point_val_at_i;
+        // First, convert the boolean point into its integer representation.
+        let mut target_x_index = 0;
+        // The point's coordinates are for variables from LSB to MSB.
+        for (i, &bit) in partial_point_x.iter().enumerate() {
+            if bit.is_one() {
+                target_x_index |= 1 << i;
             }
         }
+        
+        // Iterate over the polynomial's evaluations and select the ones
+        // that fall into the hypercube slice defined by `target_x_index`.
+        for (&full_index, &value) in &poly.evaluations {
+            let y_index = full_index & ((1 << mu) - 1);
+            let x_index = full_index >> mu;
 
-        // Add the contribution to the corresponding entry in the new polynomial.
-        // This is the corrected part: we no longer skip if lagrange_eval is zero.
-        let contribution = value * lagrange_eval;
-        *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+            if x_index == target_x_index {
+                new_evals.insert(y_index, value);
+            }
+        }
+    } else {
+        // GENERAL PATH for non-boolean points.
+        // This requires evaluating the Lagrange basis polynomials.
+        for (&full_index, &value) in &poly.evaluations {
+            let y_index = full_index & ((1 << mu) - 1);
+            let x_index = full_index >> mu;
+
+            let mut lagrange_eval = F::one();
+            for i in 0..nu {
+                let point_val_at_i = partial_point_x[i];
+                // The i-th point coordinate corresponds to the i-th LSB of x_index.
+                let bit_of_x_idx = (x_index >> i) & 1;
+
+                if bit_of_x_idx == 1 {
+                    lagrange_eval *= point_val_at_i;
+                } else {
+                    lagrange_eval *= F::one() - point_val_at_i;
+                }
+            }
+            
+            let contribution = value * lagrange_eval;
+            *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+        }
     }
-
-    // After summing up all contributions, we can choose whether to keep explicit
-    // zero entries. Based on your test cases, they should be kept. If the
-    // convention for SparseMultilinearExtension was to only store non-zeroes,
-    // we would add: new_evals.retain(|_, v| !v.is_zero());
-
+    
     // Collect the BTreeMap into a Vec of tuples to pass to the constructor.
     let final_evaluations: Vec<(usize, F)> = new_evals.into_iter().collect();
-
+    
     // Use the public constructor instead of direct instantiation.
     SparseMultilinearExtension::from_evaluations(mu, &final_evaluations)
 }
-
 pub fn evaluate_last_dense<F: PrimeField>(f: &DenseMultilinearExtension<F>, point: &[F]) -> F {
     assert_eq!(f.num_vars, point.len());
     fix_last_variables(f, point).evaluations[0]
@@ -289,7 +302,11 @@ pub fn evaluate_last_dense<F: PrimeField>(f: &DenseMultilinearExtension<F>, poin
 
 pub fn evaluate_last_sparse<F: PrimeField>(f: &SparseMultilinearExtension<F>, point: &[F]) -> F {
     assert_eq!(f.num_vars, point.len());
-    *fix_last_variables_sparse(f, point).evaluations.values().next().unwrap()
+    *fix_last_variables_sparse(f, point)
+        .evaluations
+        .values()
+        .next()
+        .unwrap()
 }
 #[test]
 fn test_fix_last_variables_sparse() {
