@@ -1,27 +1,28 @@
-pub mod srs;
+mod srs;
 pub mod structs;
 #[cfg(test)]
 mod tests;
 use crate::{
-    pcs::{
-        kzh2::srs::{KZH2UniversalParams, KZH2VerifierParam},
-        StructuredReferenceString,
-    },
+    pcs::kzh2::srs::{KZH2ProverParam, KZH2VerifierParam},
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
 use arithmetic::{build_eq_x_r, fix_last_variables, fix_variables};
 use ark_ec::{
-    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
+    pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup, ScalarMul,
 };
 use ark_ff::{AdditiveGroup, Field, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
-use ark_std::{
-    cfg_chunks, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng, start_timer,
-};
+#[cfg(feature = "parallel")]
+use rayon::iter::IntoParallelIterator;
 
+use crate::pcs::{kzh2::srs::KZH2UniversalParams, StructuredReferenceString};
+use ark_std::{
+    cfg_chunks, cfg_into_iter, cfg_iter, cfg_iter_mut, collections::BTreeMap, end_timer, rand::Rng,
+    start_timer, UniformRand,
+};
 #[cfg(feature = "parallel")]
 use rayon::{
     iter::{
@@ -30,7 +31,6 @@ use rayon::{
     },
     prelude::ParallelSlice,
 };
-use srs::KZH2ProverParam;
 use std::{borrow::Borrow, marker::PhantomData};
 use structs::{KZH2AuxInfo, KZH2Commitment, KZH2OpeningProof};
 use transcript::IOPTranscript;
@@ -45,9 +45,9 @@ pub struct KZH2<E: Pairing> {
 
 impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     // Parameters
+    type SRS = KZH2UniversalParams<E>;
     type ProverParam = KZH2ProverParam<E>;
     type VerifierParam = KZH2VerifierParam<E>;
-    type SRS = KZH2UniversalParams<E>;
     // Polynomial and its associated types
     type Polynomial = DenseOrSparseMLE<E::ScalarField>;
     type Point = Vec<E::ScalarField>;
@@ -127,18 +127,18 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         aux: &Self::Aux,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError> {
+        let verify_timer = start_timer!(|| "KZH::Verify");
         let (x0, y0) = point.split_at(verifier_param.get_nu());
         // Check 1: Pairing check for commitment switching
+        let check1_timer = start_timer!(|| "KZH::Verify::Check1");
         let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d());
         let g2_pairing_elements = std::iter::once(verifier_param.get_minus_v_prime())
             .chain(verifier_param.get_v_vec().iter().copied());
-        // assert!(E::multi_pairing(g1_pairing_elements,
-        // g2_pairing_elements).is_zero());
         let p1 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
+        end_timer!(check1_timer);
         // Check 2: Hyrax Check
-        // let eq_x0_mle = build_eq_x_r(x0)?;
+        let check2_timer = start_timer!(|| "KZH::Verify::Check2");
         let eq_x0_mle = build_eq_x_r(x0).unwrap();
-        // TODO: Fix the to_evaluations
         let scalars: Vec<E::ScalarField> = proof
             .get_f_star()
             .to_evaluations()
@@ -153,10 +153,13 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             .chain(aux.get_d().iter().copied())
             .collect();
         let p2 = E::G1::msm(&bases, &scalars).unwrap().is_zero();
-
+        end_timer!(check2_timer);
         // Check 3: Evaluate polynomial at point
+        let check3_timer = start_timer!(|| "KZH::Verify::Check3");
         let p3 = proof.get_f_star().evaluate(&y0.to_vec()) == *value;
+        end_timer!(check3_timer);
         let res = p1 && p2 && p3;
+        end_timer!(verify_timer);
         Ok(res)
     }
 
@@ -215,7 +218,7 @@ impl<E: Pairing> KZH2<E> {
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
         let f_star = fix_last_variables(polynomial, x0);
-        let z0 = f_star.evaluate(&y0.to_vec());
+        let z0 = fix_last_variables(&f_star, y0).evaluations[0];
         end_timer!(open_timer);
         Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Dense(f_star)), z0))
     }
@@ -226,22 +229,15 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        let timer = start_timer!(|| "KZH::OpenInternal");
-        let prover_param = prover_param.borrow();
-        let (x0, y0) = point.split_at(prover_param.get_nu());
-        let new_evals = fix_first_k_vars_sparse_parallel::<E::ScalarField>(
-            &polynomial.evaluations,
-            polynomial.num_vars as u32,
-            x0,
-        );
-        let poly_fixed_at_x0 =
-            SparseMultilinearExtension::from_evaluations(prover_param.get_mu(), &new_evals);
-        let z0 = poly_fixed_at_x0.evaluate(&y0.to_vec());
-        end_timer!(timer);
-        Ok((
-            KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(poly_fixed_at_x0)),
-            z0,
-        ))
+        // TODO: Make this free for boolean points
+        // let open_timer = start_timer!(|| "KZH::Open");
+        // let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        // let (x0, y0) = point.split_at(prover_param.get_nu());
+        // let f_star = fix_last_variables(polynomial, x0);
+        // let z0 = fix_last_variables(&f_star, y0).evaluations[0];
+        // end_timer!(open_timer);
+        // Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
+        todo!()
     }
 
     fn comp_aux_dense(

@@ -6,11 +6,11 @@
 
 use crate::{util::get_batched_nv, ArithErrors};
 use ark_ff::{Field, PrimeField};
-use ark_poly::MultilinearExtension;
+use ark_poly::{MultilinearExtension, SparseMultilinearExtension};
 use ark_std::{end_timer, rand::RngCore, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 pub use ark_poly::DenseMultilinearExtension;
 
@@ -156,7 +156,6 @@ pub fn fix_variables<F: Field>(
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
-
 fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let mut res = vec![F::zero(); 1 << (nv - 1)];
 
@@ -266,6 +265,66 @@ pub fn fix_last_variables<F: PrimeField>(
     }
 
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
+}
+
+/// Helper function to perform partial evaluation on a sparse multilinear
+/// polynomial.
+///
+/// It fixes the first `nu = partial_point.len()` variables of `poly` to the
+/// values in `partial_point`, returning a new, smaller sparse polynomial over
+/// the remaining `mu` variables.
+///
+/// The evaluation of the new polynomial `f_star` at a point `y_idx` is computed
+/// as: f_star(y_idx) = sum_{x_idx} f(x_idx, y_idx) * L_{x_idx}(partial_point)
+/// where `f` is the original polynomial and `L` is the Lagrange basis.
+fn fix_first_variables_sparse<F: Field>(
+    poly: &SparseMultilinearExtension<F>,
+    // This is x0, the point for the first `nu` variables
+    partial_point_x: &[F],
+) -> SparseMultilinearExtension<F> {
+    let nu = partial_point_x.len();
+    assert!(nu <= poly.num_vars, "Invalid size of partial point");
+    let mu = poly.num_vars - nu;
+
+    let mut new_evals: BTreeMap<usize, F> = BTreeMap::new();
+
+    // Iterate over the non-zero evaluations of the original sparse polynomial.
+    for (&full_index, &value) in &poly.evaluations {
+        if value.is_zero() {
+            continue;
+        }
+
+        // Decompose the full index into the part for the fixed variables (x)
+        // and the part for the remaining variables (y).
+        // We assume low bits correspond to the first variables.
+        let x_index = full_index & ((1 << nu) - 1); // Lower nu bits
+        let y_index = full_index >> nu; // Upper mu bits
+
+        // Calculate the evaluation of the Lagrange basis polynomial for x_index
+        // at the provided partial_point_x.
+        let mut lagrange_eval = F::one();
+        for i in 0..nu {
+            let point_val_at_i = partial_point_x[i];
+            let bit_of_x_idx = (x_index >> i) & 1;
+
+            if bit_of_x_idx == 1 {
+                lagrange_eval *= point_val_at_i;
+            } else {
+                lagrange_eval *= F::one() - point_val_at_i;
+            }
+        }
+
+        // Add the contribution to the corresponding entry in the new polynomial.
+        if !lagrange_eval.is_zero() {
+            let contribution = value * lagrange_eval;
+            *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+        }
+    }
+
+    // Remove any entries that might have become zero due to cancellations.
+    new_evals.retain(|_, v| !v.is_zero());
+    let new_evals_vec: Vec<(usize, F)> = new_evals.into_iter().collect();
+    SparseMultilinearExtension::from_evaluations(mu, &new_evals_vec)
 }
 
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
