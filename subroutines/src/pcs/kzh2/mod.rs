@@ -7,7 +7,10 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
-use arithmetic::{build_eq_x_r, fix_last_variables, fix_last_variables_sparse};
+use arithmetic::{
+    build_eq_x_r, evaluate_last_dense, evaluate_last_sparse, fix_last_variables,
+    fix_last_variables_sparse,
+};
 use ark_ec::{
     pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
@@ -150,8 +153,12 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         end_timer!(check2_timer);
         // Check 3: Evaluate polynomial at point
         let check3_timer = start_timer!(|| "KZH::Verify::Check3");
-        let p3 = proof.get_f_star().evaluate(&y0.to_vec()) == *value;
+        let p3 = match proof.get_f_star() {
+            DenseOrSparseMLE::Dense(f_star) => evaluate_last_dense(&f_star, y0) == *value,
+            DenseOrSparseMLE::Sparse(f_star) => evaluate_last_sparse(&f_star, y0) == *value,
+        };
         end_timer!(check3_timer);
+        dbg!(p1, p2, p3);
         let res = p1 && p2 && p3;
         end_timer!(verify_timer);
         Ok(res)
@@ -185,16 +192,25 @@ impl<E: Pairing> KZH2<E> {
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-        let mut bases = vec![E::G1Affine::zero(); sparse_poly.evaluations.len()];
-        cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
-            *base = prover_param.get_h_mat()[i];
-        });
-        let scalars = sparse_poly
-            .evaluations
-            .iter()
-            .map(|(_, &v)| v)
-            .collect::<Vec<_>>();
+
+        // The scalars for the MSM are the values from the sparse polynomial's
+        // evaluation map.
+        let scalars: Vec<E::ScalarField> = sparse_poly.evaluations.values().cloned().collect();
+
+        // The bases for the MSM must correspond to the generator at the index
+        // specified by the key in the sparse polynomial's evaluation map.
+        let h_mat = prover_param.get_h_mat();
+        let bases: Vec<E::G1Affine> = sparse_poly
+        .evaluations
+        .keys()
+        .map(|&index| h_mat[index]) // Use the key `index` to get the correct base.
+        .collect();
+
+        // Ensure that we have the same number of bases and scalars.
+        assert_eq!(bases.len(), scalars.len());
+
         let com = E::G1::msm(&bases, &scalars).unwrap();
+
         Ok(KZH2Commitment::new(
             com.into_affine(),
             sparse_poly.num_vars(),
@@ -299,14 +315,4 @@ impl<E: Pairing> KZH2<E> {
         end_timer!(timer);
         Ok(KZH2AuxInfo::new(d))
     }
-}
-
-fn verify_internal<E: Pairing>(
-    verifier_param: &KZH2VerifierParam<E>,
-    commitment: &KZH2Commitment<E>,
-    point: &[E::ScalarField],
-    value: &E::ScalarField,
-    proof: &KZH2OpeningProof<E>,
-) -> Result<bool, PCSError> {
-    todo!()
 }

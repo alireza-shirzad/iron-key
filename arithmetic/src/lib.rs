@@ -13,7 +13,7 @@ mod virtual_polynomial;
 pub use errors::ArithErrors;
 pub use multilinear_polynomial::{
     evaluate_no_par, evaluate_opt, fix_last_variables, fix_first_variables, fix_last_variables_sparse,
-    identity_permutation, identity_permutation_mles, merge_polynomials, random_mle_list,
+    identity_permutation, identity_permutation_mles, random_mle_list, evaluate_last_dense, evaluate_last_sparse,
     random_permutation, random_permutation_mles, random_zero_mle_list, DenseMultilinearExtension,
 };
 pub use univariate_polynomial::{build_l, get_uni_domain};

@@ -1,12 +1,5 @@
-// Copyright (c) 2023 Espresso Systems (espressosys.com)
-// This file is part of the HyperPlonk library.
-
-// You should have received a copy of the MIT License
-// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
-
-use crate::{util::get_batched_nv, ArithErrors};
 use ark_ff::{Field, PrimeField};
-use ark_poly::{MultilinearExtension, SparseMultilinearExtension};
+use ark_poly::{univariate::DenseOrSparsePolynomial, SparseMultilinearExtension};
 use ark_std::{end_timer, rand::RngCore, start_timer};
 #[cfg(feature = "parallel")]
 use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
@@ -199,34 +192,6 @@ fn fix_first_variables_no_par<F: Field>(
     DenseMultilinearExtension::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
-/// merge a set of polynomials. Returns an error if the
-/// polynomials do not share a same number of nvs.
-pub fn merge_polynomials<F: PrimeField>(
-    polynomials: &[Arc<DenseMultilinearExtension<F>>],
-) -> Result<Arc<DenseMultilinearExtension<F>>, ArithErrors> {
-    let nv = polynomials[0].num_vars();
-    for poly in polynomials.iter() {
-        if nv != poly.num_vars() {
-            return Err(ArithErrors::InvalidParameters(
-                "num_vars do not match for polynomials".to_string(),
-            ));
-        }
-    }
-
-    let merged_nv = get_batched_nv(nv, polynomials.len());
-    let mut scalars = vec![];
-    for poly in polynomials.iter() {
-        scalars.extend_from_slice(poly.to_evaluations().as_slice());
-    }
-    scalars.extend_from_slice(vec![F::zero(); (1 << merged_nv) - scalars.len()].as_ref());
-    Ok(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
-        merged_nv, scalars,
-    )))
-}
-
-
-
-
 pub fn fix_last_variables<F: PrimeField>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
@@ -246,66 +211,6 @@ pub fn fix_last_variables<F: PrimeField>(
     DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
 }
 
-/// Helper function to perform partial evaluation on a sparse multilinear
-/// polynomial.
-///
-/// It fixes the first `nu = partial_point.len()` variables of `poly` to the
-/// values in `partial_point`, returning a new, smaller sparse polynomial over
-/// the remaining `mu` variables.
-///
-/// The evaluation of the new polynomial `f_star` at a point `y_idx` is computed
-/// as: f_star(y_idx) = sum_{x_idx} f(x_idx, y_idx) * L_{x_idx}(partial_point)
-/// where `f` is the original polynomial and `L` is the Lagrange basis.
-pub fn fix_last_variables_sparse<F: Field>(
-    poly: &SparseMultilinearExtension<F>,
-    // This is x0, the point for the first `nu` variables
-    partial_point_x: &[F],
-) -> SparseMultilinearExtension<F> {
-    let nu = partial_point_x.len();
-    assert!(nu <= poly.num_vars, "Invalid size of partial point");
-    let mu = poly.num_vars - nu;
-
-    let mut new_evals: BTreeMap<usize, F> = BTreeMap::new();
-
-    // Iterate over the non-zero evaluations of the original sparse polynomial.
-    for (&full_index, &value) in &poly.evaluations {
-        if value.is_zero() {
-            continue;
-        }
-
-        // Decompose the full index into the part for the fixed variables (x)
-        // and the part for the remaining variables (y).
-        // We assume low bits correspond to the first variables.
-        let x_index = full_index & ((1 << nu) - 1); // Lower nu bits
-        let y_index = full_index >> nu; // Upper mu bits
-
-        // Calculate the evaluation of the Lagrange basis polynomial for x_index
-        // at the provided partial_point_x.
-        let mut lagrange_eval = F::one();
-        for i in 0..nu {
-            let point_val_at_i = partial_point_x[i];
-            let bit_of_x_idx = (x_index >> i) & 1;
-
-            if bit_of_x_idx == 1 {
-                lagrange_eval *= point_val_at_i;
-            } else {
-                lagrange_eval *= F::one() - point_val_at_i;
-            }
-        }
-
-        // Add the contribution to the corresponding entry in the new polynomial.
-        if !lagrange_eval.is_zero() {
-            let contribution = value * lagrange_eval;
-            *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
-        }
-    }
-
-    // Remove any entries that might have become zero due to cancellations.
-    new_evals.retain(|_, v| !v.is_zero());
-    let new_evals_vec: Vec<(usize, F)> = new_evals.into_iter().collect();
-    SparseMultilinearExtension::from_evaluations(mu, &new_evals_vec)
-}
-
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let half_len = 1 << (nv - 1);
     let mut res = vec![F::zero(); half_len];
@@ -322,4 +227,86 @@ fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F
     });
 
     res
+}
+
+pub fn fix_last_variables_sparse<F: Field>(
+    poly: &SparseMultilinearExtension<F>,
+    // This is x0, the point for the last `nu` variables
+    partial_point_x: &[F],
+) -> SparseMultilinearExtension<F> {
+    let nu = partial_point_x.len();
+    assert!(nu <= poly.num_vars, "Invalid size of partial point");
+    let mu = poly.num_vars - nu;
+
+    let mut new_evals: BTreeMap<usize, F> = BTreeMap::new();
+
+    // Iterate over all evaluations in the original sparse polynomial.
+    for (&full_index, &value) in &poly.evaluations {
+        // Decompose the full index. The variables for the new, smaller polynomial
+        // correspond to the lower `mu` bits. The variables being fixed correspond
+        // to the upper `nu` bits.
+        let y_index = full_index & ((1 << mu) - 1); // Lower `mu` bits become the new index.
+        let x_index = full_index >> mu; // Upper `nu` bits are for the fixed part.
+
+        // Calculate the evaluation of the Lagrange basis polynomial for x_index
+        // at the provided partial_point_x.
+        let mut lagrange_eval = F::one();
+        for i in 0..nu {
+            // Point's vars are ordered from most-significant to least-significant
+            let point_val_at_i = partial_point_x[i];
+            // Bit of x_index are also ordered from most-significant to least-significant
+            let bit_of_x_idx = (x_index >> (nu - 1 - i)) & 1;
+
+            if bit_of_x_idx == 1 {
+                lagrange_eval *= point_val_at_i;
+            } else {
+                lagrange_eval *= F::one() - point_val_at_i;
+            }
+        }
+
+        // Add the contribution to the corresponding entry in the new polynomial.
+        // This is the corrected part: we no longer skip if lagrange_eval is zero.
+        let contribution = value * lagrange_eval;
+        *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+    }
+
+    // After summing up all contributions, we can choose whether to keep explicit
+    // zero entries. Based on your test cases, they should be kept. If the
+    // convention for SparseMultilinearExtension was to only store non-zeroes,
+    // we would add: new_evals.retain(|_, v| !v.is_zero());
+
+    // Collect the BTreeMap into a Vec of tuples to pass to the constructor.
+    let final_evaluations: Vec<(usize, F)> = new_evals.into_iter().collect();
+
+    // Use the public constructor instead of direct instantiation.
+    SparseMultilinearExtension::from_evaluations(mu, &final_evaluations)
+}
+
+pub fn evaluate_last_dense<F: PrimeField>(f: &DenseMultilinearExtension<F>, point: &[F]) -> F {
+    assert_eq!(f.num_vars, point.len());
+    fix_last_variables(f, point).evaluations[0]
+}
+
+pub fn evaluate_last_sparse<F: PrimeField>(f: &SparseMultilinearExtension<F>, point: &[F]) -> F {
+    assert_eq!(f.num_vars, point.len());
+    *fix_last_variables_sparse(f, point).evaluations.values().next().unwrap()
+}
+#[test]
+fn test_fix_last_variables_sparse() {
+    use ark_bn254::{Bn254 as E, Fr};
+    let poly = SparseMultilinearExtension::from_evaluations(
+        3,
+        &[
+            (0, Fr::from(0)),
+            (1, Fr::from(1)),
+            (2, Fr::from(2)),
+            (3, Fr::from(3)),
+            (4, Fr::from(4)),
+            (5, Fr::from(5)),
+            (6, Fr::from(6)),
+            (7, Fr::from(7)),
+        ],
+    );
+    let res = fix_last_variables_sparse(&poly, &[Fr::from(0)]);
+    dbg!(res.evaluations);
 }
