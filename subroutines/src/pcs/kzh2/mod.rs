@@ -111,9 +111,43 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         polynomials: &[&Self::Polynomial],
         point: &<Self::Polynomial as Polynomial<E::ScalarField>>::Point,
         aux: &[Self::Aux],
-        transcript: &mut IOPTranscript<E::ScalarField>,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
-        todo!()
+        let num_vars = point.len();
+        let mut aggr_aux: KZH2AuxInfo<E> =
+            KZH2AuxInfo::new(vec![E::G1Affine::zero(); 1 << num_vars]);
+        let (agg_poly, aggr_aux) = match polynomials[0] {
+            DenseOrSparseMLE::Dense(_) => {
+                let mut aggr_poly = DenseMultilinearExtension::from_evaluations_vec(
+                    num_vars,
+                    vec![E::ScalarField::zero(); 1 << num_vars],
+                );
+                for (poly, aux) in polynomials.iter().zip(aux.iter()) {
+                    if let DenseOrSparseMLE::Dense(dense_poly) = poly {
+                        aggr_poly += dense_poly;
+                        aggr_aux = aggr_aux + aux.clone();
+                    } else {
+                        panic!("All polynomials must be dense here");
+                    }
+                }
+                (DenseOrSparseMLE::Dense(aggr_poly), aggr_aux)
+            },
+            DenseOrSparseMLE::Sparse(_) => {
+                let mut aggr_poly =
+                    SparseMultilinearExtension::from_evaluations(num_vars, Vec::new());
+                for (poly, aux) in polynomials.iter().zip(aux.iter()) {
+                    if let DenseOrSparseMLE::Sparse(sparse_poly) = poly {
+                        aggr_poly += sparse_poly;
+                        aggr_aux = aggr_aux + aux.clone();
+                    } else {
+                        panic!("All polynomials must be sparse here");
+                    }
+                }
+
+                (DenseOrSparseMLE::Sparse(aggr_poly), aggr_aux)
+            },
+        };
+        Self::open(prover_param, &agg_poly, point, &aggr_aux)
     }
 
     fn verify(
@@ -164,14 +198,31 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     }
 
     fn batch_verify(
-        _verifier_param: &Self::VerifierParam,
-        _commitments: &[Self::Commitment],
-        _auxs: &[Self::Aux],
-        _points: &Self::Point,
-        _batch_proof: &Self::BatchProof,
+        verifier_param: &Self::VerifierParam,
+        commitments: &[Self::Commitment],
+        auxs: &[Self::Aux],
+        points: &Self::Point,
+        values: &[E::ScalarField],
+        batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
-        todo!()
+        let mut aggr_comm = Self::Commitment::default();
+        let mut aggr_aux = Self::Aux::default();
+        let mut aggr_value = E::ScalarField::zero();
+        for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
+            aggr_comm = aggr_comm + *comm;
+            aggr_aux = aggr_aux + aux.clone();
+            aggr_value += value;
+        }
+
+        Self::verify(
+            verifier_param,
+            &aggr_comm,
+            points,
+            &aggr_value,
+            &aggr_aux,
+            batch_proof,
+        )
     }
 }
 impl<E: Pairing> KZH2<E> {

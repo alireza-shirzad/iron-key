@@ -100,6 +100,7 @@ where
             &commitments,
             auxes,
             &proof.get_index(),
+            &[value, self.label.to_field()],
             proof.get_batched_opening_proof(),
             &mut transcript,
         )

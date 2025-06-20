@@ -9,7 +9,7 @@ use ark_ec::pairing::Pairing;
 use ark_ff::{Field, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use subroutines::{PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
-
+use ark_ec::AdditiveGroup;
 use crate::{
     VKDAuditor, VKDClient, VKDDictionary, VKDLabel, VKDResult,
     bb::dummybb::DummyBB,
@@ -116,11 +116,13 @@ where
                     .as_ref()
                     .unwrap()
                     .get_opening_proof();
+                //TODO: Fix the values
                 MvPCS::batch_verify(
                     self.key.get_pcs_verifier_param(),
                     &commitments,
                     &auxs,
                     &zerocheck_proof.point,
+                    &[E::ScalarField::ZERO, E::ScalarField::ZERO],
                     opening_proof,
                     &mut transcript,
                 )

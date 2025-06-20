@@ -96,6 +96,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         _commitments: &[Self::Commitment],
         _auxs: &[Self::Aux],
         _point: &Self::Point,
+        _values: &[E::ScalarField],
         _batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
