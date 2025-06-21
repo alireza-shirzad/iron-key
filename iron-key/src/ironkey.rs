@@ -9,15 +9,7 @@ use crate::{
     },
 };
 use ark_ec::pairing::Pairing;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Read, Write};
-use ark_std::{
-    end_timer,
-    env::current_dir,
-    fs::File,
-    io::{BufReader, BufWriter},
-    ops::Sub,
-    start_timer, test_rng,
-};
+use ark_std::{end_timer, ops::Sub, start_timer, test_rng};
 use std::ops::Add;
 use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 pub struct IronKey<E, MvPCS, T>
@@ -81,32 +73,8 @@ where
         let capacity = specification.get_capacity();
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
-        let srs_path = current_dir()
-            .unwrap()
-            .join(format!("../srs/srs_{}.bin", num_vars));
-        let srs = if srs_path.exists() {
-            eprintln!("Loading SRS");
-            let mut buffer = Vec::new();
-            BufReader::new(File::open(&srs_path).unwrap())
-                .read_to_end(&mut buffer)
-                .unwrap();
-            MvPCS::SRS::deserialize_uncompressed_unchecked(&buffer[..]).unwrap_or_else(|_| {
-                panic!("Failed to deserialize SRS from {:?}", srs_path);
-            })
-        } else {
-            eprintln!("Computing SRS");
-            let mut rng = test_rng();
-            let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
-            let mut serialized = Vec::new();
-            srs.serialize_uncompressed(&mut serialized).unwrap();
-            BufWriter::new(
-                File::create(srs_path.clone())
-                    .unwrap_or_else(|_| panic!("could not create file for SRS at {:?}", srs_path)),
-            )
-            .write_all(&serialized)
-            .unwrap();
-            srs
-        };
+        let mut rng = test_rng();
+        let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
         end_timer!(timer);
         Ok(IronPublicParameters::<E, MvPCS>::new(real_capacity, srs))
     }

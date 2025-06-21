@@ -22,13 +22,20 @@ use ark_poly::{
 use rayon::iter::IntoParallelIterator;
 
 use crate::pcs::{kzh2::srs::KZH2UniversalParams, StructuredReferenceString};
-use ark_std::{cfg_chunks, cfg_iter_mut, end_timer, rand::Rng, start_timer};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{cfg_chunks, cfg_iter_mut, end_timer, rand::Rng, start_timer, test_rng};
 #[cfg(feature = "parallel")]
 use rayon::{
     iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator},
     prelude::ParallelSlice,
 };
-use std::{borrow::Borrow, marker::PhantomData};
+use std::{
+    borrow::Borrow,
+    env::current_dir,
+    fs::File,
+    io::{BufReader, BufWriter, Read, Write},
+    marker::PhantomData,
+};
 use structs::{KZH2AuxInfo, KZH2Commitment, KZH2OpeningProof};
 use transcript::IOPTranscript;
 // use batching::{batch_verify_internal, multi_open_internal};
@@ -56,7 +63,33 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     type Aux = KZH2AuxInfo<E>;
 
     fn gen_srs_for_testing<R: Rng>(rng: &mut R, log_size: usize) -> Result<Self::SRS, PCSError> {
-        KZH2UniversalParams::<E>::gen_srs_for_testing(rng, log_size)
+        let srs_path = current_dir()
+            .unwrap()
+            .join(format!("../srs/srs_{}.bin", log_size));
+        if srs_path.exists() {
+            eprintln!("Loading SRS");
+            let mut buffer = Vec::new();
+            BufReader::new(File::open(&srs_path).unwrap())
+                .read_to_end(&mut buffer)
+                .unwrap();
+            Ok(
+                Self::SRS::deserialize_uncompressed_unchecked(&buffer[..]).unwrap_or_else(|_| {
+                    panic!("Failed to deserialize SRS from {:?}", srs_path);
+                }),
+            )
+        } else {
+            eprintln!("Computing SRS");
+            let srs = KZH2UniversalParams::<E>::gen_srs_for_testing(rng, log_size).unwrap();
+            let mut serialized = Vec::new();
+            srs.serialize_uncompressed(&mut serialized).unwrap();
+            BufWriter::new(
+                File::create(srs_path.clone())
+                    .unwrap_or_else(|_| panic!("could not create file for SRS at {:?}", srs_path)),
+            )
+            .write_all(&serialized)
+            .unwrap();
+            Ok(srs)
+        }
     }
 
     fn trim(
