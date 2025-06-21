@@ -108,38 +108,25 @@ fn prepare_prover_update_prove_inputs(
     (server, update_batch, bulletin_board)
 }
 
-/// Compile-time list of (log_capacity, log_update_size, 3) triplets for light
-/// tests.
+/// Compile-time list of (log_capacity, log_update_size) triplets.
 pub const PARAMS: &[Params] = &{
     const INIT: u64 = 2; // log_initial_batch_size
-    // The size 663 seems specific. Ensure it matches the loop logic.
-    // Sum of (n-2+1) for n from 3 to 33: Sum of (n-1) for n from 3 to 33.
-    // (3-1) + (4-1) + ... + (33-1) = 2 + 3 + ... + 32
-    // This is sum(1..32) - sum(1..1) = (32*33/2) - 1 = 16*33 - 1 = 528 - 1 = 527
-    // If k goes from 0 to n-2, there are n-2-0+1 = n-1 items for each n.
-    // n=3: 2 items (k=0,1)
-    // n=4: 3 items (k=0,1,2)
-    // ...
-    // n=33: 32 items (k=0..31)
-    // Total = sum_{i=2}^{32} i = (sum_{i=1}^{32} i) - 1 = (32*33/2) - 1 = 528 - 1 =
-    // 527 Please double-check the array size `663`. If it's correct, the loop
-    // might be different or include other cases. For now, I'll keep 663 as per
-    // your code, but this calculation suggests 527.
-    const PARAMS_ARRAY_SIZE: usize = 527; // Based on calculation for n=3..33, k=0..n-2
+    // Calculation for array size:
+    // The outer loop for n (log_capacity) runs from 20 to 32.
+    // The inner loop for k (log_update_size) runs from 0 to n-2.
+    // The number of iterations is the sum of (n-1) for n from 20 to 32.
+    // Sum = (19 + 20 + ... + 31) = 13 * (19 + 31) / 2 = 325.
+    const PARAMS_ARRAY_SIZE: usize = 325;
 
-    const fn build_light() -> [Params; PARAMS_ARRAY_SIZE] {
-        // Adjusted size based on calculation
-        let mut out = [Params(4, 0, 0); PARAMS_ARRAY_SIZE]; // Initialize with dummy
+    const fn build_params() -> [Params; PARAMS_ARRAY_SIZE] {
+        let mut out = [Params(0, 0, 0); PARAMS_ARRAY_SIZE];
         let mut i = 0;
 
-        let mut n = 3; // log_capacity
+        let mut n = 20; // log_capacity starts from 20
         while n <= 32 {
             let mut k = 0; // log_update_size
-            // k <= n - 2 means k can go up to n-2.
-            // Number of values for k is (n-2) - 0 + 1 = n-1.
             while k <= n - 2 {
                 if i < PARAMS_ARRAY_SIZE {
-                    // Boundary check
                     out[i] = Params(n, k, INIT);
                 }
                 i += 1;
@@ -147,11 +134,9 @@ pub const PARAMS: &[Params] = &{
             }
             n += 1;
         }
-        // If i != PARAMS_ARRAY_SIZE at the end, there's a mismatch in size calculation.
-        // For safety, one might panic here in a debug build if i != PARAMS_ARRAY_SIZE
         out
     }
-    build_light()
+    build_params()
 };
 
 #[divan::bench(
@@ -172,9 +157,4 @@ fn light_update_reg(bencher: Bencher, Params(cap, _upd_log_size, init): Params) 
         // whose size is determined by `_upd_log_size`.
         server.update_reg(&update_batch, &mut bb).unwrap();
     });
-}
-
-// Ensure main function is present for Divan if this is the main benchmark file
-fn main() {
-    divan::main();
 }

@@ -15,7 +15,7 @@ use crate::{
         update::{IronEpochKeyMessage, IronEpochRegMessage, IronUpdateProof},
     },
 };
-use arithmetic::VirtualPolynomial;
+use arithmetic::{VirtualPolynomial, evaluate_last_sparse};
 use ark_ec::pairing::Pairing;
 use ark_poly::MultilinearExtension;
 use ark_std::{One, Zero, end_timer, start_timer};
@@ -189,9 +189,19 @@ where
                     &auxes,
                     &mut transcript,
                 );
+                let new_reg_eval = evaluate_last_sparse(
+                    &new_label_mle.borrow().to_sparse(),
+                    &zerocheck_proof.point,
+                );
+                let current_reg_eval = evaluate_last_sparse(
+                    &current_label_mle.borrow().to_sparse(),
+                    &zerocheck_proof.point,
+                );
                 let iron_update_proof: IronUpdateProof<E, MvPCS> = IronUpdateProof::new(
                     zerocheck_proof,
                     target_virtual_poly.aux_info.clone(),
+                    new_reg_eval,
+                    current_reg_eval,
                     update_proof.unwrap().0,
                 );
                 IronEpochRegMessage::new(new_label_comm, Some(iron_update_proof), new_label_aux)

@@ -5,17 +5,13 @@ use std::{
     ops::{Add, Sub},
 };
 
-use ark_ec::pairing::Pairing;
-use ark_ff::{Field, PrimeField};
-use ark_poly::DenseMultilinearExtension;
-use subroutines::{PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
-use ark_ec::AdditiveGroup;
 use crate::{
-    VKDAuditor, VKDClient, VKDDictionary, VKDLabel, VKDResult,
+    VKDAuditor, VKDLabel, VKDResult,
     bb::dummybb::DummyBB,
     structs::{dictionary::IronDictionary, pp::IronAuditorKey, update::IronUpdateProof},
 };
-use subroutines::PolyIOP;
+use ark_ec::{AdditiveGroup, pairing::Pairing};
+use subroutines::{PolyIOP, PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
 pub struct IronAuditor<
     E: Pairing,
     T: VKDLabel<E>,
@@ -60,7 +56,7 @@ where
     type BulletinBoard = DummyBB<E, MvPCS>;
     fn init(key: Self::AuditorKey) -> Self {
         Self {
-            _phantom_t: PhantomData::default(),
+            _phantom_t: PhantomData,
             key,
         }
     }
@@ -75,10 +71,31 @@ where
         <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
     {
+        let reg_update_check_result = self.check_reg_update(bulletin_board)?;
+        let keys_update_check_result = self.check_keys_update(bulletin_board)?;
+
+        Ok(reg_update_check_result && keys_update_check_result)
+    }
+}
+
+impl<E, MvPCS, T> IronAuditor<E, T, MvPCS>
+where
+    E: Pairing,
+    MvPCS: PolynomialCommitmentScheme<
+            E,
+            Polynomial = DenseOrSparseMLE<E::ScalarField>,
+            Point = Vec<<E as Pairing>::ScalarField>,
+        > + Send
+        + Sync,
+    T: VKDLabel<E>,
+{
+    fn check_reg_update(&self, bulletin_board: &DummyBB<E, MvPCS>) -> VKDResult<bool> {
+        // Get the two last registration messages
         let last_reg_message = bulletin_board.get_last_reg_update_message();
         let second_last_reg_message = bulletin_board.get_second_last_reg_update_message();
 
         let reg_update_check_result = match (last_reg_message, second_last_reg_message) {
+            // If we have at least two registration messages, we can verify the update
             (Some(last_reg), Some(second_last_reg)) => {
                 let mut transcript =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
@@ -94,6 +111,7 @@ where
                     .as_ref()
                     .unwrap()
                     .get_zerocheck_aux();
+                // Perform zero-check verification
                 let zerocheck_proof =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::verify(
                         sc_proof,
@@ -101,40 +119,53 @@ where
                         &mut transcript,
                     )
                     .unwrap();
+                // Get the last two label commitments
                 let last_label_commitment = last_reg.get_label_commitment();
                 let second_last_label_commitment = second_last_reg.get_label_commitment();
-
+                // Get the last two label auxs
                 let last_label_aux = last_reg.get_label_aux();
                 let second_last_label_aux = second_last_reg.get_label_aux();
-                let auxs = [last_label_aux.clone(), second_last_label_aux.clone()];
-                let commitments = [
-                    last_label_commitment.clone(),
-                    second_last_label_commitment.clone(),
-                ];
-                let opening_proof = last_reg
-                    .get_update_proof()
-                    .as_ref()
-                    .unwrap()
-                    .get_opening_proof();
-                //TODO: Fix the values
                 MvPCS::batch_verify(
                     self.key.get_pcs_verifier_param(),
-                    &commitments,
-                    &auxs,
+                    &[
+                        last_label_commitment.clone(),
+                        second_last_label_commitment.clone(),
+                    ],
+                    &[last_label_aux.clone(), second_last_label_aux.clone()],
                     &zerocheck_proof.point,
                     &[E::ScalarField::ZERO, E::ScalarField::ZERO],
-                    opening_proof,
+                    last_reg
+                        .get_update_proof()
+                        .as_ref()
+                        .unwrap()
+                        .get_opening_proof(),
                     &mut transcript,
                 )
                 .unwrap()
             },
-            (Some(last_reg), None) => true,
+            // If there is only one registration message, the auditor accepts anything
+            (Some(_), None) => true,
+            // If there are no registration messages, the auditor accepts anything
             (None, None) => true,
-            (None, Some(second_last_reg)) => {
+            // If there is a second last registration message, but no last one, this is an error
+            (None, Some(_)) => {
                 panic!("No last registration message found, but second last exists");
             },
         };
+        Ok(reg_update_check_result)
+    }
 
+    fn check_keys_update(&self, bulletin_board: &DummyBB<E, MvPCS>) -> VKDResult<bool>
+    where
+        <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+            Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+        <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
+            Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
+        <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+            Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
+        <MvPCS as PolynomialCommitmentScheme<E>>::Aux:
+            Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Aux>,
+    {
         let last_keys_update_message = bulletin_board.get_last_key_update_message();
         let second_last_keys_update_message = bulletin_board.get_second_last_key_update_message();
 
@@ -149,13 +180,12 @@ where
                         last_keys_commitment.clone() - second_last_keys_commitment.clone();
                     last_acc.clone() == (second_last_acc.clone() + diff_commitment.clone())
                 },
-                (Some(last_keys), None) => true,
+                (Some(_), None) => true,
                 (None, None) => true,
-                (None, Some(second_last_keys)) => {
+                (None, Some(_)) => {
                     panic!("No last keys update message found, but second last exists");
                 },
             };
-
-        Ok(reg_update_check_result && keys_update_check_result)
+        Ok(keys_update_check_result)
     }
 }

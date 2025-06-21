@@ -16,7 +16,6 @@ pub enum DenseOrSparseMLE<F: Field> {
     Sparse(SparseMultilinearExtension<F>),
 }
 impl<F: Field> DenseOrSparseMLE<F> {
-
     pub fn rand(num_vars: usize, rng: &mut impl Rng) -> Self {
         DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(num_vars, rng))
     }
@@ -25,6 +24,14 @@ impl<F: Field> DenseOrSparseMLE<F> {
         match self {
             DenseOrSparseMLE::Dense(mle) => mle.clone(),
             DenseOrSparseMLE::Sparse(mle) => mle.to_dense_multilinear_extension(),
+        }
+    }
+    pub fn to_sparse(&self) -> SparseMultilinearExtension<F> {
+        match self {
+            DenseOrSparseMLE::Dense(_) => {
+                panic!("Cannot convert Dense Multilinear Extension to Sparse")
+            },
+            DenseOrSparseMLE::Sparse(mle) => mle.clone(),
         }
     }
 }

@@ -110,19 +110,19 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         prover_param: impl Borrow<Self::ProverParam>,
         polynomials: &[&Self::Polynomial],
         point: &<Self::Polynomial as Polynomial<E::ScalarField>>::Point,
-        aux: &[Self::Aux],
+        auxes: &[Self::Aux],
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
         let num_vars = point.len();
         let mut aggr_aux: KZH2AuxInfo<E> =
-            KZH2AuxInfo::new(vec![E::G1Affine::zero(); 1 << num_vars]);
+            KZH2AuxInfo::new(vec![E::G1Affine::zero(); auxes[0].get_d().len()]);
         let (agg_poly, aggr_aux) = match polynomials[0] {
             DenseOrSparseMLE::Dense(_) => {
                 let mut aggr_poly = DenseMultilinearExtension::from_evaluations_vec(
                     num_vars,
                     vec![E::ScalarField::zero(); 1 << num_vars],
                 );
-                for (poly, aux) in polynomials.iter().zip(aux.iter()) {
+                for (poly, aux) in polynomials.iter().zip(auxes.iter()) {
                     if let DenseOrSparseMLE::Dense(dense_poly) = poly {
                         aggr_poly += dense_poly;
                         aggr_aux = aggr_aux + aux.clone();
@@ -135,7 +135,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             DenseOrSparseMLE::Sparse(_) => {
                 let mut aggr_poly =
                     SparseMultilinearExtension::from_evaluations(num_vars, Vec::new());
-                for (poly, aux) in polynomials.iter().zip(aux.iter()) {
+                for (poly, aux) in polynomials.iter().zip(auxes.iter()) {
                     if let DenseOrSparseMLE::Sparse(sparse_poly) = poly {
                         aggr_poly += sparse_poly;
                         aggr_aux = aggr_aux + aux.clone();
@@ -207,7 +207,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
         let mut aggr_comm = Self::Commitment::default();
-        let mut aggr_aux = Self::Aux::default();
+        let mut aggr_aux = KZH2AuxInfo::new(vec![E::G1Affine::zero(); auxs[0].get_d().len()]);
         let mut aggr_value = E::ScalarField::zero();
         for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
             aggr_comm = aggr_comm + *comm;

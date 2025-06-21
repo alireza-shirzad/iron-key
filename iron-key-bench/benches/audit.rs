@@ -100,7 +100,7 @@ fn prepare_verifier_lookup_intput(
     (auditor, bulletin_board)
 }
 
-#[divan::bench(args = [4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29])]
+#[divan::bench(args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn audit(bencher: Bencher, batch_size: usize) {
     // batch_size here is effectively log_capacity
     let current_log_capacity = batch_size as u64;

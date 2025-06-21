@@ -218,26 +218,26 @@ pub fn fix_last_variables<F: PrimeField>(
                 target_x_index |= 1 << i;
             }
         }
-        
+
         // The new polynomial's evaluations are a slice of the original.
-        // The size of the slice is the number of evaluations for a mu-variate polynomial.
+        // The size of the slice is the number of evaluations for a mu-variate
+        // polynomial.
         let slice_size = 1 << mu;
-        
+
         // The starting point of the slice is determined by the integer value
         // of the boolean point.
         let start = target_x_index * slice_size;
         let end = start + slice_size;
-        
+
         let new_evals = &poly.evaluations[start..end];
 
         DenseMultilinearExtension::<F>::from_evaluations_slice(mu, new_evals)
-
     } else {
         // --- GENERAL PATH for non-boolean (random) points ---
         // This is the original, more expensive implementation.
 
         let mut current_evals = poly.evaluations.to_vec();
-        
+
         // Evaluate single variable of partial point from right to left (MSB to LSB).
         for (i, point) in partial_point.iter().rev().enumerate() {
             current_evals = fix_last_variable_helper(&current_evals, poly.num_vars - i, point);
@@ -246,7 +246,6 @@ pub fn fix_last_variables<F: PrimeField>(
         DenseMultilinearExtension::<F>::from_evaluations_slice(mu, &current_evals[..1 << mu])
     }
 }
-
 
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
     let half_len = 1 << (nv - 1);
@@ -266,33 +265,34 @@ fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F
     res
 }
 
-pub fn fix_last_variables_sparse<F: Field>(
+pub fn fix_last_variables_sparse<F: Field + Sync>(
     poly: &SparseMultilinearExtension<F>,
     // This is x0, the point for the last `nu` variables
     partial_point_x: &[F],
-) -> SparseMultilinearExtension<F> {
+) -> SparseMultilinearExtension<F>
+where
+    // Required trait bounds for parallel processing
+    F: Send + Sync,
+{
     let is_boolean_point = partial_point_x.iter().all(|&x| x.is_zero() || x.is_one());
     let nu = partial_point_x.len();
     assert!(nu <= poly.num_vars, "Invalid size of partial point");
     let mu = poly.num_vars - nu;
 
-    let mut new_evals: BTreeMap<usize, F> = BTreeMap::new();
+    let mut new_evals: BTreeMap<usize, F>;
 
     if is_boolean_point {
-        // OPTIMIZED PATH for boolean points (zeros and ones).
-        // This is a simple selection/filtering operation, no field arithmetic needed.
-
-        // First, convert the boolean point into its integer representation.
+        // --- OPTIMIZED PATH for boolean points ---
+        // This is a simple selection. It's very fast and not worth the
+        // overhead of parallelization.
+        new_evals = BTreeMap::new();
         let mut target_x_index = 0;
-        // The point's coordinates are for variables from LSB to MSB.
         for (i, &bit) in partial_point_x.iter().enumerate() {
             if bit.is_one() {
                 target_x_index |= 1 << i;
             }
         }
-        
-        // Iterate over the polynomial's evaluations and select the ones
-        // that fall into the hypercube slice defined by `target_x_index`.
+
         for (&full_index, &value) in &poly.evaluations {
             let y_index = full_index & ((1 << mu) - 1);
             let x_index = full_index >> mu;
@@ -302,33 +302,72 @@ pub fn fix_last_variables_sparse<F: Field>(
             }
         }
     } else {
-        // GENERAL PATH for non-boolean points.
-        // This requires evaluating the Lagrange basis polynomials.
-        for (&full_index, &value) in &poly.evaluations {
-            let y_index = full_index & ((1 << mu) - 1);
-            let x_index = full_index >> mu;
+        // --- GENERAL PATH for non-boolean points ---
+        #[cfg(feature = "parallel")]
+        {
+            // PARALLEL IMPLEMENTATION:
+            // 1. Compute all contributions in parallel.
 
-            let mut lagrange_eval = F::one();
-            for i in 0..nu {
-                let point_val_at_i = partial_point_x[i];
-                // The i-th point coordinate corresponds to the i-th LSB of x_index.
-                let bit_of_x_idx = (x_index >> i) & 1;
+            use rayon::iter::IntoParallelRefIterator;
+            let contributions: Vec<(usize, F)> = poly
+                .evaluations
+                .par_iter()
+                .map(|(&full_index, &value)| {
+                    let y_index = full_index & ((1 << mu) - 1);
+                    let x_index = full_index >> mu;
 
-                if bit_of_x_idx == 1 {
-                    lagrange_eval *= point_val_at_i;
-                } else {
-                    lagrange_eval *= F::one() - point_val_at_i;
-                }
+                    let mut lagrange_eval = F::one();
+                    for i in 0..nu {
+                        let point_val_at_i = partial_point_x[i];
+                        let bit_of_x_idx = (x_index >> i) & 1;
+
+                        if bit_of_x_idx == 1 {
+                            lagrange_eval *= point_val_at_i;
+                        } else {
+                            lagrange_eval *= F::one() - point_val_at_i;
+                        }
+                    }
+
+                    (y_index, value * lagrange_eval)
+                })
+                .collect();
+
+            // 2. Aggregate the contributions sequentially.
+            new_evals = BTreeMap::new();
+            for (y_index, contribution) in contributions {
+                *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
             }
-            
-            let contribution = value * lagrange_eval;
-            *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+        }
+
+        #[cfg(not(feature = "parallel"))]
+        {
+            // SEQUENTIAL IMPLEMENTATION:
+            new_evals = BTreeMap::new();
+            for (&full_index, &value) in &poly.evaluations {
+                let y_index = full_index & ((1 << mu) - 1);
+                let x_index = full_index >> mu;
+
+                let mut lagrange_eval = F::one();
+                for i in 0..nu {
+                    let point_val_at_i = partial_point_x[i];
+                    let bit_of_x_idx = (x_index >> i) & 1;
+
+                    if bit_of_x_idx == 1 {
+                        lagrange_eval *= point_val_at_i;
+                    } else {
+                        lagrange_eval *= F::one() - point_val_at_i;
+                    }
+                }
+
+                let contribution = value * lagrange_eval;
+                *new_evals.entry(y_index).or_insert_with(F::zero) += contribution;
+            }
         }
     }
-    
+
     // Collect the BTreeMap into a Vec of tuples to pass to the constructor.
     let final_evaluations: Vec<(usize, F)> = new_evals.into_iter().collect();
-    
+
     // Use the public constructor instead of direct instantiation.
     SparseMultilinearExtension::from_evaluations(mu, &final_evaluations)
 }
@@ -343,7 +382,7 @@ pub fn evaluate_last_sparse<F: PrimeField>(f: &SparseMultilinearExtension<F>, po
         .evaluations
         .values()
         .next()
-        .unwrap()
+        .unwrap_or(&F::zero())
 }
 #[test]
 fn test_fix_last_variables_sparse() {
@@ -361,6 +400,11 @@ fn test_fix_last_variables_sparse() {
             (7, Fr::from(7)),
         ],
     );
-    let res = fix_last_variables_sparse(&poly, &[Fr::from(0)]);
+    let res = fix_last_variables_sparse(&poly, &[Fr::from(1), Fr::from(0)]);
+    dbg!(fix_last_variables_sparse(
+        &poly,
+        &[Fr::from(0), Fr::from(0), Fr::from(1)]
+    ));
+
     dbg!(res.evaluations);
 }

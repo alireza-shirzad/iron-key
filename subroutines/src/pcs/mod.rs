@@ -76,7 +76,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         _prover_param: impl Borrow<Self::ProverParam>,
         _polynomials: &[&Self::Polynomial],
         _point: &Self::Point,
-        _aux: &[Self::Aux],
+        _auxes: &[Self::Aux],
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
         unimplemented!()

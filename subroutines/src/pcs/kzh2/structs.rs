@@ -114,6 +114,11 @@ impl<E: Pairing> Add for KZH2AuxInfo<E> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
+        assert_eq!(
+            self.d.len(),
+            rhs.d.len(),
+            "Auxiliary information must have the same length"
+        );
         let mut output = vec![E::G1Affine::zero(); self.d.len()];
         cfg_iter_mut!(output).enumerate().for_each(|(i, v)| {
             *v = (self.d[i] + rhs.d[i]).into();

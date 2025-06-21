@@ -100,10 +100,11 @@ where
     fn init(key: Self::ClientKey, label: <Self::Dictionary as VKDDictionary<E>>::Label) -> Self;
     fn lookup_verify(
         &mut self,
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
         value: <Self::Dictionary as VKDDictionary<E>>::Value,
         proof: &Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
-    ) -> VKDResult<()>;
+    ) -> VKDResult<bool>;
 
     fn self_audit_verify(
         &mut self,

@@ -1,8 +1,7 @@
 use arithmetic::VPAuxInfo;
 use ark_ec::pairing::Pairing;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use subroutines::{IOPProof, PolynomialCommitmentScheme};
-use subroutines::poly::DenseOrSparseMLE;
+use subroutines::{IOPProof, PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 #[derive(CanonicalSerialize, Clone)]
 pub struct IronUpdateProof<E, MvPCS>
 where
@@ -16,6 +15,8 @@ where
 {
     zerocheck_proof: IOPProof<E::ScalarField>,
     zerocheck_aux: VPAuxInfo<E::ScalarField>,
+    new_reg_eval: E::ScalarField,
+    current_reg_eval: E::ScalarField,
     opening_proof: MvPCS::BatchProof,
 }
 
@@ -32,11 +33,15 @@ where
     pub fn new(
         zerocheck_proof: IOPProof<E::ScalarField>,
         zerocheck_aux: VPAuxInfo<E::ScalarField>,
+        new_reg_eval: E::ScalarField,
+        current_reg_eval: E::ScalarField,
         opening_proof: MvPCS::BatchProof,
     ) -> Self {
         Self {
             zerocheck_proof,
             zerocheck_aux,
+            new_reg_eval,
+            current_reg_eval,
             opening_proof,
         }
     }
@@ -46,6 +51,12 @@ where
     }
     pub fn get_zerocheck_aux(&self) -> &VPAuxInfo<E::ScalarField> {
         &self.zerocheck_aux
+    }
+    pub fn get_new_reg_eval(&self) -> &E::ScalarField {
+        &self.new_reg_eval
+    }
+    pub fn get_current_reg_eval(&self) -> &E::ScalarField {
+        &self.current_reg_eval
     }
     pub fn get_opening_proof(&self) -> &MvPCS::BatchProof {
         &self.opening_proof

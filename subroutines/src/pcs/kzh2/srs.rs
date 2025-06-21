@@ -143,28 +143,6 @@ impl<E: Pairing> KZH2VerifierParam<E> {
     pub fn get_v_vec(&self) -> &Vec<E::G2Affine> {
         &self.v_vec
     }
-
-    pub fn rand(nu: usize, mu: usize, rng: &mut impl Rng) -> Self {
-        let m = 1 << mu;
-        let n = 1 << nu;
-        let rng = &mut ark_std::test_rng();
-        // Sampling generators
-        let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();
-        let v = E::G2::rand(rng);
-        // Sampling trapdoors
-        let tau_vec = (0..n)
-            .map(|_| E::ScalarField::rand(rng))
-            .collect::<Vec<_>>();
-        let alpha = E::ScalarField::rand(rng);
-        // Compute the srs elements
-        let minus_v_prime: E::G2Affine = (-v * alpha).into_affine();
-        let v_vec = v.batch_mul(&tau_vec);
-        let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
-            .map(|g| (*g * alpha).into_affine())
-            .collect::<Vec<_>>();
-
-        Self::new(nu as usize, mu as usize, h_vec, minus_v_prime, v_vec)
-    }
 }
 
 impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
@@ -199,34 +177,79 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
         ))
     }
 
-    fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
+    fn gen_srs_for_testing<R: Rng>(
+        rng: &mut R,
+        num_vars: usize,
+    ) -> Result<KZH2UniversalParams<E>, PCSError> {
         // Dimensions of the polynomials
         let nu = num_vars / 2;
         let mu = num_vars - nu;
         let m = 1 << mu;
         let n = 1 << nu;
+
         // Sampling generators
         let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();
         let v = E::G2::rand(rng);
+
         // Sampling trapdoors
         let tau_vec = (0..n)
             .map(|_| E::ScalarField::rand(rng))
             .collect::<Vec<_>>();
         let alpha = E::ScalarField::rand(rng);
-        // Compute the srs elements
+
+        // Compute a constant part of the SRS
         let minus_v_prime: E::G2Affine = (-v * alpha).into_affine();
-        let v_vec = v.batch_mul(&tau_vec);
-        let h_vec: Vec<E::G1Affine> = cfg_iter!(generators_1)
-            .map(|g| (*g * alpha).into_affine())
-            .collect::<Vec<_>>();
 
-        let mut h_mat_transpose: Vec<Vec<E::G1Affine>> = vec![Vec::new(); m];
-        cfg_iter_mut!(h_mat_transpose)
-            .enumerate()
-            .for_each(|(i, h)| {
-                *h = generators_1[i].batch_mul(&tau_vec);
-            });
+        // The following three vectors can be computed independently.
+        let (v_vec, h_vec, h_mat_transpose);
 
+        #[cfg(feature = "parallel")]
+        {
+            // To use this feature, add `rayon` to your Cargo.toml dependencies.
+            // We use two nested calls to `rayon::join` to run the three closures in
+            // parallel.
+            use rayon;
+
+            let (vecs_h, vec_v) = rayon::join(
+                || {
+                    rayon::join(
+                        || {
+                            generators_1
+                                .par_iter()
+                                .map(|g| (*g * alpha).into_affine())
+                                .collect::<Vec<_>>()
+                        },
+                        || {
+                            generators_1
+                                .par_iter()
+                                .map(|g| g.batch_mul(&tau_vec))
+                                .collect::<Vec<_>>()
+                        },
+                    )
+                },
+                || v.batch_mul(&tau_vec),
+            );
+            h_vec = vecs_h.0;
+            h_mat_transpose = vecs_h.1;
+            v_vec = vec_v;
+        }
+
+        #[cfg(not(feature = "parallel"))]
+        {
+            // Without the "parallel" feature, compute them sequentially.
+            v_vec = v.batch_mul(&tau_vec);
+            h_vec = generators_1
+                .iter()
+                .map(|g| (*g * alpha).into_affine())
+                .collect::<Vec<_>>();
+            h_mat_transpose = generators_1
+                .iter()
+                .map(|g| g.batch_mul(&tau_vec))
+                .collect::<Vec<_>>();
+        }
+
+        // Transpose h_mat_transpose to get the final h_mat matrix for commitments.
+        // This part remains parallelized based on the cfg_into_iter macro.
         #[cfg(feature = "parallel")]
         let h_mat: Vec<E::G1Affine> = cfg_into_iter!(0..n)
             .flat_map_iter(|i| {

@@ -76,10 +76,11 @@ where
 
     fn lookup_verify(
         &mut self,
+        label: <Self::Dictionary as VKDDictionary<E>>::Label,
         value: <Self::Dictionary as VKDDictionary<E>>::Value,
         proof: &Self::LookupProof,
         bulletin_board: &Self::BulletinBoard,
-    ) -> VKDResult<()>
+    ) -> VKDResult<bool>
     where
         <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
             Add<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
@@ -89,18 +90,16 @@ where
         // TODO: Fix this for real scenarios
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
-        let commitments = [
-            last_keys_message.get_value_commitment().clone(),
-            last_reg_message.get_label_commitment().clone(),
-        ];
-        let auxes = proof.get_auxes();
         let mut transcript = IOPTranscript::new(b"lookup");
-        MvPCS::batch_verify(
+        let b = MvPCS::batch_verify(
             self.key.get_pcs_verifier_param(),
-            &commitments,
-            auxes,
+            &[
+                last_keys_message.get_value_commitment().clone(),
+                last_reg_message.get_label_commitment().clone(),
+            ],
+            proof.get_auxes(),
             &proof.get_index(),
-            &[value, self.label.to_field()],
+            &[value, label.to_field()],
             proof.get_batched_opening_proof(),
             &mut transcript,
         )
@@ -110,7 +109,7 @@ where
             0,
             self.key.get_log_capacity(),
         );
-        Ok(())
+        Ok(b)
     }
 
     fn self_audit_verify(
