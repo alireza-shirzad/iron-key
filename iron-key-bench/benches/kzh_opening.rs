@@ -129,8 +129,8 @@ pub const PARAMS: &[BenchParams] = &{
             is_sparse: false,
             is_boolean_point: false,
         }; (32 - 10 + 1) * 4];
-        let mut i = 0;
-        let mut nv = 10;
+        let mut i: usize = 0;
+        let mut nv: usize = 31;
         while nv <= 32 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {
@@ -187,4 +187,3 @@ fn bench_open(bencher: Bencher, params: BenchParams) {
         KZH2::open(&*ck, &poly, &point, &aux)
     });
 }
-

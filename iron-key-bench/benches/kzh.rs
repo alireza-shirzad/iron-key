@@ -36,10 +36,10 @@
 //             panic!("Failed to deserialize SRS from {:?}", srs_path);
 //         });
 //     let (pk, vk) = KZH2::<Bn254>::trim(srs, None, Some(LOG_CAPACITY)).unwrap();
-//     let mut evals = vec![Fr::from(0); 1 << LOG_CAPACITY];
+//     let mut evals = vec![Fr::from(0); 1usize << LOG_CAPACITY];
 //     let mut t_rng = rand::rng();
 //     // Sample k unique positions from the vector
-//     let indices = sample(&mut t_rng, 1 << LOG_CAPACITY, 1 << LOG_DENSITY).into_vec();
+//     let indices = sample(&mut t_rng, 1usize << LOG_CAPACITY, 1usize << LOG_DENSITY).into_vec();
 
 //     let mut rng = test_rng();
 //     for idx in indices {

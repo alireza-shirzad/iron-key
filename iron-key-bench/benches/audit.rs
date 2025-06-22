@@ -38,7 +38,7 @@ fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
                 "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(1 << log_capacity);
+            let spec = IronSpecification::new(1usize << log_capacity);
             // IronKey::<..., IronLabel> specifies generics for the IronKey struct itself,
             // its `setup` method returns Result<IronPublicParameters<E, Pcs>, _>
             let pp = IronKey::<Bn254, KZH2<Bn254>, IronLabel>::setup(spec)
@@ -60,8 +60,8 @@ fn prepare_verifier_lookup_intput(
 
     let mut server = IronServer::<Bn254, KZH2<Bn254>, IronLabel>::init(pp_ref);
     let mut bulletin_board = DummyBB::default();
-    let first_batch_size = 1 << log_first_batch_size;
-    let second_batch_elements = 1 << log_second_batch_size; // Number of elements in the second batch
+    let first_batch_size = 1usize << log_first_batch_size;
+    let second_batch_elements = 1usize << log_second_batch_size; // Number of elements in the second batch
 
     // Build first batch
     let updates1: HashMap<IronLabel, Fr> = (1..=first_batch_size)

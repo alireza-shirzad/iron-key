@@ -26,10 +26,10 @@ static PP_CACHE: Lazy<Mutex<HashMap<u64, Arc<AppPublicParameters>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Helper function to get or create PP for a given log_capacity
-fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
+fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
     let mut cache = PP_CACHE.lock().unwrap_or_else(|e| e.into_inner());
     cache
-        .entry(log_capacity)
+        .entry(log_capacity.try_into().unwrap())
         .or_insert_with(|| {
             println!(
                 "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
@@ -46,9 +46,9 @@ fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
 /// Triplet carried around by Divan.
 #[derive(Copy, Clone, Debug)]
 struct Params(
-    pub u64, // log_capacity
-    pub u64, // log_update_size
-    pub u64, // initial_batch_size
+    pub usize, // log_capacity
+    pub usize, // log_update_size
+    pub usize, // initial_batch_size
 );
 
 impl fmt::Display for Params {
@@ -65,9 +65,9 @@ impl fmt::Display for Params {
 /// and the real update batch of size `2^log_update_size`.
 /// This function now uses the PP cache.
 fn prepare_prover_update_prove_inputs(
-    log_capacity: u64,
-    log_update_size: u64,
-    log_initial_batch_size: u64,
+    log_capacity: usize,
+    log_update_size: usize,
+    log_initial_batch_size: usize,
 ) -> (
     IronServer<Bn254, KZH2<Bn254>, IronLabel>,
     HashMap<IronLabel, Fr>,
@@ -110,7 +110,7 @@ fn prepare_prover_update_prove_inputs(
 
 /// Compile-time list of (log_capacity, log_update_size) triplets.
 pub const PARAMS: &[Params] = &{
-    const INIT: u64 = 2; // log_initial_batch_size
+    const INIT: usize = 2; // log_initial_batch_size
     // Calculation for array size:
     // The outer loop for n (log_capacity) runs from 20 to 32.
     // The inner loop for k (log_update_size) runs from 0 to n-2.
@@ -120,9 +120,9 @@ pub const PARAMS: &[Params] = &{
 
     const fn build_params() -> [Params; PARAMS_ARRAY_SIZE] {
         let mut out = [Params(0, 0, 0); PARAMS_ARRAY_SIZE];
-        let mut i = 0;
+        let mut i:usize = 0;
 
-        let mut n = 20; // log_capacity starts from 20
+        let mut n:usize = 31; // log_capacity starts from 20
         while n <= 32 {
             let mut k = 0; // log_update_size
             while k <= n - 2 {
