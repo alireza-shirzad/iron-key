@@ -150,7 +150,6 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         let num_vars = point.len();
         let mut aggr_aux: KZH2AuxInfo<E> =
             KZH2AuxInfo::new(vec![E::G1Affine::zero(); auxes[0].get_d().len()]);
-        dbg!(num_vars);
         let (agg_poly, aggr_aux) = match polynomials[0] {
             DenseOrSparseMLE::Dense(_) => {
                 let mut aggr_poly = DenseMultilinearExtension::from_evaluations_vec(

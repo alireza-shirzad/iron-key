@@ -24,7 +24,6 @@ impl<F: Field> DenseOrSparseMLE<F> {
         match self {
             DenseOrSparseMLE::Dense(mle) => mle.clone(),
             DenseOrSparseMLE::Sparse(mle) => {
-                dbg!(mle.num_vars);
                 mle.to_dense_multilinear_extension()
             },
         }
