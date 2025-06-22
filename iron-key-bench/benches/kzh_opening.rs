@@ -124,15 +124,15 @@ fn prepare_open_inputs(
 // We test nv from 10 to 30, for the four specified cases.
 // Note: nv = 31 and 32 cause memory issues due to large SRS sizes.
 pub const PARAMS: &[BenchParams] = &{
-    const fn build_params() -> [BenchParams; (30 - 10 + 1) * 4] {
+    const fn build_params() -> [BenchParams; (32 - 10 + 1) * 4] {
         let mut out = [BenchParams {
             nv: 0,
             is_sparse: false,
             is_boolean_point: false,
-        }; (30 - 10 + 1) * 4];
+        }; (32 - 10 + 1) * 4];
         let mut i: usize = 0;
         let mut nv: usize = 31;
-        while nv <= 30 {
+        while nv <= 32 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {
                 nv,
