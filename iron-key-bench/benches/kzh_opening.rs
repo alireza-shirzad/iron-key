@@ -131,7 +131,7 @@ pub const PARAMS: &[BenchParams] = &{
             is_boolean_point: false,
         }; (30 - 10 + 1) * 4];
         let mut i: usize = 0;
-        let mut nv: usize = 10;
+        let mut nv: usize = 31;
         while nv <= 30 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {
