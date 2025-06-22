@@ -133,7 +133,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         point: &Self::Point,
         aux: &Self::Aux,
     ) -> Result<(KZH2OpeningProof<E>, Self::Evaluation), PCSError> {
-        eprintln!("Start opening");
+        // eprintln!("Start opening");
         match polynomial {
             DenseOrSparseMLE::Dense(poly) => Self::open_dense(prover_param, poly, point, aux),
             DenseOrSparseMLE::Sparse(poly) => Self::open_sparse(prover_param, poly, point, aux),
@@ -265,7 +265,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         poly: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
-        eprintln!("Start committing dense polynomial");
+        // eprintln!("Start committing dense polynomial");
         let commit_timer = start_timer!(|| "KZH::Commit");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let com = E::G1::msm(prover_param.get_h_mat(), &poly.evaluations).unwrap();
@@ -277,7 +277,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
-        eprintln!("Start committing sparse polynomial");
+        // eprintln!("Start committing sparse polynomial");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
 
         // The scalars for the MSM are the values from the sparse polynomial's
@@ -310,7 +310,7 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        eprintln!("Start opening dense");
+        // eprintln!("Start opening dense");
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
@@ -326,7 +326,7 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        eprintln!("Start opening dense");
+        // eprintln!("Start opening dense");
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
@@ -345,7 +345,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
-        eprintln!("Start computing auxiliary information for dense polynomial");
+        // eprintln!("Start computing auxiliary information for dense polynomial");
         let timer = start_timer!(|| "KZH::CompAux(Dense)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let mut d = vec![E::G1Affine::zero(); 1usize << prover_param.get_nu()];
@@ -365,7 +365,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
-        eprintln!("Start computing auxiliary information for sparse polynomial");
+        // eprintln!("Start computing auxiliary information for sparse polynomial");
         let timer = start_timer!(|| "KZH::CompAux(Sparse)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
 
