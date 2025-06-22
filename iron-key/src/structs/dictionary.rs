@@ -17,7 +17,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     sync::Arc,
 };
-use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 use thiserror::Error;
 pub struct IronDictionary<E: Pairing, T: VKDLabel<E>> {
     value_mle: Arc<RefCell<DenseOrSparseMLE<E::ScalarField>>>,
@@ -72,7 +72,7 @@ impl<E: Pairing, T: Debug + VKDLabel<E>> IronDictionary<E, T> {
             self.label_mle.borrow().num_vars(),
             self.value_mle.borrow().num_vars()
         );
-        1 << self.label_mle.borrow().num_vars()
+        1usize << self.label_mle.borrow().num_vars()
     }
 
     pub fn log_max_size(&self) -> usize {
@@ -270,8 +270,8 @@ mod tests {
     };
     #[test]
     fn test_dictionary() {
-        // const DICT_CAPACITY: usize = 1 << 4;
-        // const NUM_ENTRIES: usize = 1 << 3;
+        // const DICT_CAPACITY: usize = 1usize << 4;
+        // const NUM_ENTRIES: usize = 1usize << 3;
         // let mut rng = ark_std::test_rng();
         // let mut dict: IronDictionary<Fr> =
         // IronDictionary::new_with_capacity(DICT_CAPACITY); for _ in 0.

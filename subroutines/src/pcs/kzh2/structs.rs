@@ -166,11 +166,3 @@ impl<E: Pairing> KZH2OpeningProof<E> {
         self.f_star.clone()
     }
 }
-
-impl<E: Pairing> Default for KZH2OpeningProof<E> {
-    fn default() -> Self {
-        KZH2OpeningProof {
-            f_star: DenseOrSparseMLE::zero(),
-        }
-    }
-}

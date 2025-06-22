@@ -184,8 +184,8 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
         // Dimensions of the polynomials
         let nu = num_vars / 2;
         let mu = num_vars - nu;
-        let m = 1 << mu;
-        let n = 1 << nu;
+        let m = 1usize << mu;
+        let n = 1usize << nu;
 
         // Sampling generators
         let generators_1 = (0..m).map(|_| E::G1::rand(rng)).collect::<Vec<_>>();

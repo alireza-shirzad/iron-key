@@ -121,7 +121,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         products_list.iter().for_each(|(coefficient, products)| {
             #[cfg(feature = "parallel")]
-            let mut sum = cfg_into_iter!(0..1 << (self.poly.aux_info.num_variables - self.round))
+            let mut sum = cfg_into_iter!(0..1usize << (self.poly.aux_info.num_variables - self.round))
                 .fold(
                     || {
                         (
@@ -158,7 +158,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             #[cfg(not(feature = "parallel"))]
             let mut sum = {
                 let mut acc = vec![F::zero(); products.len() + 1];
-                for b in 0..1 << (self.poly.aux_info.num_variables - self.round) {
+                for b in 0..1usize << (self.poly.aux_info.num_variables - self.round) {
                     let mut buf = vec![(F::zero(), F::zero()); products.len()];
                     let mut acc_local = vec![F::zero(); products.len() + 1];
                     buf.iter_mut()

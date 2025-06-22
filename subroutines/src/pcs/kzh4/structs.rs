@@ -224,17 +224,6 @@ impl<E: Pairing> KZH4OpeningProof<E> {
         self.f_star.clone()
     }
 }
-
-impl<E: Pairing> Default for KZH4OpeningProof<E> {
-    fn default() -> Self {
-        KZH4OpeningProof {
-            d_y: vec![],
-            d_z: vec![],
-            f_star: DenseOrSparseMLE::zero(),
-        }
-    }
-}
-
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]
 pub struct KZH4BatchOpeningProof<E: Pairing> {
     batch_proof: KZH4OpeningProof<E>,
@@ -252,10 +241,3 @@ impl<E: Pairing> KZH4BatchOpeningProof<E> {
     }
 }
 
-impl<E: Pairing> Default for KZH4BatchOpeningProof<E> {
-    fn default() -> Self {
-        KZH4BatchOpeningProof {
-            batch_proof: KZH4OpeningProof::default(),
-        }
-    }
-}

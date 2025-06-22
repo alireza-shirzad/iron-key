@@ -23,7 +23,10 @@ impl<F: Field> DenseOrSparseMLE<F> {
     pub fn to_dense(&self) -> DenseMultilinearExtension<F> {
         match self {
             DenseOrSparseMLE::Dense(mle) => mle.clone(),
-            DenseOrSparseMLE::Sparse(mle) => mle.to_dense_multilinear_extension(),
+            DenseOrSparseMLE::Sparse(mle) => {
+                dbg!(mle.num_vars);
+                mle.to_dense_multilinear_extension()
+            },
         }
     }
     pub fn to_sparse(&self) -> SparseMultilinearExtension<F> {

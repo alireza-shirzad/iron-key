@@ -19,11 +19,11 @@ pub fn random_mle_list<F: PrimeField, R: RngCore>(
     let start = start_timer!(|| "sample random mle list");
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
-        multiplicands.push(Vec::with_capacity(1 << nv))
+        multiplicands.push(Vec::with_capacity(1usize << nv))
     }
     let mut sum = F::zero();
 
-    for _ in 0..(1 << nv) {
+    for _ in 0..(1usize << nv) {
         let mut product = F::one();
 
         for e in multiplicands.iter_mut() {
@@ -53,9 +53,9 @@ pub fn random_zero_mle_list<F: PrimeField, R: RngCore>(
 
     let mut multiplicands = Vec::with_capacity(degree);
     for _ in 0..degree {
-        multiplicands.push(Vec::with_capacity(1 << nv))
+        multiplicands.push(Vec::with_capacity(1usize << nv))
     }
-    for _ in 0..(1 << nv) {
+    for _ in 0..(1usize << nv) {
         multiplicands[0].push(F::zero());
         for e in multiplicands.iter_mut().skip(1) {
             e.push(F::rand(rng));
@@ -83,7 +83,7 @@ pub fn identity_permutation_mles<F: PrimeField>(
 ) -> Vec<Arc<DenseMultilinearExtension<F>>> {
     let mut res = vec![];
     for i in 0..num_chunks {
-        let shift = (i * (1 << num_vars)) as u64;
+        let shift = (i * (1usize << num_vars)) as u64;
         let s_id_vec = (shift..shift + (1u64 << num_vars)).map(F::from).collect();
         res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars, s_id_vec,
@@ -115,7 +115,7 @@ pub fn random_permutation_mles<F: PrimeField, R: RngCore>(
 ) -> Vec<Arc<DenseMultilinearExtension<F>>> {
     let s_perm_vec = random_permutation(num_vars, num_chunks, rng);
     let mut res = vec![];
-    let n = 1 << num_vars;
+    let n = 1usize << num_vars;
     for i in 0..num_chunks {
         res.push(Arc::new(DenseMultilinearExtension::from_evaluations_vec(
             num_vars,
@@ -146,15 +146,15 @@ pub fn fix_first_variables<F: Field>(
         poly = fix_one_variable_helper(&poly, nv - i, point);
     }
 
-    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
+    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1usize << (nv - dim))])
 }
 
 fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
-    let mut res = vec![F::zero(); 1 << (nv - 1)];
+    let mut res = vec![F::zero(); 1usize << (nv - 1)];
 
     // evaluate single variable of partial point from left to right
     #[cfg(not(feature = "parallel"))]
-    for i in 0..(1 << (nv - 1)) {
+    for i in 0..(1usize << (nv - 1)) {
         res[i] = data[i] + (data[(i << 1) + 1] - data[i << 1]) * point;
     }
 
@@ -185,11 +185,11 @@ fn fix_first_variables_no_par<F: Field>(
     // evaluate single variable of partial point from left to right
     for i in 1..dim + 1 {
         let r = partial_point[i - 1];
-        for b in 0..(1 << (nv - i)) {
+        for b in 0..(1usize << (nv - i)) {
             poly[b] = poly[b << 1] + (poly[(b << 1) + 1] - poly[b << 1]) * r;
         }
     }
-    DenseMultilinearExtension::from_evaluations_slice(nv - dim, &poly[..(1 << (nv - dim))])
+    DenseMultilinearExtension::from_evaluations_slice(nv - dim, &poly[..(1usize << (nv - dim))])
 }
 
 pub fn fix_last_variables<F: PrimeField>(
@@ -215,14 +215,14 @@ pub fn fix_last_variables<F: PrimeField>(
         let mut target_x_index = 0;
         for (i, &bit) in partial_point.iter().enumerate() {
             if bit.is_one() {
-                target_x_index |= 1 << i;
+                target_x_index |= 1usize << i;
             }
         }
 
         // The new polynomial's evaluations are a slice of the original.
         // The size of the slice is the number of evaluations for a mu-variate
         // polynomial.
-        let slice_size = 1 << mu;
+        let slice_size = 1usize << mu;
 
         // The starting point of the slice is determined by the integer value
         // of the boolean point.
@@ -243,12 +243,12 @@ pub fn fix_last_variables<F: PrimeField>(
             current_evals = fix_last_variable_helper(&current_evals, poly.num_vars - i, point);
         }
 
-        DenseMultilinearExtension::<F>::from_evaluations_slice(mu, &current_evals[..1 << mu])
+        DenseMultilinearExtension::<F>::from_evaluations_slice(mu, &current_evals[..1usize << mu])
     }
 }
 
 fn fix_last_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {
-    let half_len = 1 << (nv - 1);
+    let half_len = 1usize << (nv - 1);
     let mut res = vec![F::zero(); half_len];
 
     // evaluate single variable of partial point from left to right
@@ -278,7 +278,6 @@ where
     let nu = partial_point_x.len();
     assert!(nu <= poly.num_vars, "Invalid size of partial point");
     let mu = poly.num_vars - nu;
-
     let mut new_evals: BTreeMap<usize, F>;
 
     if is_boolean_point {
@@ -289,12 +288,12 @@ where
         let mut target_x_index = 0;
         for (i, &bit) in partial_point_x.iter().enumerate() {
             if bit.is_one() {
-                target_x_index |= 1 << i;
+                target_x_index |= 1usize << i;
             }
         }
 
         for (&full_index, &value) in &poly.evaluations {
-            let y_index = full_index & ((1 << mu) - 1);
+            let y_index = full_index & ((1usize << mu) - 1);
             let x_index = full_index >> mu;
 
             if x_index == target_x_index {
@@ -313,7 +312,7 @@ where
                 .evaluations
                 .par_iter()
                 .map(|(&full_index, &value)| {
-                    let y_index = full_index & ((1 << mu) - 1);
+                    let y_index = full_index & ((1usize << mu) - 1);
                     let x_index = full_index >> mu;
 
                     let mut lagrange_eval = F::one();
@@ -344,7 +343,7 @@ where
             // SEQUENTIAL IMPLEMENTATION:
             new_evals = BTreeMap::new();
             for (&full_index, &value) in &poly.evaluations {
-                let y_index = full_index & ((1 << mu) - 1);
+                let y_index = full_index & ((1usize << mu) - 1);
                 let x_index = full_index >> mu;
 
                 let mut lagrange_eval = F::one();

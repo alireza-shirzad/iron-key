@@ -287,10 +287,10 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
         let (num_vars_x, num_vars_y, num_vars_z, num_vars_t) =
             Self::get_num_vars_from_maximum_num_vars(num_vars);
         let (degree_x, degree_y, degree_z, degree_t) = (
-            1 << num_vars_x,
-            1 << num_vars_y,
-            1 << num_vars_z,
-            1 << num_vars_t,
+            1usize << num_vars_x,
+            1usize << num_vars_y,
+            1usize << num_vars_z,
+            1usize << num_vars_t,
         );
 
         // Note: Your code uses E::G1::rand(rng) which is likely Projective.

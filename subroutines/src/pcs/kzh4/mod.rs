@@ -122,10 +122,10 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         let prover_param = prover_param.borrow();
 
         // degrees of each variable block
-        let degree_x = 1 << prover_param.get_num_vars_x();
-        let degree_y = 1 << prover_param.get_num_vars_y();
-        let degree_z = 1 << prover_param.get_num_vars_z();
-        let degree_t = 1 << prover_param.get_num_vars_t();
+        let degree_x = 1usize << prover_param.get_num_vars_x();
+        let degree_y = 1usize << prover_param.get_num_vars_y();
+        let degree_z = 1usize << prover_param.get_num_vars_z();
+        let degree_t = 1usize << prover_param.get_num_vars_t();
 
         // helper closures ────────────────────────────────────────────────────────
         let eval_dx = |i: usize| -> E::G1Affine {
@@ -250,7 +250,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             E::ScalarField::ZERO,
         );
 
-        let d_z = (0..1 << prover_param.get_num_vars_z())
+        let d_z = (0..1usize << prover_param.get_num_vars_z())
             .map(|i| match polynomial {
                 DenseOrSparseMLE::Dense(dense_poly) => {
                     let scalars = Self::get_dense_partial_evaluation_for_boolean_input(
@@ -281,14 +281,14 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                 },
             })
             .collect::<Vec<_>>();
-        let d_y = (0..1 << prover_param.get_num_vars_y())
+        let d_y = (0..1usize << prover_param.get_num_vars_y())
             .map(|i| match polynomial {
                 DenseOrSparseMLE::Dense(_) => {
                     let evals_vec = EqPolynomial::new(split_input[0].clone()).evals();
                     let scalars = evals_vec.as_slice();
-                    let bases = &aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i
-                        ..(1 << prover_param.get_num_vars_x()) * i
-                            + (1 << prover_param.get_num_vars_x())];
+                    let bases = &aux.get_d_xy()[(1usize << prover_param.get_num_vars_x()) * i
+                        ..(1usize << prover_param.get_num_vars_x()) * i
+                            + (1usize << prover_param.get_num_vars_x())];
                     E::G1::msm_unchecked(bases, &scalars).into()
                 },
                 DenseOrSparseMLE::Sparse(_) => {
@@ -296,7 +296,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
                     let bit_index = split_input[0].iter().fold(0usize, |acc, b| {
                         acc << 1 | if *b == E::ScalarField::ONE { 1 } else { 0 }
                     });
-                    aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index].into()
+                    aux.get_d_xy()[(1usize << prover_param.get_num_vars_x()) * i + bit_index].into()
                 },
             })
             .collect::<Vec<_>>();
@@ -503,7 +503,7 @@ impl<F: Field + Copy> EqPolynomial<F> {
     pub fn evals(&self) -> Vec<F> {
         let ell = self.r.len();
 
-        let mut evals: Vec<F> = vec![F::one(); 1 << ell];
+        let mut evals: Vec<F> = vec![F::one(); 1usize << ell];
         let mut size = 1;
         for j in 0..ell {
             // in each iteration, we double the size of chis

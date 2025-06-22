@@ -38,7 +38,7 @@
 //     // normal polynomials
 //     let poly1 = DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng));
 //     // let poly1 = DenseMultilinearExtension::from_evaluations_vec(nv,
-//     // vec![Fr::zero(); 1 << nv]);
+//     // vec![Fr::zero(); 1usize << nv]);
 //     test_single_helper(&params, &poly1, &mut rng)?;
 
 //     // // single-variate polynomials
