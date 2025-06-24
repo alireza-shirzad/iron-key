@@ -131,7 +131,3 @@ fn audit(bencher: Bencher, batch_size: usize) {
     );
 }
 
-// Ensure main function is present for Divan if this is the main benchmark file
-fn main() {
-    divan::main();
-}

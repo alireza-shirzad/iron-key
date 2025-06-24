@@ -1,0 +1,94 @@
+bench                             fastest       │ slowest       │ median        │ mean          │ samples │ iters
+╰─ client_lookup                                │               │               │               │         │
+   ╰─ lookup_prove_after_updates                │               │               │               │         │
+      ├─ 20                       Cache miss: Creating new IronPublicParameters for log_capacity = 20
+Loading SRS
+
+[log_capacity=20] Lookup proof size: 66289 Bytes
+[log_capacity=20] Client key size: 98408 Bytes
+
+101.8 ms      │ 112.2 ms      │ 103.2 ms      │ 103.3 ms      │ 100     │ 100
+      ├─ 21                       Cache miss: Creating new IronPublicParameters for log_capacity = 21
+Loading SRS
+
+[log_capacity=21] Lookup proof size: 66321 Bytes
+[log_capacity=21] Client key size: 131176 Bytes
+
+103 ms        │ 107.2 ms      │ 103.9 ms      │ 103.9 ms      │ 100     │ 100
+      ├─ 22                       Cache miss: Creating new IronPublicParameters for log_capacity = 22
+Loading SRS
+
+[log_capacity=22] Lookup proof size: 131889 Bytes
+[log_capacity=22] Client key size: 196712 Bytes
+
+200.9 ms      │ 206.4 ms      │ 202.1 ms      │ 202.3 ms      │ 100     │ 100
+      ├─ 23                       Cache miss: Creating new IronPublicParameters for log_capacity = 23
+Loading SRS
+
+[log_capacity=23] Lookup proof size: 131921 Bytes
+[log_capacity=23] Client key size: 262248 Bytes
+
+202.3 ms      │ 208.2 ms      │ 203.6 ms      │ 203.7 ms      │ 100     │ 100
+      ├─ 24                       Cache miss: Creating new IronPublicParameters for log_capacity = 24
+Loading SRS
+
+[log_capacity=24] Lookup proof size: 263025 Bytes
+[log_capacity=24] Client key size: 393320 Bytes
+
+397.9 ms      │ 404.9 ms      │ 400.5 ms      │ 400.4 ms      │ 100     │ 100
+      ├─ 25                       Cache miss: Creating new IronPublicParameters for log_capacity = 25
+Loading SRS
+
+[log_capacity=25] Lookup proof size: 263057 Bytes
+[log_capacity=25] Client key size: 524392 Bytes
+
+399.8 ms      │ 406.5 ms      │ 402.1 ms      │ 402.4 ms      │ 100     │ 100
+      ├─ 26                       Cache miss: Creating new IronPublicParameters for log_capacity = 26
+Loading SRS
+
+[log_capacity=26] Lookup proof size: 525233 Bytes
+[log_capacity=26] Client key size: 786536 Bytes
+
+793.2 ms      │ 798.9 ms      │ 794.4 ms      │ 794.7 ms      │ 100     │ 100
+      ├─ 27                       Cache miss: Creating new IronPublicParameters for log_capacity = 27
+Loading SRS
+
+[log_capacity=27] Lookup proof size: 525265 Bytes
+[log_capacity=27] Client key size: 1048680 Bytes
+
+792.6 ms      │ 803.1 ms      │ 795.9 ms      │ 796.1 ms      │ 100     │ 100
+      ├─ 28                       Cache miss: Creating new IronPublicParameters for log_capacity = 28
+Loading SRS
+
+[log_capacity=28] Lookup proof size: 1049625 Bytes
+[log_capacity=28] Client key size: 1572968 Bytes
+
+1.57 s        │ 1.589 s       │ 1.572 s       │ 1.574 s       │ 100     │ 100
+      ├─ 29                       Cache miss: Creating new IronPublicParameters for log_capacity = 29
+Loading SRS
+
+[log_capacity=29] Lookup proof size: 1049657 Bytes
+[log_capacity=29] Client key size: 2097256 Bytes
+
+1.573 s       │ 1.588 s       │ 1.575 s       │ 1.575 s       │ 100     │ 100
+      ├─ 30                       Cache miss: Creating new IronPublicParameters for log_capacity = 30
+Loading SRS
+
+[log_capacity=30] Lookup proof size: 2098225 Bytes
+[log_capacity=30] Client key size: 3145832 Bytes
+
+3.13 s        │ 3.16 s        │ 3.135 s       │ 3.136 s       │ 100     │ 100
+      ├─ 31                       Cache miss: Creating new IronPublicParameters for log_capacity = 31
+Loading SRS
+
+[log_capacity=31] Lookup proof size: 2098257 Bytes
+[log_capacity=31] Client key size: 4194408 Bytes
+
+3.139 s       │ 3.288 s       │ 3.161 s       │ 3.192 s       │ 100     │ 100
+      ╰─ 32                       Cache miss: Creating new IronPublicParameters for log_capacity = 32
+Loading SRS
+
+[log_capacity=32] Lookup proof size: 4195441 Bytes
+[log_capacity=32] Client key size: 6291560 Bytes
+
+6.268 s       │ 6.574 s       │ 6.32 s        │ 6.358 s       │ 100     │ 100

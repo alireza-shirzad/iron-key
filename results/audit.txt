@@ -1,0 +1,65 @@
+╰─ audit                   │               │               │               │         │
+   ╰─ audit                │               │               │               │         │
+      ├─ 20  
+Cache miss: Creating new IronPublicParameters for log_capacity = 20
+Loading SRS
+
+[log_capacity=20] Reg proof size: 36802 Bytes
+103 ms        │ 109.7 ms      │ 105.1 ms      │ 105.4 ms      │ 100     │ 100
+      ├─ 21  
+Cache miss: Creating new IronPublicParameters for log_capacity = 21
+Loading SRS
+
+[log_capacity=21] Reg proof size: 36970 Bytes
+103.1 ms      │ 107.2 ms      │ 104.3 ms      │ 104.5 ms      │ 100     │ 100
+      ├─ 22  
+Cache miss: Creating new IronPublicParameters for log_capacity = 22
+Loading SRS
+
+[log_capacity=22] Reg proof size: 69906 Bytes
+202.5 ms      │ 208.8 ms      │ 204.6 ms      │ 204.8 ms      │ 100     │ 100
+      ├─ 23  
+Cache miss: Creating new IronPublicParameters for log_capacity = 23
+Loading SRS
+
+[log_capacity=23] Reg proof size: 70074 Bytes
+202.2 ms      │ 208.9 ms      │ 204.9 ms      │ 204.9 ms      │ 100     │ 100
+      ├─ 24  
+Cache miss: Creating new IronPublicParameters for log_capacity = 24
+Loading SRS
+
+[log_capacity=24] Reg proof size: 135778 Bytes
+398.7 ms      │ 408.6 ms      │ 402.9 ms      │ 402.7 ms      │ 100     │ 100
+      ├─ 25  
+Cache miss: Creating new IronPublicParameters for log_capacity = 25
+Loading SRS
+
+[log_capacity=25] Reg proof size: 135946 Bytes
+399.8 ms      │ 410 ms        │ 403.9 ms      │ 404.2 ms      │ 100     │ 100
+      ├─ 26  
+Cache miss: Creating new IronPublicParameters for log_capacity = 26
+Loading SRS
+
+[log_capacity=26] Reg proof size: 267186 Bytes
+791.8 ms      │ 804.2 ms      │ 796.2 ms      │ 796.4 ms      │ 100     │ 100
+      ├─ 27  
+Cache miss: Creating new IronPublicParameters for log_capacity = 27
+Loading SRS
+
+[log_capacity=27] Reg proof size: 267354 Bytes
+793.3 ms      │ 805.8 ms      │ 800.6 ms      │ 800.3 ms      │ 100     │ 100
+      ├─ 28  
+Cache miss: Creating new IronPublicParameters for log_capacity = 28
+Loading SRS
+
+[log_capacity=28] Reg proof size: 529666 Bytes
+1.576 s       │ 1.596 s       │ 1.581 s       │ 1.583 s       │ 100     │ 100
+      ├─ 29  
+Cache miss: Creating new IronPublicParameters for log_capacity = 29
+Loading SRS
+
+[log_capacity=29] Reg proof size: 529834 Bytes
+1.578 s       │ 1.623 s       │ 1.586 s       │ 1.587 s       │ 100     │ 100
+      ├─ 30  
+Cache miss: Creating new IronPublicParameters for log_capacity = 30
+Loading SRS
