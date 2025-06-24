@@ -150,4 +150,9 @@ Computing SRS
       ├─ [nv=30, poly=Sparse, point=Random]   9.955 ms      │ 12.95 ms      │ 11.77 ms      │ 11.45 ms      │ 10      │ 100
       ├─ [nv=31, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 31
-Computing SRS
+57.2 µs       │ 911.2 µs      │ 59.86 µs      │ 153.6 µs      │ 10      │ 100
+      ├─ [nv=31, poly=Dense, point=Random]    42.3 s        │ 42.3 s        │ 42.3 s        │ 42.3 s        │ 1       │ 10
+      ├─ [nv=31, poly=Sparse, point=Boolean]  120.7 µs      │ 123.6 µs      │ 121.5 µs      │ 121.7 µs      │ 10      │ 100
+      ├─ [nv=31, poly=Sparse, point=Random]   8.85 ms       │ 9.464 ms      │ 9.277 ms      │ 9.223 ms      │ 10      │ 100
+      ├─ [nv=32, poly=Dense, point=Boolean]   
+Cache miss: Creating new keys for nv = 32
