@@ -259,34 +259,3 @@ pub(crate) enum DictionaryError {
     #[error("The dictionary is full.")]
     DictionaryFull,
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ark_ff::UniformRand;
-    use fake::{
-        Fake,
-        faker::internet::en::{FreeEmail, FreeEmailProvider, SafeEmail},
-    };
-    #[test]
-    fn test_dictionary() {
-        // const DICT_CAPACITY: usize = 1usize << 4;
-        // const NUM_ENTRIES: usize = 1usize << 3;
-        // let mut rng = ark_std::test_rng();
-        // let mut dict: IronDictionary<Fr> =
-        // IronDictionary::new_with_capacity(DICT_CAPACITY); for _ in 0.
-        // .NUM_ENTRIES {     let label: String = FreeEmail().fake();
-        //     let value = Fr::rand(&mut rng);
-        //     dict.insert(&label, value).unwrap();
-        // }
-        // assert_eq!(dict.size(), NUM_ENTRIES);
-        // assert_eq!(
-        //     dict.mle
-        //         .evaluations()
-        //         .iter()
-        //         .filter(|&&x| !x.is_zero())
-        //         .count(),
-        //     NUM_ENTRIES
-        // );
-    }
-}

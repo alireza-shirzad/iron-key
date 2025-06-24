@@ -20,10 +20,9 @@ derivative = { workspace = true }
 num-bigint = { workspace = true }
 rayon = { workspace = true, optional = true }
 thiserror = { workspace = true }
-sha2 = "0.10"
+sha2 = { workspace = true }
 [dev-dependencies]
 ark-bn254 = { workspace = true }
-fake = { version = "4.3.0" }
 
 [features]
 default = ["std"]
