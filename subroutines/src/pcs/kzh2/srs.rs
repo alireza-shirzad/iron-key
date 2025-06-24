@@ -151,12 +151,20 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
 
     /// Extract the prover parameters from the public parameters.
     fn extract_prover_param(&self, supported_num_vars: usize) -> Self::ProverParam {
+        eprintln!(
+            "Extracting prover parameters for supported_num_vars = {}",
+            supported_num_vars
+        );
         assert_eq!(supported_num_vars, self.nu + self.mu);
         KZH2ProverParam::new(self.nu, self.mu, self.h_mat.clone(), self.h_vec.clone())
     }
 
     /// Extract the verifier parameters from the public parameters.
     fn extract_verifier_param(&self, supported_num_vars: usize) -> Self::VerifierParam {
+        eprintln!(
+            "Extracting verifier parameters for supported_num_vars = {}",
+            supported_num_vars
+        );
         assert_eq!(supported_num_vars, self.nu + self.mu);
         KZH2VerifierParam::new(
             self.nu,

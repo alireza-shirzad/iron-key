@@ -97,6 +97,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         _supported_degree: Option<usize>,
         supported_num_vars: Option<usize>,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError> {
+        eprintln!("Trimming SRS");
         let srs = srs.borrow();
         let supp_nv = supported_num_vars.unwrap();
         assert_eq!(srs.get_nu() + srs.get_mu(), supp_nv);
