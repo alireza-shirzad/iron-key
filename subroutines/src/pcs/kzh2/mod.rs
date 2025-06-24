@@ -309,7 +309,7 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        // eprintln!("Start opening dense");
+        eprintln!("Start opening dense");
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
@@ -325,7 +325,7 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        // eprintln!("Start opening dense");
+        eprintln!("Start opening dense");
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
@@ -344,7 +344,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
-        // eprintln!("Start computing auxiliary information for dense polynomial");
+        eprintln!("Start computing auxiliary information for dense polynomial");
         let timer = start_timer!(|| "KZH::CompAux(Dense)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let mut d = vec![E::G1Affine::zero(); 1usize << prover_param.get_nu()];
@@ -364,7 +364,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
-        // eprintln!("Start computing auxiliary information for sparse polynomial");
+        eprintln!("Start computing auxiliary information for sparse polynomial");
         let timer = start_timer!(|| "KZH::CompAux(Sparse)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
 
