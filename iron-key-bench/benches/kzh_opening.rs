@@ -134,12 +134,12 @@ pub const PARAMS: &[BenchParams] = &{
         let mut nv: usize = 31;
         while nv <= 32 {
             // Case 1: Dense, Random Point
-            out[i] = BenchParams {
-                nv,
-                is_sparse: false,
-                is_boolean_point: false,
-            };
-            i += 1;
+            // out[i] = BenchParams {
+            //     nv,
+            //     is_sparse: false,
+            //     is_boolean_point: false,
+            // };
+            // i += 1;
             // Case 2: Dense, Boolean Point
             out[i] = BenchParams {
                 nv,
