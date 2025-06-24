@@ -356,7 +356,6 @@ pub fn build_eq_x_r<F: PrimeField>(
     r: &[F],
 ) -> Result<Arc<DenseMultilinearExtension<F>>, ArithErrors> {
     let evals = build_eq_x_r_vec(r)?;
-    // eprintln!("evals len: {:?}", evals.len());
 
     let mle = DenseMultilinearExtension::from_evaluations_vec(r.len(), evals);
 

@@ -42,7 +42,6 @@ fn get_or_create_keys(nv: usize) -> Arc<(ProverKey, VerifierKey)> {
             let mut rng = test_rng();
             let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)
                 .expect("Failed to generate SRS for testing");
-            eprintln!("SRS generated for nv = {}", nv);
             let (ck, vk) =
                 KZH2::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
             Arc::new((ck, vk))
@@ -89,21 +88,15 @@ fn prepare_open_inputs(
     Vec<Fr>,
     KZH2Commitment<E>,
 ) {
-    eprintln!("Start preparing opening inputs");
-    eprintln!(
-        "Parameters: nv = {}, is_sparse = {}, is_boolean_point = {}",
-        nv, is_sparse, is_boolean_point
-    );
+
     let mut rng = test_rng();
     let (ck, _) = &*get_or_create_keys(nv);
-    eprintln!("Prover and Verifier keys retrieved for nv = {}", nv);
     // Generate a random polynomial of the specified type.
     let poly = if is_sparse {
         DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
     } else {
         DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng))
     };
-    eprintln!("Polynomial generated: {:?}", poly);
 
     // Generate the point for the opening.
     let point: Vec<Fr> = if is_boolean_point {
@@ -120,11 +113,9 @@ fn prepare_open_inputs(
     } else {
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
-    eprintln!("Opening point generated: {:?}", point);
 
     // Commit to the polynomial to generate the auxiliary info required for opening.
     let com = KZH2::commit(ck, &poly).unwrap();
-    eprintln!("Commitment generated: {:?}", com);
     (ck.clone().into(), poly, point, com)
 }
 
