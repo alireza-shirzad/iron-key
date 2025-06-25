@@ -88,9 +88,9 @@ fn prepare_open_inputs(
     Vec<Fr>,
     KZH2Commitment<E>,
 ) {
-
     let mut rng = test_rng();
     let (ck, _) = &*get_or_create_keys(nv);
+
     // Generate a random polynomial of the specified type.
     let poly = if is_sparse {
         DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
@@ -116,12 +116,12 @@ fn prepare_open_inputs(
 
     // Commit to the polynomial to generate the auxiliary info required for opening.
     let com = KZH2::commit(ck, &poly).unwrap();
+
     (ck.clone().into(), poly, point, com)
 }
 
 // Compile-time list of parameters to benchmark.
-// We test nv from 10 to 30, for the four specified cases.
-// Note: nv = 31 and 32 cause memory issues due to large SRS sizes.
+// We test nv from 10 to 32, for the three specified cases.
 pub const PARAMS: &[BenchParams] = &{
     const fn build_params() -> [BenchParams; (32 - 10 + 1) * 4] {
         let mut out = [BenchParams {
@@ -130,7 +130,7 @@ pub const PARAMS: &[BenchParams] = &{
             is_boolean_point: false,
         }; (32 - 10 + 1) * 4];
         let mut i: usize = 0;
-        let mut nv: usize = 32;
+        let mut nv: usize = 31;
         while nv <= 32 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {

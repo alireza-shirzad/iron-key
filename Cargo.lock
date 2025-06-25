@@ -92,7 +92,7 @@ dependencies = [
 [[package]]
 name = "ark-ec"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "ahash",
  "ark-ff",
@@ -113,7 +113,7 @@ dependencies = [
 [[package]]
 name = "ark-ff"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "ark-ff-asm",
  "ark-ff-macros",
@@ -133,7 +133,7 @@ dependencies = [
 [[package]]
 name = "ark-ff-asm"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "quote",
  "syn 2.0.104",
@@ -142,7 +142,7 @@ dependencies = [
 [[package]]
 name = "ark-ff-macros"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "num-bigint",
  "num-traits",
@@ -154,7 +154,7 @@ dependencies = [
 [[package]]
 name = "ark-poly"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "ahash",
  "ark-ff",
@@ -169,7 +169,7 @@ dependencies = [
 [[package]]
 name = "ark-serialize"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "ark-serialize-derive",
  "ark-std",
@@ -183,7 +183,7 @@ dependencies = [
 [[package]]
 name = "ark-serialize-derive"
 version = "0.5.0"
-source = "git+https://github.com/alireza-shirzad/algebra.git#609080a7d720925f208426da7c5ca7d9f28fcf78"
+source = "git+https://github.com/alireza-shirzad/algebra.git#e11183abc422b4e2a65e29c96fe323d6270a441c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -427,9 +427,9 @@ checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
 
 [[package]]
 name = "crunchy"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43da5946c66ffcc7745f48db692ffbb10a83bfe0afd96235c5c2a4fb23994929"
+checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "crypto-common"

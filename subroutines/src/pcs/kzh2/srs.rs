@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{PCSError, StructuredReferenceString};
 use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -14,11 +16,11 @@ use rayon::iter::{
 pub struct KZH2UniversalParams<E: Pairing> {
     nu: usize,
     mu: usize,
-    h_mat: Vec<E::G1Affine>,
-    h_vec: Vec<E::G1Affine>,
-    v_vec: Vec<E::G2Affine>,
+    h_mat: Arc<Vec<E::G1Affine>>,
+    h_vec: Arc<Vec<E::G1Affine>>,
+    v_vec: Arc<Vec<E::G2Affine>>,
     minus_v_prime: E::G2Affine,
-    gi: Vec<E::G1Affine>,
+    gi: Arc<Vec<E::G1Affine>>,
 }
 
 impl<E: Pairing> KZH2UniversalParams<E> {
@@ -26,11 +28,11 @@ impl<E: Pairing> KZH2UniversalParams<E> {
     pub fn new(
         nu: usize,
         mu: usize,
-        h_mat: Vec<E::G1Affine>,
-        h_vec: Vec<E::G1Affine>,
-        v_vec: Vec<E::G2Affine>,
+        h_mat: Arc<Vec<E::G1Affine>>,
+        h_vec: Arc<Vec<E::G1Affine>>,
+        v_vec: Arc<Vec<E::G2Affine>>,
         minus_v_prime: E::G2Affine,
-        gi: Vec<E::G1Affine>,
+        gi: Arc<Vec<E::G1Affine>>,
     ) -> Self {
         Self {
             nu,
@@ -72,12 +74,17 @@ impl<E: Pairing> KZH2UniversalParams<E> {
 pub struct KZH2ProverParam<E: Pairing> {
     nu: usize,
     mu: usize,
-    h_mat: Vec<E::G1Affine>,
-    h_vec: Vec<E::G1Affine>,
+    h_mat: Arc<Vec<E::G1Affine>>,
+    h_vec: Arc<Vec<E::G1Affine>>,
 }
 impl<E: Pairing> KZH2ProverParam<E> {
     /// Create a new prover parameter
-    pub fn new(nu: usize, mu: usize, h_mat: Vec<E::G1Affine>, h_vec: Vec<E::G1Affine>) -> Self {
+    pub fn new(
+        nu: usize,
+        mu: usize,
+        h_mat: Arc<Vec<E::G1Affine>>,
+        h_vec: Arc<Vec<E::G1Affine>>,
+    ) -> Self {
         Self {
             nu,
             mu,
@@ -105,9 +112,9 @@ impl<E: Pairing> KZH2ProverParam<E> {
 pub struct KZH2VerifierParam<E: Pairing> {
     nu: usize,
     mu: usize,
-    h_vec: Vec<E::G1Affine>,
+    h_vec: Arc<Vec<E::G1Affine>>,
     minus_v_prime: E::G2Affine,
-    v_vec: Vec<E::G2Affine>,
+    v_vec: Arc<Vec<E::G2Affine>>,
 }
 
 impl<E: Pairing> KZH2VerifierParam<E> {
@@ -115,9 +122,9 @@ impl<E: Pairing> KZH2VerifierParam<E> {
     pub fn new(
         nu: usize,
         mu: usize,
-        h_vec: Vec<E::G1Affine>,
+        h_vec: Arc<Vec<E::G1Affine>>,
         minus_v_prime: E::G2Affine,
-        v_vec: Vec<E::G2Affine>,
+        v_vec: Arc<Vec<E::G2Affine>>,
     ) -> Self {
         Self {
             nu,
@@ -151,14 +158,12 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
 
     /// Extract the prover parameters from the public parameters.
     fn extract_prover_param(&self, supported_num_vars: usize) -> Self::ProverParam {
-
         assert_eq!(supported_num_vars, self.nu + self.mu);
         KZH2ProverParam::new(self.nu, self.mu, self.h_mat.clone(), self.h_vec.clone())
     }
 
     /// Extract the verifier parameters from the public parameters.
     fn extract_verifier_param(&self, supported_num_vars: usize) -> Self::VerifierParam {
-
         assert_eq!(supported_num_vars, self.nu + self.mu);
         KZH2VerifierParam::new(
             self.nu,
@@ -271,11 +276,11 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH2UniversalParams<E> {
         Ok(KZH2UniversalParams::new(
             nu,
             mu,
-            h_mat,
-            h_vec,
-            v_vec,
+            Arc::new(h_mat),
+            Arc::new(h_vec),
+            Arc::new(v_vec),
             minus_v_prime,
-            generators_1.into_iter().map(|g| g.into_affine()).collect(),
+            Arc::new(generators_1.into_iter().map(|g| g.into_affine()).collect()),
         ))
     }
 }
