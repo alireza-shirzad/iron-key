@@ -119,7 +119,7 @@ pub const PARAMS: &[Params] = &{
     const PARAMS_ARRAY_SIZE: usize = 325;
 
     const fn build_params() -> [Params; PARAMS_ARRAY_SIZE] {
-        let mut out = [Params(0, 0, 0); PARAMS_ARRAY_SIZE];
+        let mut out = [Params(4, 0, 0); PARAMS_ARRAY_SIZE];
         let mut i:usize = 0;
 
         let mut n:usize = 31; // log_capacity starts from 20
