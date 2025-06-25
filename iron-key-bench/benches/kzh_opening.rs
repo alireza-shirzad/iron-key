@@ -39,10 +39,13 @@ fn get_or_create_keys(nv: usize) -> Arc<ProverKey> {
         .or_insert_with(|| {
             println!("\nCache miss: Creating new keys for nv = {}", nv);
             let mut rng = test_rng();
+            eprintln!("Generating SRS for nv = {}", nv);
             let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)
                 .expect("Failed to generate SRS for testing");
+            eprintln!("Trimming SRS for nv = {}", nv);
             let (ck, _) =
                 KZH2::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
+            eprintln!("Keys created for nv = {}", nv);
             Arc::new(ck)
         })
         .clone()
