@@ -265,7 +265,7 @@ impl<E: Pairing> KZH2<E> {
     ) -> Result<KZH2Commitment<E>, PCSError> {
         let commit_timer = start_timer!(|| "KZH::Commit");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-        let com = E::G1::msm(prover_param.get_h_mat(), &poly.evaluations).unwrap();
+        let com = E::G1::msm(&prover_param.get_h_mat(), &poly.evaluations).unwrap();
         end_timer!(commit_timer);
         Ok(KZH2Commitment::new(com.into(), poly.num_vars()))
     }
@@ -346,7 +346,7 @@ impl<E: Pairing> KZH2<E> {
         cfg_iter_mut!(d)
             .zip(cfg_chunks!(evaluations, 1usize << prover_param.get_mu()))
             .for_each(|(d, f)| {
-                *d = E::G1::msm(prover_param.get_h_vec(), f)
+                *d = E::G1::msm(&prover_param.get_h_vec(), f)
                     .unwrap()
                     .into_affine();
             });

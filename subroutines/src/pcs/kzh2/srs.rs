@@ -52,20 +52,20 @@ impl<E: Pairing> KZH2UniversalParams<E> {
         self.mu
     }
 
-    pub fn get_h_mat(&self) -> &Vec<E::G1Affine> {
-        &self.h_mat
+    pub fn get_h_mat(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_mat.clone()
     }
-    pub fn get_h_vec(&self) -> &Vec<E::G1Affine> {
-        &self.h_vec
+    pub fn get_h_vec(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_vec.clone()
     }
-    pub fn get_v_vec(&self) -> &Vec<E::G2Affine> {
-        &self.v_vec
+    pub fn get_v_vec(&self) -> Arc<Vec<E::G2Affine>> {
+        self.v_vec.clone()
     }
     pub fn get_minus_v_prime(&self) -> E::G2Affine {
         self.minus_v_prime
     }
-    pub fn get_gi(&self) -> &Vec<E::G1Affine> {
-        &self.gi
+    pub fn get_gi(&self) -> Arc<Vec<E::G1Affine>> {
+        self.gi.clone()
     }
 }
 
@@ -99,11 +99,11 @@ impl<E: Pairing> KZH2ProverParam<E> {
     pub fn get_mu(&self) -> usize {
         self.mu
     }
-    pub fn get_h_mat(&self) -> &Vec<E::G1Affine> {
-        &self.h_mat
+    pub fn get_h_mat(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_mat.clone()
     }
-    pub fn get_h_vec(&self) -> &Vec<E::G1Affine> {
-        &self.h_vec
+    pub fn get_h_vec(&self) -> Arc<Vec<E::G1Affine>> {
+        self.h_vec.clone()
     }
 }
 

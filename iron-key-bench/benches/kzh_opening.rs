@@ -15,7 +15,7 @@ use subroutines::{
         PolynomialCommitmentScheme,
         kzh2::{
             KZH2,
-            srs::{KZH2ProverParam, KZH2VerifierParam},
+            srs::{KZH2ProverParam},
             structs::KZH2Commitment,
         },
     },
