@@ -24,16 +24,15 @@ use subroutines::{
 // ---
 
 type ProverKey = KZH2ProverParam<E>;
-type VerifierKey = KZH2VerifierParam<E>;
 
 // Static cache for prover and verifier keys, keyed by the number of variables
 // `nv`. This avoids re-generating the SRS for each benchmark combination.
-static KEY_CACHE: Lazy<Mutex<HashMap<usize, Arc<(ProverKey, VerifierKey)>>>> =
+static KEY_CACHE: Lazy<Mutex<HashMap<usize, Arc<ProverKey>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Helper function to get or create the prover and verifier keys for a given
 /// `nv`.
-fn get_or_create_keys(nv: usize) -> Arc<(ProverKey, VerifierKey)> {
+fn get_or_create_keys(nv: usize) -> Arc<ProverKey> {
     let mut cache = KEY_CACHE.lock().unwrap();
     cache
         .entry(nv)
@@ -42,9 +41,9 @@ fn get_or_create_keys(nv: usize) -> Arc<(ProverKey, VerifierKey)> {
             let mut rng = test_rng();
             let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)
                 .expect("Failed to generate SRS for testing");
-            let (ck, vk) =
+            let (ck, _) =
                 KZH2::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
-            Arc::new((ck, vk))
+            Arc::new(ck)
         })
         .clone()
 }
@@ -89,15 +88,16 @@ fn prepare_open_inputs(
     KZH2Commitment<E>,
 ) {
     let mut rng = test_rng();
-    let (ck, _) = &*get_or_create_keys(nv);
-
+    eprintln!("begining");
+    let ck = get_or_create_keys(nv);
+    eprintln!("keys created");
     // Generate a random polynomial of the specified type.
     let poly = if is_sparse {
         DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
     } else {
         DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng))
     };
-
+    eprintln!("poly created");
     // Generate the point for the opening.
     let point: Vec<Fr> = if is_boolean_point {
         (0..nv)
@@ -113,11 +113,11 @@ fn prepare_open_inputs(
     } else {
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
-
+    eprintln!("point created");
     // Commit to the polynomial to generate the auxiliary info required for opening.
-    let com = KZH2::commit(ck, &poly).unwrap();
-
-    (ck.clone().into(), poly, point, com)
+    let com = KZH2::commit(ck.clone(), &poly).unwrap();
+    eprintln!("commit created");
+    (ck, poly, point, com)
 }
 
 // Compile-time list of parameters to benchmark.
