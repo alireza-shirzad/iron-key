@@ -110,6 +110,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
     ) -> Result<Self::Commitment, PCSError> {
+        println!("KZH2::Commit");
         match poly {
             DenseOrSparseMLE::Dense(dense_poly) => Self::commit_dense(prover_param, dense_poly),
             DenseOrSparseMLE::Sparse(sparse_poly) => Self::commit_sparse(prover_param, sparse_poly),
@@ -263,9 +264,12 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         poly: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
+        println!("KZH2::Commit(Dense)");
         let commit_timer = start_timer!(|| "KZH::Commit");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        println!("Prover param");
         let com = E::G1::msm(&prover_param.get_h_mat(), &poly.evaluations).unwrap();
+        println!("MSM done");
         end_timer!(commit_timer);
         Ok(KZH2Commitment::new(com.into(), poly.num_vars()))
     }
@@ -274,26 +278,30 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
+        println!("KZH2::Commit(Sparse)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-
+        println!("Prover param");
         // The scalars for the MSM are the values from the sparse polynomial's
         // evaluation map.
         let scalars: Vec<E::ScalarField> = sparse_poly.evaluations.values().cloned().collect();
-
+        println!("Scalars collected");
         // The bases for the MSM must correspond to the generator at the index
         // specified by the key in the sparse polynomial's evaluation map.
         let h_mat = prover_param.get_h_mat();
+        println!("H matrix collected");
         let bases: Vec<E::G1Affine> = sparse_poly
         .evaluations
         .keys()
         .map(|&index| h_mat[index]) // Use the key `index` to get the correct base.
         .collect();
 
+        println!("Bases collected");
         // Ensure that we have the same number of bases and scalars.
         assert_eq!(bases.len(), scalars.len());
 
         let com = E::G1::msm(&bases, &scalars).unwrap();
 
+        println!("MSM done");
         Ok(KZH2Commitment::new(
             com.into_affine(),
             sparse_poly.num_vars(),
