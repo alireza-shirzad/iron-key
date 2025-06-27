@@ -356,8 +356,8 @@ impl<E: Pairing> KZH2<E> {
         println!("D initialized");
         let evaluations = polynomial.evaluations.clone();
         println!("Evaluations cloned");
-        cfg_iter_mut!(d)
-            .zip(cfg_chunks!(evaluations, 1usize << prover_param.get_mu()))
+        d.iter_mut()                                   // serial, not par_iter_mut()
+ .zip(evaluations.chunks(1usize << prover_param.get_mu()))
             .for_each(|(d, f)| {
                 *d = E::G1::msm(&prover_param.get_h_vec(), f)
                     .unwrap()
