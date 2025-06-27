@@ -108,8 +108,10 @@ fn prepare_open_inputs(
     } else {
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
+    println!("Hey");
     // Commit to the polynomial to generate the auxiliary info required for opening.
     let com = KZH2::commit(ck.clone(), &poly).unwrap();
+    println!("sjdaksudh");
     (ck, poly, point, com)
 }
 

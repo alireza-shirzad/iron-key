@@ -321,9 +321,11 @@ impl<E: Pairing> KZH2<E> {
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        println!("Opening at point");
         let (x0, y0) = point.split_at(prover_param.get_nu());
         let f_star = fix_last_variables_sparse(polynomial, x0);
         let binding = fix_last_variables_sparse(&f_star, y0);
+        println!("Binding");
         let z0 = binding
             .evaluations
             .get(&0)
