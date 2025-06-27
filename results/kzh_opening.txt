@@ -4,133 +4,161 @@ bench                                         fastest       │ slowest       �
       ├─ [nv=10, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 10
 Loading SRS
-
-69.67 ns      │ 514.9 ns      │ 73.92 ns      │ 118.9 ns      │ 10      │ 100
-      ├─ [nv=10, poly=Dense, point=Random]    1.114 ms      │ 1.659 ms      │ 1.263 ms      │ 1.299 ms      │ 10      │ 100
-      ├─ [nv=10, poly=Sparse, point=Boolean]  262.9 ns      │ 940.8 ns      │ 282.4 ns      │ 366.6 ns      │ 10      │ 100
-      ├─ [nv=10, poly=Sparse, point=Random]   566.2 µs      │ 970.9 µs      │ 597.8 µs      │ 646.7 µs      │ 10      │ 100
+69.17 ns      │ 418.3 ns      │ 71.47 ns      │ 109 ns        │ 10      │ 100
+      ├─ [nv=10, poly=Dense, point=Random]    1.199 ms      │ 1.671 ms      │ 1.351 ms      │ 1.411 ms      │ 10      │ 100
+      ├─ [nv=10, poly=Sparse, point=Boolean]  279.9 ns      │ 737.4 ns      │ 292.7 ns      │ 338.7 ns      │ 10      │ 100
+      ├─ [nv=10, poly=Sparse, point=Random]   587 µs        │ 870.8 µs      │ 689.8 µs      │ 703.5 µs      │ 10      │ 100
       ├─ [nv=11, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 11
 Loading SRS
-127.1 ns      │ 1.54 µs       │ 171.6 ns      │ 306 ns        │ 10      │ 100
-      ├─ [nv=11, poly=Dense, point=Random]    1.496 ms      │ 2.091 ms      │ 1.683 ms      │ 1.729 ms      │ 10      │ 100
-      ├─ [nv=11, poly=Sparse, point=Boolean]  241.4 ns      │ 664.3 ns      │ 249.1 ns      │ 295 ns        │ 10      │ 100
-      ├─ [nv=11, poly=Sparse, point=Random]   529.4 µs      │ 1.181 ms      │ 614.4 µs      │ 701.6 µs      │ 10      │ 100
+163.2 ns      │ 1.389 µs      │ 190 ns        │ 310.4 ns      │ 10      │ 100
+      ├─ [nv=11, poly=Dense, point=Random]    1.552 ms      │ 1.985 ms      │ 1.662 ms      │ 1.685 ms      │ 10      │ 100
+      ├─ [nv=11, poly=Sparse, point=Boolean]  261 ns        │ 651.4 ns      │ 266.8 ns      │ 309.3 ns      │ 10      │ 100
+      ├─ [nv=11, poly=Sparse, point=Random]   630.4 µs      │ 1.155 ms      │ 727.6 µs      │ 773.5 µs      │ 10      │ 100
       ├─ [nv=12, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 12
 Loading SRS
-162.9 ns      │ 1.602 µs      │ 191.9 ns      │ 331.7 ns      │ 10      │ 100
-      ├─ [nv=12, poly=Dense, point=Random]    2.042 ms      │ 7.983 ms      │ 2.228 ms      │ 2.808 ms      │ 10      │ 100
-      ├─ [nv=12, poly=Sparse, point=Boolean]  348.1 ns      │ 886.9 ns      │ 361.8 ns      │ 420.4 ns      │ 10      │ 100
-      ├─ [nv=12, poly=Sparse, point=Random]   645.1 µs      │ 1.77 ms       │ 687.6 µs      │ 843.8 µs      │ 10      │ 100
+118 ns        │ 1.749 µs      │ 167 ns        │ 329 ns        │ 10      │ 100
+      ├─ [nv=12, poly=Dense, point=Random]    2.109 ms      │ 7.959 ms      │ 2.278 ms      │ 2.889 ms      │ 10      │ 100
+      ├─ [nv=12, poly=Sparse, point=Boolean]  372.7 ns      │ 862.9 ns      │ 385.3 ns      │ 434.9 ns      │ 10      │ 100
+      ├─ [nv=12, poly=Sparse, point=Random]   714 µs        │ 1.12 ms       │ 796.2 µs      │ 845.9 µs      │ 10      │ 100
       ├─ [nv=13, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 13
 Loading SRS
-137.6 ns      │ 1.487 µs      │ 145.7 ns      │ 278.7 ns      │ 10      │ 100
-      ├─ [nv=13, poly=Dense, point=Random]    2.877 ms      │ 4.051 ms      │ 3.008 ms      │ 3.103 ms      │ 10      │ 100
-      ├─ [nv=13, poly=Sparse, point=Boolean]  346.9 ns      │ 874.6 ns      │ 368.3 ns      │ 440.5 ns      │ 10      │ 100
-      ├─ [nv=13, poly=Sparse, point=Random]   705 µs        │ 2.13 ms       │ 1.121 ms      │ 1.266 ms      │ 10      │ 100
+162.9 ns      │ 1.389 µs      │ 225 ns        │ 407 ns        │ 10      │ 100
+      ├─ [nv=13, poly=Dense, point=Random]    2.765 ms      │ 4.059 ms      │ 2.988 ms      │ 3.08 ms       │ 10      │ 100
+      ├─ [nv=13, poly=Sparse, point=Boolean]  395.9 ns      │ 777.2 ns      │ 402.2 ns      │ 440.7 ns      │ 10      │ 100
+      ├─ [nv=13, poly=Sparse, point=Random]   562.2 µs      │ 884 µs        │ 719.4 µs      │ 734.2 µs      │ 10      │ 100
       ├─ [nv=14, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 14
 Loading SRS
-159 ns        │ 2.92 µs       │ 202.1 ns      │ 476.5 ns      │ 10      │ 100
-      ├─ [nv=14, poly=Dense, point=Random]    3.849 ms      │ 6.023 ms      │ 4.143 ms      │ 4.298 ms      │ 10      │ 100
-      ├─ [nv=14, poly=Sparse, point=Boolean]  577.3 ns      │ 1.034 µs      │ 585.7 ns      │ 700.4 ns      │ 10      │ 100
-      ├─ [nv=14, poly=Sparse, point=Random]   658.3 µs      │ 1.352 ms      │ 704 µs        │ 821.9 µs      │ 10      │ 100
+133.1 ns      │ 1.524 µs      │ 136.7 ns      │ 282.9 ns      │ 10      │ 100
+      ├─ [nv=14, poly=Dense, point=Random]    3.862 ms      │ 4.511 ms      │ 4.13 ms       │ 4.153 ms      │ 10      │ 100
+      ├─ [nv=14, poly=Sparse, point=Boolean]  593.9 ns      │ 1.179 µs      │ 620.8 ns      │ 676.7 ns      │ 10      │ 100
+      ├─ [nv=14, poly=Sparse, point=Random]   559.6 µs      │ 1.068 ms      │ 707.4 µs      │ 731.3 µs      │ 10      │ 100
       ├─ [nv=15, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 15
 Loading SRS
-231 ns        │ 3.587 µs      │ 280.1 ns      │ 597.7 ns      │ 10      │ 100
-      ├─ [nv=15, poly=Dense, point=Random]    5.473 ms      │ 6.445 ms      │ 5.775 ms      │ 5.779 ms      │ 10      │ 100
-      ├─ [nv=15, poly=Sparse, point=Boolean]  444.2 ns      │ 713.4 ns      │ 453.8 ns      │ 479.5 ns      │ 10      │ 100
-      ├─ [nv=15, poly=Sparse, point=Random]   630.8 µs      │ 1.312 ms      │ 671 µs        │ 794.4 µs      │ 10      │ 100
+236.4 ns      │ 3.02 µs       │ 280.7 ns      │ 551.6 ns      │ 10      │ 100
+      ├─ [nv=15, poly=Dense, point=Random]    5.192 ms      │ 17.23 ms      │ 5.631 ms      │ 6.754 ms      │ 10      │ 100
+      ├─ [nv=15, poly=Sparse, point=Boolean]  504.5 ns      │ 761.8 ns      │ 524.6 ns      │ 544.5 ns      │ 10      │ 100
+      ├─ [nv=15, poly=Sparse, point=Random]   614.8 µs      │ 907.7 µs      │ 680.2 µs      │ 706.9 µs      │ 10      │ 100
       ├─ [nv=16, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 16
 Loading SRS
-228.3 ns      │ 2.061 µs      │ 250.8 ns      │ 442.9 ns      │ 10      │ 100
-      ├─ [nv=16, poly=Dense, point=Random]    7.032 ms      │ 8.276 ms      │ 7.198 ms      │ 7.326 ms      │ 10      │ 100
-      ├─ [nv=16, poly=Sparse, point=Boolean]  774.6 ns      │ 1.109 µs      │ 807.2 ns      │ 852.7 ns      │ 10      │ 100
-      ├─ [nv=16, poly=Sparse, point=Random]   489.9 µs      │ 1.133 ms      │ 542.9 µs      │ 614.5 µs      │ 10      │ 100
+        266.4 ns      │ 3.16 µs       │ 339.2 ns      │ 632.5 ns      │ 10      │ 100
+      ├─ [nv=16, poly=Dense, point=Random]    6.806 ms      │ 7.88 ms       │ 6.864 ms      │ 6.99 ms       │ 10      │ 100
+      ├─ [nv=16, poly=Sparse, point=Boolean]  868.6 ns      │ 2.118 µs      │ 949.5 ns      │ 1.065 µs      │ 10      │ 100
+      ├─ [nv=16, poly=Sparse, point=Random]   539.5 µs      │ 1.21 ms       │ 619.3 µs      │ 676.4 µs      │ 10      │ 100
       ├─ [nv=17, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 17
 Loading SRS
-390.7 ns      │ 2.746 µs      │ 399.1 ns      │ 634.2 ns      │ 10      │ 100
-      ├─ [nv=17, poly=Dense, point=Random]    8.99 ms       │ 9.867 ms      │ 9.26 ms       │ 9.336 ms      │ 10      │ 100
-      ├─ [nv=17, poly=Sparse, point=Boolean]  916 ns        │ 1.451 µs      │ 930.1 ns      │ 1.009 µs      │ 10      │ 100
-      ├─ [nv=17, poly=Sparse, point=Random]   496.3 µs      │ 1.002 ms      │ 537 µs        │ 595.1 µs      │ 10      │ 100
+386.3 ns      │ 21.05 µs      │ 387.1 ns      │ 2.455 µs      │ 10      │ 100
+      ├─ [nv=17, poly=Dense, point=Random]    8.634 ms      │ 9.579 ms      │ 8.914 ms      │ 8.955 ms      │ 10      │ 100
+      ├─ [nv=17, poly=Sparse, point=Boolean]  965.3 ns      │ 2.076 µs      │ 999.7 ns      │ 1.16 µs       │ 10      │ 100
+      ├─ [nv=17, poly=Sparse, point=Random]   543.9 µs      │ 1.346 ms      │ 1.116 ms      │ 1.073 ms      │ 10      │ 100
       ├─ [nv=18, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 18
 Loading SRS
-422.1 ns      │ 3.871 µs      │ 533.7 ns      │ 1.3 µs        │ 10      │ 100
-      ├─ [nv=18, poly=Dense, point=Random]    11.91 ms      │ 25.17 ms      │ 12.17 ms      │ 13.49 ms      │ 10      │ 100
-      ├─ [nv=18, poly=Sparse, point=Boolean]  1.624 µs      │ 2.389 µs      │ 1.743 µs      │ 1.798 µs      │ 10      │ 100
-      ├─ [nv=18, poly=Sparse, point=Random]   621.6 µs      │ 930 µs        │ 671.9 µs      │ 723.7 µs      │ 10      │ 100
+454.4 ns      │ 2.61 µs       │ 512.3 ns      │ 715.8 ns      │ 10      │ 100
+      ├─ [nv=18, poly=Dense, point=Random]    11.64 ms      │ 12.48 ms      │ 11.87 ms      │ 11.93 ms      │ 10      │ 100
+      ├─ [nv=18, poly=Sparse, point=Boolean]  1.779 µs      │ 2.539 µs      │ 1.81 µs       │ 1.894 µs      │ 10      │ 100
+      ├─ [nv=18, poly=Sparse, point=Random]   604.6 µs      │ 1.242 ms      │ 632.8 µs      │ 697.7 µs      │ 10      │ 100
       ├─ [nv=19, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 19
 Loading SRS
-916.3 ns      │ 6.645 µs      │ 930.6 ns      │ 1.505 µs      │ 10      │ 100
-      ├─ [nv=19, poly=Dense, point=Random]    16.35 ms      │ 17.44 ms      │ 16.8 ms       │ 16.84 ms      │ 10      │ 100
-      ├─ [nv=19, poly=Sparse, point=Boolean]  1.503 µs      │ 2.022 µs      │ 1.594 µs      │ 1.641 µs      │ 10      │ 100
-      ├─ [nv=19, poly=Sparse, point=Random]   616.3 µs      │ 1.653 ms      │ 687.4 µs      │ 797.2 µs      │ 10      │ 100
+1.014 µs      │ 4.831 µs      │ 1.027 µs      │ 1.409 µs      │ 10      │ 100
+      ├─ [nv=19, poly=Dense, point=Random]    15.97 ms      │ 20.65 ms      │ 16.49 ms      │ 17.01 ms      │ 10      │ 100
+      ├─ [nv=19, poly=Sparse, point=Boolean]  1.705 µs      │ 1.999 µs      │ 1.855 µs      │ 1.814 µs      │ 10      │ 100
+      ├─ [nv=19, poly=Sparse, point=Random]   698 µs        │ 1.371 ms      │ 722.9 µs      │ 788.1 µs      │ 10      │ 100
       ├─ [nv=20, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 20
 Loading SRS
-892.3 ns      │ 15.34 µs      │ 896.9 ns      │ 2.35 µs       │ 10      │ 100
-      ├─ [nv=20, poly=Dense, point=Random]    26.96 ms      │ 30.62 ms      │ 27.45 ms      │ 27.96 ms      │ 10      │ 100
-      ├─ [nv=20, poly=Sparse, point=Boolean]  3.053 µs      │ 4.495 µs      │ 3.339 µs      │ 3.41 µs       │ 10      │ 100
-      ├─ [nv=20, poly=Sparse, point=Random]   836 µs        │ 1.709 ms      │ 906.5 µs      │ 1.017 ms      │ 10      │ 100
+897.7 ns      │ 8.938 µs      │ 906.4 ns      │ 1.71 µs       │ 10      │ 100
+      ├─ [nv=20, poly=Dense, point=Random]    26.58 ms      │ 29.91 ms      │ 27.32 ms      │ 27.51 ms      │ 10      │ 100
+      ├─ [nv=20, poly=Sparse, point=Boolean]  3.419 µs      │ 4.144 µs      │ 3.628 µs      │ 3.63 µs       │ 10      │ 100
+      ├─ [nv=20, poly=Sparse, point=Random]   813.3 µs      │ 1.215 ms      │ 943.1 µs      │ 954.5 µs      │ 10      │ 100
       ├─ [nv=21, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 21
-Computing SRS
-1.665 µs      │ 6.637 µs      │ 1.673 µs      │ 2.17 µs       │ 10      │ 100
-      ├─ [nv=21, poly=Dense, point=Random]    44.91 ms      │ 51.95 ms      │ 46.07 ms      │ 46.44 ms      │ 10      │ 100
-      ├─ [nv=21, poly=Sparse, point=Boolean]  3.078 µs      │ 13.35 µs      │ 3.105 µs      │ 4.175 µs      │ 10      │ 100
-      ├─ [nv=21, poly=Sparse, point=Random]   846.9 µs      │ 1.266 ms      │ 912.9 µs      │ 970.7 µs      │ 10      │ 100
+Loading SRS
+1.664 µs      │ 101.6 µs      │ 1.673 µs      │ 11.67 µs      │ 10      │ 100
+      ├─ [nv=21, poly=Dense, point=Random]    43.56 ms      │ 51.94 ms      │ 44.81 ms      │ 45.53 ms      │ 10      │ 100
+      ├─ [nv=21, poly=Sparse, point=Boolean]  3.403 µs      │ 4.646 µs      │ 3.516 µs      │ 3.621 µs      │ 10      │ 100
+      ├─ [nv=21, poly=Sparse, point=Random]   917.1 µs      │ 1.434 ms      │ 1.008 ms      │ 1.04 ms       │ 10      │ 100
       ├─ [nv=22, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 22
-Computing SRS
-1.682 µs      │ 104.7 µs      │ 1.694 µs      │ 12.15 µs      │ 10      │ 100
-      ├─ [nv=22, poly=Dense, point=Random]    84.71 ms      │ 92.7 ms       │ 85.99 ms      │ 86.68 ms      │ 10      │ 100
-      ├─ [nv=22, poly=Sparse, point=Boolean]  6.056 µs      │ 7.567 µs      │ 6.418 µs      │ 6.512 µs      │ 10      │ 100
-      ├─ [nv=22, poly=Sparse, point=Random]   1.137 ms      │ 1.973 ms      │ 1.163 ms      │ 1.283 ms      │ 10      │ 100
+Loading SRS
+1.668 µs      │ 7.804 µs      │ 1.672 µs      │ 2.286 µs      │ 10      │ 100
+      ├─ [nv=22, poly=Dense, point=Random]    83.8 ms       │ 87.92 ms      │ 84.55 ms      │ 85.11 ms      │ 10      │ 100
+      ├─ [nv=22, poly=Sparse, point=Boolean]  6.603 µs      │ 7.476 µs      │ 7.153 µs      │ 7.093 µs      │ 10      │ 100
+      ├─ [nv=22, poly=Sparse, point=Random]   1.209 ms      │ 2.146 ms      │ 1.343 ms      │ 1.419 ms      │ 10      │ 100
       ├─ [nv=23, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 23
-Computing SRS
-3.336 µs      │ 35.11 µs      │ 3.345 µs      │ 6.573 µs      │ 10      │ 100
-      ├─ [nv=23, poly=Dense, point=Random]    150.8 ms      │ 158.5 ms      │ 154.9 ms      │ 154.9 ms      │ 7       │ 70
-      ├─ [nv=23, poly=Sparse, point=Boolean]  5.759 µs      │ 7.572 µs      │ 6.264 µs      │ 6.39 µs       │ 10      │ 100
-      ├─ [nv=23, poly=Sparse, point=Random]   1.204 ms      │ 2.294 ms      │ 1.26 ms       │ 1.414 ms      │ 10      │ 100
+Loading SRS
+3.265 µs      │ 50.77 µs      │ 3.275 µs      │ 8.075 µs      │ 10      │ 100
+      ├─ [nv=23, poly=Dense, point=Random]    154.3 ms      │ 172.1 ms      │ 161.8 ms      │ 161.6 ms      │ 7       │ 70
+      ├─ [nv=23, poly=Sparse, point=Boolean]  6.588 µs      │ 7.95 µs       │ 7.14 µs       │ 7.167 µs      │ 10      │ 100
+      ├─ [nv=23, poly=Sparse, point=Random]   1.196 ms      │ 2.302 ms      │ 1.269 ms      │ 1.392 ms      │ 10      │ 100
       ├─ [nv=24, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 24
-Computing SRS
-3.348 µs      │ 18.87 µs      │ 3.365 µs      │ 5.234 µs      │ 10      │ 100
-      ├─ [nv=24, poly=Dense, point=Random]    309.5 ms      │ 318.6 ms      │ 310.4 ms      │ 312.2 ms      │ 4       │ 40
-      ├─ [nv=24, poly=Sparse, point=Boolean]  11.5 µs       │ 14.25 µs      │ 12.22 µs      │ 12.35 µs      │ 10      │ 100
-      ├─ [nv=24, poly=Sparse, point=Random]   2.02 ms       │ 3.048 ms      │ 2.285 ms      │ 2.346 ms      │ 10      │ 100
+Loading SRS
+3.221 µs      │ 13.06 µs      │ 3.235 µs      │ 4.229 µs      │ 10      │ 100
+      ├─ [nv=24, poly=Dense, point=Random]    305.9 ms      │ 316.1 ms      │ 308.5 ms      │ 309.8 ms      │ 4       │ 40
+      ├─ [nv=24, poly=Sparse, point=Boolean]  13.22 µs      │ 16.18 µs      │ 13.74 µs      │ 13.95 µs      │ 10      │ 100
+      ├─ [nv=24, poly=Sparse, point=Random]   1.992 ms      │ 2.736 ms      │ 2.145 ms      │ 2.189 ms      │ 10      │ 100
       ├─ [nv=25, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 25
-Computing SRS
-10.03 µs      │ 26.37 µs      │ 10.06 µs      │ 12 µs         │ 10      │ 100
-      ├─ [nv=25, poly=Dense, point=Random]    569.1 ms      │ 580.8 ms      │ 575 ms        │ 575 ms        │ 2       │ 20
-      ├─ [nv=25, poly=Sparse, point=Boolean]  11.52 µs      │ 14.11 µs      │ 12.13 µs      │ 12.26 µs      │ 10      │ 100
-      ├─ [nv=25, poly=Sparse, point=Random]   1.894 ms      │ 2.979 ms      │ 2.094 ms      │ 2.209 ms      │ 10      │ 100
+Loading SRS
+10.2 µs       │ 27.13 µs      │ 10.24 µs      │ 12.27 µs      │ 10      │ 100
+      ├─ [nv=25, poly=Dense, point=Random]    593.2 ms      │ 607.1 ms      │ 600.1 ms      │ 600.1 ms      │ 2       │ 20
+      ├─ [nv=25, poly=Sparse, point=Boolean]  13.31 µs      │ 16.08 µs      │ 14.14 µs      │ 14.23 µs      │ 10      │ 100
+      ├─ [nv=25, poly=Sparse, point=Random]   2.079 ms      │ 3.377 ms      │ 2.27 ms       │ 2.346 ms      │ 10      │ 100
       ├─ [nv=26, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 26
-Computing SRS
-9.931 µs      │ 51.16 µs      │ 9.97 µs       │ 14.48 µs      │ 10      │ 100
-      ├─ [nv=26, poly=Dense, point=Random]    1.137 s       │ 1.137 s       │ 1.137 s       │ 1.137 s       │ 1       │ 10
-      ├─ [nv=26, poly=Sparse, point=Boolean]  22.66 µs      │ 27.89 µs      │ 23.04 µs      │ 23.6 µs       │ 10      │ 100
-      ├─ [nv=26, poly=Sparse, point=Random]   3.907 ms      │ 4.519 ms      │ 3.952 ms      │ 4.016 ms      │ 10      │ 100
+Loading SRS
+10.11 µs      │ 32.69 µs      │ 10.17 µs      │ 12.71 µs      │ 10      │ 100
+      ├─ [nv=26, poly=Dense, point=Random]    1.167 s       │ 1.167 s       │ 1.167 s       │ 1.167 s       │ 1       │ 10
+      ├─ [nv=26, poly=Sparse, point=Boolean]  26.53 µs      │ 34.2 µs       │ 28.11 µs      │ 29.19 µs      │ 10      │ 100
+      ├─ [nv=26, poly=Sparse, point=Random]   3.709 ms      │ 4.262 ms      │ 3.798 ms      │ 3.847 ms      │ 10      │ 100
       ├─ [nv=27, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 27
-Computing SRS
-20.87 µs      │ 58.11 µs      │ 20.88 µs      │ 26.21 µs      │ 10      │ 100
-      ├─ [nv=27, poly=Dense, point=Random]    2.235 s       │ 2.235 s       │ 2.235 s       │ 2.235 s       │ 1       │ 10
-      ├─ [nv=27, poly=Sparse, point=Boolean]  22.91 µs      │ 30.36 µs      │ 22.95 µs      │ 23.69 µs      │ 10      │ 100
-      ├─ [nv=27, poly=Sparse, point=Random]   3.999 ms      │ 4.769 ms      │ 4.102 ms      │ 4.161 ms      │ 10      │ 100
+Loading SRS
+20.56 µs      │ 55.47 µs      │ 20.59 µs      │ 24.83 µs      │ 10      │ 100
+      ├─ [nv=27, poly=Dense, point=Random]    2.281 s       │ 2.281 s       │ 2.281 s       │ 2.281 s       │ 1       │ 10
+      ├─ [nv=27, poly=Sparse, point=Boolean]  26.06 µs      │ 28.73 µs      │ 27.75 µs      │ 27.52 µs      │ 10      │ 100
+      ├─ [nv=27, poly=Sparse, point=Random]   3.848 ms      │ 4.435 ms      │ 4.012 ms      │ 4.037 ms      │ 10      │ 100
       ├─ [nv=28, poly=Dense, point=Boolean]   
 Cache miss: Creating new keys for nv = 28
+Loading SRS
+20.95 µs      │ 147.5 µs      │ 20.98 µs      │ 34.91 µs      │ 10      │ 100
+      ├─ [nv=28, poly=Dense, point=Random]    4.421 s       │ 4.421 s       │ 4.421 s       │ 4.421 s       │ 1       │ 10
+      ├─ [nv=28, poly=Sparse, point=Boolean]  45.95 µs      │ 61.49 µs      │ 51.15 µs      │ 53.07 µs      │ 10      │ 100
+      ├─ [nv=28, poly=Sparse, point=Random]   5.124 ms      │ 5.764 ms      │ 5.269 ms      │ 5.297 ms      │ 10      │ 100
+      ├─ [nv=29, poly=Dense, point=Boolean]   
+Cache miss: Creating new keys for nv = 29
 Computing SRS
-20.96 µs      │ 47.57 µs      │ 21.01 µs      │ 24.58 µs      │ 10      │ 100
-      ├─ [nv=28, poly=Dense, point=Random]    4.491 s       │ 4.491 s       │ 4.491 s       │ 4.491 s       │ 1       │ 10
-      
+44.59 µs      │ 165.9 µs      │ 44.73 µs      │ 59.94 µs      │ 10      │ 100
+      ├─ [nv=29, poly=Dense, point=Random]    8.94 s        │ 8.94 s        │ 8.94 s        │ 8.94 s        │ 1       │ 10
+      ├─ [nv=29, poly=Sparse, point=Boolean]  51.18 µs      │ 62.18 µs      │ 53.71 µs      │ 54.08 µs      │ 10      │ 100
+      ├─ [nv=29, poly=Sparse, point=Random]   5.415 ms      │ 6.197 ms      │ 5.559 ms      │ 5.607 ms      │ 10      │ 100
+      ├─ [nv=30, poly=Dense, point=Boolean]   
+Cache miss: Creating new keys for nv = 30
+Computing SRS
+42.15 µs      │ 177.6 µs      │ 42.56 µs      │ 60.82 µs      │ 10      │ 100
+      ├─ [nv=30, poly=Dense, point=Random]    18.16 s       │ 18.16 s       │ 18.16 s       │ 18.16 s       │ 1       │ 10
+      ├─ [nv=30, poly=Sparse, point=Boolean]  90.66 µs      │ 121.1 µs      │ 102.3 µs      │ 103.5 µs      │ 10      │ 100
+      ├─ [nv=30, poly=Sparse, point=Random]   8.22 ms       │ 8.891 ms      │ 8.561 ms      │ 8.535 ms      │ 10      │ 100
+      ├─ [nv=31, poly=Dense, point=Boolean]   
+Cache miss: Creating new keys for nv = 31
+Computing SRS
+150.6 µs      │ 295.4 µs      │ 151.1 µs      │ 174.3 µs      │ 10      │ 100
+      ├─ [nv=31, poly=Dense, point=Random]    35.78 s       │ 35.78 s       │ 35.78 s       │ 35.78 s       │ 1       │ 10
+      ├─ [nv=31, poly=Sparse, point=Boolean]  92.8 µs       │ 112.9 µs      │ 105.6 µs      │ 105.1 µs      │ 10      │ 100
+      ├─ [nv=31, poly=Sparse, point=Random]   9.139 ms      │ 10.2 ms       │ 9.293 ms      │ 9.374 ms      │ 10      │ 100
+      ├─ [nv=32, poly=Dense, point=Boolean]   
+Cache miss: Creating new keys for nv = 32
+Loading SRS
+138.6 µs      │ 885.5 µs      │ 139.2 µs      │ 221.6 µs      │ 10      │ 100
+      ├─ [nv=32, poly=Dense, point=Random]    1.655 m       │ 1.655 m       │ 1.655 m       │ 1.655 m       │ 1       │ 10
+      ├─ [nv=32, poly=Sparse, point=Boolean]  207.9 µs      │ 248.7 µs      │ 209.6 µs      │ 214 µs        │ 10      │ 100
+      ╰─ [nv=32, poly=Sparse, point=Random]   14.48 ms      │ 15.5 ms       │ 14.93 ms      │ 14.91 ms      │ 10      │ 100
