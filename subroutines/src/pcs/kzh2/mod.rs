@@ -122,6 +122,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         polynomial: &Self::Polynomial,
         _com: &Self::Commitment,
     ) -> Result<Self::Aux, PCSError> {
+        println!("KZH2::CompAux");
         match polynomial {
             DenseOrSparseMLE::Dense(poly) => Self::comp_aux_dense(prover_param, poly),
             DenseOrSparseMLE::Sparse(poly) => Self::comp_aux_sparse(prover_param, poly),
@@ -347,10 +348,14 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
+        println!("KZH2::CompAux(Dense)");
         let timer = start_timer!(|| "KZH::CompAux(Dense)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        println!("Prover param");
         let mut d = vec![E::G1Affine::zero(); 1usize << prover_param.get_nu()];
+        println!("D initialized");
         let evaluations = polynomial.evaluations.clone();
+        println!("Evaluations cloned");
         cfg_iter_mut!(d)
             .zip(cfg_chunks!(evaluations, 1usize << prover_param.get_mu()))
             .for_each(|(d, f)| {
@@ -358,6 +363,7 @@ impl<E: Pairing> KZH2<E> {
                     .unwrap()
                     .into_affine();
             });
+        println!("MSM done");
         end_timer!(timer);
         Ok(KZH2AuxInfo::new(d))
     }
@@ -366,6 +372,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2AuxInfo<E>, PCSError> {
+        println!("KZH2::CompAux(Sparse)");
         let timer = start_timer!(|| "KZH::CompAux(Sparse)");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
 
