@@ -22,8 +22,3 @@ pub use util::{bit_decompose, gen_eval_point, get_batched_nv, get_index};
 pub use virtual_polynomial::{
     build_eq_x_r, build_eq_x_r_vec, eq_eval, VPAuxInfo, VirtualPolynomial,
 };
-
-#[test]
-fn test() {
-    println!("usize::BITS = {}", usize::BITS);
-}

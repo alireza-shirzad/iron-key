@@ -107,7 +107,6 @@ where
         let diff_label_mle: DenseOrSparseMLE<<E as Pairing>::ScalarField> =
             &*new_label_mle.borrow() - &*current_label_mle.borrow();
         // Commit to the diff commitment
-        println!("Computing the diff label commitment...");
 
         #[cfg(feature = "parallel")]
         let (diff_label_com, diff_label_aux) = join(
@@ -132,7 +131,6 @@ where
         )
         .unwrap();
 
-        println!("Computing the diff label commitment... done");
         // Check if the bulletin board has a reg message
         let iron_epoch_reg_message = match bulletin_board.get_last_reg_update_message() {
             // If it's the first time, the diff info is the new info
@@ -156,12 +154,10 @@ where
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
                 transcript.append_message(b"iron-key", b"iron-key").unwrap();
                 // Build the target virtual polynomial to do the zerocheck on
-                println!("Building the target virtual polynomial for zerocheck...");
                 let mut target_virtual_poly =
                     VirtualPolynomial::new(current_label_mle.borrow().num_vars());
                 // Building the target virtual polynomial
                 // TODO: Make this zerocheck to operate on sparse polynomials
-                println!("Adding the current label MLE to the target virtual polynomial...");
                 let current_label_mle_arc = Arc::new(current_label_mle.borrow().to_dense());
                 let new_label_mle_arc = Arc::new(new_label_mle.borrow().to_dense());
                 target_virtual_poly
@@ -176,7 +172,6 @@ where
                         -E::ScalarField::one(),
                     )
                     .unwrap();
-                println!("Building the target virtual polynomial for zerocheck... done");
                 // Performing the zerocheck
                 let zerocheck_proof =
                     <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::prove(
@@ -185,12 +180,9 @@ where
                     )
                     .unwrap();
 
-                println!("Zerocheck proof generated");
                 // Gathering the polynomials and auxes for opening the polynomials
                 let polys = &[&*new_label_mle.borrow(), &*current_label_mle.borrow()];
-                println!("Opening the polynomials...");
                 let auxes = vec![new_label_aux.clone(), last_label_aux.clone()];
-                println!("Opening the polynomials... done");
                 let update_proof = MvPCS::multi_open(
                     self.key.get_pcs_prover_param(),
                     polys,
@@ -198,17 +190,14 @@ where
                     &auxes,
                     &mut transcript,
                 );
-                println!("Update proof generated");
                 let new_reg_eval = evaluate_last_sparse(
                     &new_label_mle.borrow().to_sparse(),
                     &zerocheck_proof.point,
                 );
-                println!("New reg eval done");
                 let current_reg_eval = evaluate_last_sparse(
                     &current_label_mle.borrow().to_sparse(),
                     &zerocheck_proof.point,
                 );
-                println!("Current reg eval done");
                 let iron_update_proof: IronUpdateProof<E, MvPCS> = IronUpdateProof::new(
                     zerocheck_proof,
                     target_virtual_poly.aux_info.clone(),
