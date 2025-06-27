@@ -123,7 +123,7 @@ pub const PARAMS: &[BenchParams] = &{
             is_boolean_point: false,
         }; (32 - 10 + 1) * 4];
         let mut i: usize = 0;
-        let mut nv: usize = 10;
+        let mut nv: usize = 28;
         while nv <= 32 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {
