@@ -83,6 +83,10 @@ fn prepare_open_inputs(
     Vec<Fr>,
     KZH2Commitment<E>,
 ) {
+    rayon::ThreadPoolBuilder::new()
+    .num_threads(100)   // or whatever you like
+    .build_global()
+    .expect("global pool already built");
     let mut rng = test_rng();
     let ck = get_or_create_keys(nv);
     // Generate a random polynomial of the specified type.

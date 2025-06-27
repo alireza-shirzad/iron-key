@@ -397,7 +397,7 @@ impl<E: Pairing> KZH2<E> {
                 *d_i = E::G1::msm(bases, scalars).unwrap().into_affine();
             }
         });
-
+        println!("Finished computing auxiliary info for {} chunks", n_chunks);
         end_timer!(timer);
         Ok(KZH2AuxInfo::new(d))
     }
