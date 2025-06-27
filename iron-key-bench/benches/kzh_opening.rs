@@ -108,10 +108,8 @@ fn prepare_open_inputs(
     } else {
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
-    println!("Hey");
     // Commit to the polynomial to generate the auxiliary info required for opening.
     let com = KZH2::commit(ck.clone(), &poly).unwrap();
-    println!("sjdaksudh");
     (ck, poly, point, com)
 }
 
@@ -125,7 +123,7 @@ pub const PARAMS: &[BenchParams] = &{
             is_boolean_point: false,
         }; (32 - 10 + 1) * 4];
         let mut i: usize = 0;
-        let mut nv: usize = 28;
+        let mut nv: usize = 10;
         while nv <= 32 {
             // Case 1: Dense, Random Point
             out[i] = BenchParams {

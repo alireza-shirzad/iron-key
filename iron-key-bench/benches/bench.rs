@@ -35,9 +35,5 @@ fn sha256_hash(bencher: Bencher) {
 }
 
 fn main() {
-    rayon::ThreadPoolBuilder::new()
-    .num_threads(100)   // or whatever you like
-    .build_global()
-    .expect("global pool already built");
     divan::Divan::from_args().main();
 }

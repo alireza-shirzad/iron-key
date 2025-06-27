@@ -321,11 +321,9 @@ impl<E: Pairing> KZH2<E> {
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
-        println!("Opening at point");
         let (x0, y0) = point.split_at(prover_param.get_nu());
         let f_star = fix_last_variables_sparse(polynomial, x0);
         let binding = fix_last_variables_sparse(&f_star, y0);
-        println!("Binding");
         let z0 = binding
             .evaluations
             .get(&0)
@@ -369,7 +367,6 @@ impl<E: Pairing> KZH2<E> {
         // ── step 1: bucket the sparse entries per chunk ────────────────────────────
         let mut chunk_bases: Vec<Vec<E::G1Affine>> = vec![Vec::new(); n_chunks];
         let mut chunk_scalars: Vec<Vec<<E as Pairing>::ScalarField>> = vec![Vec::new(); n_chunks];
-        println!("Computing auxiliary info for {} chunks", n_chunks);
         for (&idx, &val) in polynomial.evaluations.iter() {
             // (optional) skip zeros if they could be present
             if val.is_zero() {
@@ -385,8 +382,7 @@ impl<E: Pairing> KZH2<E> {
 
         // ── step 2: run an MSM for every chunk in parallel ────────────────────────
         let mut d = vec![E::G1Affine::zero(); n_chunks];
-        println!("Computing auxiliary info for {} chunks", n_chunks);
-        cfg_iter_mut!(d).enumerate().for_each(|(chunk, d_i)| {
+        d.iter_mut().enumerate().for_each(|(chunk, d_i)| {
             let bases = &chunk_bases[chunk];
             let scalars = &chunk_scalars[chunk];
 
@@ -397,7 +393,6 @@ impl<E: Pairing> KZH2<E> {
                 *d_i = E::G1::msm(bases, scalars).unwrap().into_affine();
             }
         });
-        println!("Finished computing auxiliary info for {} chunks", n_chunks);
         end_timer!(timer);
         Ok(KZH2AuxInfo::new(d))
     }
