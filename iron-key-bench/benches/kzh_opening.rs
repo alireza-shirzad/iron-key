@@ -13,11 +13,7 @@ use once_cell::sync::Lazy;
 use subroutines::{
     pcs::{
         PolynomialCommitmentScheme,
-        kzh2::{
-            KZH2,
-            srs::{KZH2ProverParam},
-            structs::KZH2Commitment,
-        },
+        kzh2::{KZH2, srs::KZH2ProverParam, structs::KZH2Commitment},
     },
     poly::DenseOrSparseMLE,
 };
@@ -98,7 +94,9 @@ fn prepare_open_inputs(
     let poly = if is_sparse {
         DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
     } else {
-        DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng))
+        DenseOrSparseMLE::Dense(
+            SparseMultilinearExtension::rand(nv, &mut rng).to_dense_multilinear_extension(),
+        )
     };
     println!("poly created");
     // Generate the point for the opening.
