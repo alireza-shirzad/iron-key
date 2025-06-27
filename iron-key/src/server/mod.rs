@@ -209,7 +209,6 @@ where
             },
         };
 
-        println!("Broadcasting the iron epoch reg message...");
         let iron_epoch_message = IronEpochMessage::IronEpochRegMessage(iron_epoch_reg_message);
         bulletin_board.broadcast(iron_epoch_message)?;
         Ok(())
