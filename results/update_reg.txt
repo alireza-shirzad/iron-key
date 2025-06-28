@@ -557,3 +557,10 @@ Loading SRS
       ├─ [log(capacity)=30, log(|update|)=26, log(init-update)=2]  Preparing prover update inputs with log_capacity = 30, log_update_size = 26, initial_batch_size = 4
 7.469 m       │ 7.469 m       │ 7.469 m       │ 7.469 m       │ 1       │ 1
       ├─ [log(capacity)=30, log(|update|)=27, log(init-update)=2]  Preparing prover update inputs with log_capacity = 30, log_update_size = 27, initial_batch_size = 4
+14.74 m       │ 14.74 m       │ 14.74 m       │ 14.74 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=28, log(init-update)=2]  Preparing prover update inputs with log_capacity = 30, log_update_size = 28, initial_batch_size = 4
+31.27 m       │ 31.27 m       │ 31.27 m       │ 31.27 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=0, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 0, initial_batch_size = 4
+
+Cache miss: Creating new IronPublicParameters for log_capacity = 31
+Loading SRS     
