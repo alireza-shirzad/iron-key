@@ -78,10 +78,13 @@ fn prepare_prover_update_prove_inputs(
         "Preparing prover update inputs with log_capacity = {}, log_update_size = {}, initial_batch_size = {}",
         log_capacity, log_update_size, initial_batch_size_val
     );
+    println!("Initial batch size: {}", initial_batch_size_val);
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
+    println!("Using public parameters for log_capacity = {}", log_capacity);
     // Initialize server with the (potentially cached) public parameters
     let mut server: IronServer<_, _, _> = IronServer::init(&*pp_arc); // Dereference Arc
+    println!("Server initialized with public parameters.");
     let mut bulletin_board = DummyBB::default();
     // Warm-up batch just to create the path in the tree.
     let initial_batch: HashMap<_, _> = (1..=initial_batch_size_val)
@@ -94,6 +97,8 @@ fn prepare_prover_update_prove_inputs(
             .unwrap();
     }
 
+    println!("Warm-up batch of size {} processed.", initial_batch_size_val);
+
     // Batch whose size we actually benchmark.
     let update_batch_size = 1 << log_update_size;
     let update_batch: HashMap<_, _> = (1..=update_batch_size)
@@ -104,6 +109,11 @@ fn prepare_prover_update_prove_inputs(
             )
         })
         .collect();
+    println!(
+        "Update batch of size {} prepared with labels starting from {}.",
+        update_batch_size,
+        initial_batch_size_val + 1
+    );
     (server, update_batch, bulletin_board)
 }
 
