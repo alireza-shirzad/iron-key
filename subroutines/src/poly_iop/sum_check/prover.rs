@@ -82,17 +82,20 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)
         //
         // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
+        println!("Proving round {} with challenge: {:?}", self.round, challenge);
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> =
             cfg_iter!(self.poly.flattened_ml_extensions)
                 .map(|x| x.as_ref().clone())
                 .collect();
 
+            println!("Flattened ML extensions: {:?}", flattened_ml_extensions);
         if let Some(chal) = challenge {
             if self.round == 0 {
                 return Err(PolyIOPErrors::InvalidProver(
                     "first round should be prover first.".to_string(),
                 ));
             }
+            println!("Received challenge: {:?}", chal);
             self.challenges.push(*chal);
 
             let r = self.challenges[self.round - 1];
@@ -104,21 +107,31 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             flattened_ml_extensions
                 .iter_mut()
                 .for_each(|mle| *mle = fix_first_variables(mle, &[r]));
+            println!(
+                "Flattened ML extensions after fixing first variable: {:?}",
+                flattened_ml_extensions
+            );
         } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
             ));
         }
         // end_timer!(fix_argument);
-
+        println!(
+            "Flattened ML extensions after fixing first variable: {:?}",
+            flattened_ml_extensions
+        );
         self.round += 1;
 
         let products_list = self.poly.products.clone();
+        println!("Products list: {:?}", products_list);
         let mut products_sum = vec![F::zero(); self.poly.aux_info.max_degree + 1];
 
         // Step 2: generate sum for the partial evaluated polynomial:
         // f(r_1, ... r_m,, x_{m+1}... x_n)
-
+        println!(
+            "Generating sum for the partial evaluated polynomial: f(r_1, ... r_m,, x_{m+1}... x_n)"
+        );
         products_list.iter().for_each(|(coefficient, products)| {
             #[cfg(feature = "parallel")]
             let mut sum = cfg_into_iter!(0..1usize << (self.poly.aux_info.num_variables - self.round))
@@ -179,7 +192,9 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                 }
                 acc
             };
+            println!("Sum after fixing first variable: {:?}", sum);
             sum.iter_mut().for_each(|sum| *sum *= coefficient);
+            println!("Sum after multiplying by coefficient: {:?}", sum);
             let extraploation = cfg_into_iter!(0..self.poly.aux_info.max_degree - products.len())
                 .map(|i| {
                     let (points, weights) = &self.extrapolation_aux[products.len() - 1];
@@ -187,17 +202,21 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                     extrapolate(points, weights, &sum, &at)
                 })
                 .collect::<Vec<_>>();
+            println!("Extrapolated values: {:?}", extraploation);
             products_sum
                 .iter_mut()
                 .zip(sum.iter().chain(extraploation.iter()))
                 .for_each(|(products_sum, sum)| *products_sum += sum);
         });
-
+        println!("Products sum: {:?}", products_sum);
         // update prover's state to the partial evaluated polynomial
         self.poly.flattened_ml_extensions = cfg_iter!(flattened_ml_extensions)
             .map(|x| Arc::new(x.clone()))
             .collect();
-
+        println!(
+            "Flattened ML extensions after updating state: {:?}",
+            self.poly.flattened_ml_extensions
+        );
         Ok(IOPProverMessage {
             evaluations: products_sum,
         })
