@@ -563,4 +563,65 @@ Loading SRS
       ├─ [log(capacity)=31, log(|update|)=0, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 0, initial_batch_size = 4
 
 Cache miss: Creating new IronPublicParameters for log_capacity = 31
-Loading SRS     
+Loading SRS
+8.12 m        │ 8.12 m        │ 8.12 m        │ 8.12 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=1, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 1, initial_batch_size = 4
+5.6 m         │ 5.6 m         │ 5.6 m         │ 5.6 m         │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=2, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 2, initial_batch_size = 4
+6.168 m       │ 6.168 m       │ 6.168 m       │ 6.168 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=3, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 3, initial_batch_size = 4
+5.736 m       │ 5.736 m       │ 5.736 m       │ 5.736 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=4, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 4, initial_batch_size = 4
+8.154 m       │ 8.154 m       │ 8.154 m       │ 8.154 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=5, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 5, initial_batch_size = 4
+7.605 m       │ 7.605 m       │ 7.605 m       │ 7.605 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=6, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 6, initial_batch_size = 4
+6.769 m       │ 6.769 m       │ 6.769 m       │ 6.769 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=7, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 7, initial_batch_size = 4
+8.097 m       │ 8.097 m       │ 8.097 m       │ 8.097 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=8, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 8, initial_batch_size = 4
+6.81 m        │ 6.81 m        │ 6.81 m        │ 6.81 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=9, log(init-update)=2]   Preparing prover update inputs with log_capacity = 31, log_update_size = 9, initial_batch_size = 4 
+6.829 m       │ 6.829 m       │ 6.829 m       │ 6.829 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=10, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 10, initial_batch_size = 4
+8.409 m       │ 8.409 m       │ 8.409 m       │ 8.409 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=11, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 11, initial_batch_size = 4
+7.082 m       │ 7.082 m       │ 7.082 m       │ 7.082 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=12, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 12, initial_batch_size = 4
+5.926 m       │ 5.926 m       │ 5.926 m       │ 5.926 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=13, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 13, initial_batch_size = 4
+8.15 m        │ 8.15 m        │ 8.15 m        │ 8.15 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=14, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 14, initial_batch_size = 4
+6.547 m       │ 6.547 m       │ 6.547 m       │ 6.547 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=15, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 15, initial_batch_size = 4
+7.583 m       │ 7.583 m       │ 7.583 m       │ 7.583 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=16, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 16, initial_batch_size = 4
+7.788 m       │ 7.788 m       │ 7.788 m       │ 7.788 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=17, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 17, initial_batch_size = 4
+7.649 m       │ 7.649 m       │ 7.649 m       │ 7.649 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=18, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 18, initial_batch_size = 4
+6.453 m       │ 6.453 m       │ 6.453 m       │ 6.453 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=19, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 19, initial_batch_size = 4
+7.871 m       │ 7.871 m       │ 7.871 m       │ 7.871 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=20, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 20, initial_batch_size = 4
+7.018 m       │ 7.018 m       │ 7.018 m       │ 7.018 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=21, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 21, initial_batch_size = 4
+5.622 m       │ 5.622 m       │ 5.622 m       │ 5.622 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=22, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 22, initial_batch_size = 4
+5.48 m        │ 5.48 m        │ 5.48 m        │ 5.48 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=23, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 23, initial_batch_size = 4
+5.896 m       │ 5.896 m       │ 5.896 m       │ 5.896 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=24, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 24, initial_batch_size = 4
+6.824 m       │ 6.824 m       │ 6.824 m       │ 6.824 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=25, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 25, initial_batch_size = 4
+8.647 m       │ 8.647 m       │ 8.647 m       │ 8.647 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=26, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 26, initial_batch_size = 4
+10.9 m        │ 10.9 m        │ 10.9 m        │ 10.9 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 27, initial_batch_size = 4
+16.56 m       │ 16.56 m       │ 16.56 m       │ 16.56 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=28, log(init-update)=2]  Preparing prover update inputs with log_capacity = 31, log_update_size = 28, initial_batch_size = 4
+1.277 h       │ 1.277 h       │ 1.277 h       │ 1.277 h       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=0, log(init-update)=2]   Preparing prover update inputs with log_capacity = 32, log_update_size = 0, initial_batch_size = 4
+
+Cache miss: Creating new IronPublicParameters for log_capacity = 32
+Loading SRS
