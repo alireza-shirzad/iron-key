@@ -82,13 +82,16 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)
         //
         // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
-        println!("Proving round {} with challenge: {:?}", self.round, challenge);
+        println!(
+            "Proving round {} with challenge: {:?}",
+            self.round, challenge
+        );
         let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> =
             cfg_iter!(self.poly.flattened_ml_extensions)
                 .map(|x| x.as_ref().clone())
                 .collect();
 
-            println!("Flattened ML extensions: {:?}", flattened_ml_extensions);
+        println!("Flattened ML extensions: {:?}", flattened_ml_extensions);
         if let Some(chal) = challenge {
             if self.round == 0 {
                 return Err(PolyIOPErrors::InvalidProver(
@@ -129,45 +132,44 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
         // Step 2: generate sum for the partial evaluated polynomial:
         // f(r_1, ... r_m,, x_{m+1}... x_n)
-        println!(
-            "Generating sum for the partial evaluated polynomial: f(r_1, ... r_m,, x_{m+1}... x_n)"
-        );
+        println!("Generating sum for the partial evaluated polynomial:");
         products_list.iter().for_each(|(coefficient, products)| {
             #[cfg(feature = "parallel")]
-            let mut sum = cfg_into_iter!(0..1usize << (self.poly.aux_info.num_variables - self.round))
-                .fold(
-                    || {
-                        (
-                            vec![(F::zero(), F::zero()); products.len()],
-                            vec![F::zero(); products.len() + 1],
-                        )
-                    },
-                    |(mut buf, mut acc), b| {
-                        buf.iter_mut()
-                            .zip(products.iter())
-                            .for_each(|((eval, step), f)| {
-                                let table = &flattened_ml_extensions[*f];
-                                *eval = table[b << 1];
-                                *step = table[(b << 1) + 1] - table[b << 1];
+            let mut sum =
+                cfg_into_iter!(0..1usize << (self.poly.aux_info.num_variables - self.round))
+                    .fold(
+                        || {
+                            (
+                                vec![(F::zero(), F::zero()); products.len()],
+                                vec![F::zero(); products.len() + 1],
+                            )
+                        },
+                        |(mut buf, mut acc), b| {
+                            buf.iter_mut()
+                                .zip(products.iter())
+                                .for_each(|((eval, step), f)| {
+                                    let table = &flattened_ml_extensions[*f];
+                                    *eval = table[b << 1];
+                                    *step = table[(b << 1) + 1] - table[b << 1];
+                                });
+                            acc[0] += buf.iter().map(|(eval, _)| eval).product::<F>();
+                            acc[1..].iter_mut().for_each(|acc_i| {
+                                buf.iter_mut().for_each(|(eval, step)| *eval += step as &_);
+                                *acc_i += buf.iter().map(|(eval, _)| eval).product::<F>();
                             });
-                        acc[0] += buf.iter().map(|(eval, _)| eval).product::<F>();
-                        acc[1..].iter_mut().for_each(|acc_i| {
-                            buf.iter_mut().for_each(|(eval, step)| *eval += step as &_);
-                            *acc_i += buf.iter().map(|(eval, _)| eval).product::<F>();
-                        });
-                        (buf, acc)
-                    },
-                )
-                .map(|(_, partial)| partial)
-                .reduce(
-                    || vec![F::zero(); products.len() + 1],
-                    |mut sum, partial| {
-                        sum.iter_mut()
-                            .zip(partial.iter())
-                            .for_each(|(sum_i, partial_i)| *sum_i += partial_i);
-                        sum
-                    },
-                );
+                            (buf, acc)
+                        },
+                    )
+                    .map(|(_, partial)| partial)
+                    .reduce(
+                        || vec![F::zero(); products.len() + 1],
+                        |mut sum, partial| {
+                            sum.iter_mut()
+                                .zip(partial.iter())
+                                .for_each(|(sum_i, partial_i)| *sum_i += partial_i);
+                            sum
+                        },
+                    );
             #[cfg(not(feature = "parallel"))]
             let mut sum = {
                 let mut acc = vec![F::zero(); products.len() + 1];
