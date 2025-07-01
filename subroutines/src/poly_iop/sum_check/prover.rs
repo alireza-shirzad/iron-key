@@ -28,7 +28,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
 
     /// Initialize the prover state to argue for the sum of the input polynomial
     /// over {0,1}^`num_vars`.
-    fn prover_init(polynomial: &Self::VirtualPolynomial) -> Result<Self, PolyIOPErrors> {
+    fn prover_init(polynomial: Self::VirtualPolynomial) -> Result<Self, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prover init");
         if polynomial.aux_info.num_variables == 0 {
             return Err(PolyIOPErrors::InvalidParameters(

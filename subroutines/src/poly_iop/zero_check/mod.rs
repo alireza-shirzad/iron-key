@@ -78,7 +78,7 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         println!("Initial challenge vector r: {:?}", r);
         let f_hat = poly.build_f_hat(r.as_ref())?;
         println!("Built f_hat with max degree: {}", f_hat.aux_info.max_degree);
-        let res = <Self as SumCheck<F>>::prove(&f_hat, transcript);
+        let res = <Self as SumCheck<F>>::prove(f_hat, transcript);
         println!("SumCheck proof generated:");
 
         end_timer!(start);
