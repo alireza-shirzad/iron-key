@@ -86,44 +86,44 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
             "Proving round {} with challenge: {:?}",
             self.round, challenge
         );
-        let mut flattened_ml_extensions: Vec<DenseMultilinearExtension<F>> =
-            cfg_iter!(self.poly.flattened_ml_extensions)
-                .map(|x| x.as_ref().clone())
-                .collect();
-
-        println!("Flattened ML extensions: {:?}", flattened_ml_extensions);
+        // Mutate the existing multilinear‐extension tables in place.  This avoids
+        // allocating a second 𝑂(|table|) copy every round; `Arc::make_mut`
+        // clones the underlying buffer only when another owner still exists.
         if let Some(chal) = challenge {
             if self.round == 0 {
                 return Err(PolyIOPErrors::InvalidProver(
                     "first round should be prover first.".to_string(),
                 ));
             }
-            println!("Received challenge: {:?}", chal);
             self.challenges.push(*chal);
-
             let r = self.challenges[self.round - 1];
+
             #[cfg(feature = "parallel")]
-            flattened_ml_extensions
+            self.poly
+                .flattened_ml_extensions
                 .par_iter_mut()
-                .for_each(|mle| *mle = fix_first_variables(mle, &[r]));
+                .for_each(|mle_arc| {
+                    let mle_mut = Arc::make_mut(mle_arc);
+                    *mle_mut = fix_first_variables(mle_mut, &[r]);
+                });
+
             #[cfg(not(feature = "parallel"))]
-            flattened_ml_extensions
+            self.poly
+                .flattened_ml_extensions
                 .iter_mut()
-                .for_each(|mle| *mle = fix_first_variables(mle, &[r]));
-            println!(
-                "Flattened ML extensions after fixing first variable: {:?}",
-                flattened_ml_extensions
-            );
+                .for_each(|mle_arc| {
+                    let mle_mut = Arc::make_mut(mle_arc);
+                    *mle_mut = fix_first_variables(mle_mut, &[r]);
+                });
         } else if self.round > 0 {
             return Err(PolyIOPErrors::InvalidProver(
                 "verifier message is empty".to_string(),
             ));
         }
-        // end_timer!(fix_argument);
-        println!(
-            "Flattened ML extensions after fixing first variable: {:?}",
-            flattened_ml_extensions
-        );
+
+        // Borrow the (now possibly updated) tables immutably for the remainder
+        // of this round.
+        let flattened_ml_extensions = &self.poly.flattened_ml_extensions;
         self.round += 1;
 
         let products_list = self.poly.products.clone();
@@ -212,13 +212,6 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         });
         println!("Products sum: {:?}", products_sum);
         // update prover's state to the partial evaluated polynomial
-        self.poly.flattened_ml_extensions = cfg_iter!(flattened_ml_extensions)
-            .map(|x| Arc::new(x.clone()))
-            .collect();
-        println!(
-            "Flattened ML extensions after updating state: {:?}",
-            self.poly.flattened_ml_extensions
-        );
         Ok(IOPProverMessage {
             evaluations: products_sum,
         })
