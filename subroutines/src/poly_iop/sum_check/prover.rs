@@ -82,10 +82,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         //    g(r_1, ..., r_{m-1}, x_m ... x_n)
         //
         // eval g over r_m, and mutate g to g(r_1, ... r_m,, x_{m+1}... x_n)
-        println!(
-            "Proving round {} with challenge: {:?}",
-            self.round, challenge
-        );
+
         // Mutate the existing multilinear‐extension tables in place.  This avoids
         // allocating a second 𝑂(|table|) copy every round; `Arc::make_mut`
         // clones the underlying buffer only when another owner still exists.
@@ -127,12 +124,10 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
         self.round += 1;
 
         let products_list = self.poly.products.clone();
-        println!("Products list: {:?}", products_list);
         let mut products_sum = vec![F::zero(); self.poly.aux_info.max_degree + 1];
 
         // Step 2: generate sum for the partial evaluated polynomial:
         // f(r_1, ... r_m,, x_{m+1}... x_n)
-        println!("Generating sum for the partial evaluated polynomial:");
         products_list.iter().for_each(|(coefficient, products)| {
             #[cfg(feature = "parallel")]
             let mut sum =
@@ -194,9 +189,7 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                 }
                 acc
             };
-            println!("Sum after fixing first variable: {:?}", sum);
             sum.iter_mut().for_each(|sum| *sum *= coefficient);
-            println!("Sum after multiplying by coefficient: {:?}", sum);
             let extraploation = cfg_into_iter!(0..self.poly.aux_info.max_degree - products.len())
                 .map(|i| {
                     let (points, weights) = &self.extrapolation_aux[products.len() - 1];
@@ -204,13 +197,11 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                     extrapolate(points, weights, &sum, &at)
                 })
                 .collect::<Vec<_>>();
-            println!("Extrapolated values: {:?}", extraploation);
             products_sum
                 .iter_mut()
                 .zip(sum.iter().chain(extraploation.iter()))
                 .for_each(|(products_sum, sum)| *products_sum += sum);
         });
-        println!("Products sum: {:?}", products_sum);
         // update prover's state to the partial evaluated polynomial
         Ok(IOPProverMessage {
             evaluations: products_sum,

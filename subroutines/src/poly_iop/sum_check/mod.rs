@@ -156,17 +156,13 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::SumCheckProof, PolyIOPErrors> {
         let start = start_timer!(|| "sum check prove");
-        println!("oashdoashd");
         transcript.append_serializable_element(b"aux info", &poly.aux_info)?;
         let num_vars = poly.aux_info.num_variables;
 
         let mut prover_state = IOPProverState::prover_init(poly)?;
-        println!("Proving that the sum of polynomial is {}", num_vars);
         let mut challenge = None;
         let mut prover_msgs = Vec::with_capacity(num_vars);
-        println!("Proving that the sum of polynomial is {}-variate", num_vars);
         for i in 0..num_vars {
-            println!("Proving round {}", i + 1);
             let prover_msg =
                 IOPProverState::prove_round_and_update_state(&mut prover_state, &challenge)?;
             transcript.append_serializable_element(b"prover msg", &prover_msg)?;

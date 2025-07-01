@@ -121,13 +121,6 @@ fn audit(bencher: Bencher, batch_size: usize) {
             auditor.verify_update(&bulletin_board) // Assuming this is the method you want to benchmark
         });
     let (_, bulletin_board) = prepare_verifier_lookup_intput(current_log_capacity, 2, 2);
-    println!(
-        "\n[log_capacity={}] Reg proof size: {} Bytes",
-        current_log_capacity,
-        bulletin_board
-            .get_last_reg_update_message()
-            .unwrap()
-            .serialized_size(ark_serialize::Compress::Yes)
-    );
+
 }
 

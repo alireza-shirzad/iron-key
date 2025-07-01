@@ -72,14 +72,10 @@ impl<F: PrimeField> ZeroCheck<F> for PolyIOP<F> {
         transcript: &mut Self::Transcript,
     ) -> Result<Self::ZeroCheckProof, PolyIOPErrors> {
         let start = start_timer!(|| "zero check prove");
-        println!("Proving that the sum of polynomial is zero");
         let length = poly.aux_info.num_variables;
         let r = transcript.get_and_append_challenge_vectors(b"0check r", length)?;
-        println!("Initial challenge vector r: {:?}", r);
         let f_hat = poly.build_f_hat(r.as_ref())?;
-        println!("Built f_hat with max degree: {}", f_hat.aux_info.max_degree);
         let res = <Self as SumCheck<F>>::prove(f_hat, transcript);
-        println!("SumCheck proof generated:");
 
         end_timer!(start);
         res

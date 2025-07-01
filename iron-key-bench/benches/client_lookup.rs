@@ -117,15 +117,7 @@ fn lookup_prove_after_updates(bencher: Bencher, batch_size: usize) {
     // Note: This print will occur for *each* batch_size arg after its benchmark
     // run. If you want it once overall, you'd need a different structure or a
     // global flag.
-    println!(
-        "\n[log_capacity={}] Lookup proof size: {} Bytes",
-        current_log_capacity,
-        proof.serialized_size(ark_serialize::Compress::Yes)
-    );
-    println!(
-        "[log_capacity={}] Client key size: {} Bytes\n",
-        current_log_capacity, client_key_size
-    );
+
 }
 
 // Ensure main function is present for Divan if this is the main benchmark file
