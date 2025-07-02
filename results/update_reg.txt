@@ -300,3 +300,36 @@ Loading SRS
       ├─ [log(capacity)=31, log(|update|)=0, log(init-update)=2]   
 Cache miss: Creating new IronPublicParameters for log_capacity = 31
 Loading SRS 
+3.026 m       │ 3.026 m       │ 3.026 m       │ 3.026 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=1, log(init-update)=2]   2.87 m        │ 2.87 m        │ 2.87 m        │ 2.87 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=2, log(init-update)=2]   3.015 m       │ 3.015 m       │ 3.015 m       │ 3.015 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=3, log(init-update)=2]   2.881 m       │ 2.881 m       │ 2.881 m       │ 2.881 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=4, log(init-update)=2]   2.865 m       │ 2.865 m       │ 2.865 m       │ 2.865 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=5, log(init-update)=2]   2.811 m       │ 2.811 m       │ 2.811 m       │ 2.811 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=6, log(init-update)=2]   2.796 m       │ 2.796 m       │ 2.796 m       │ 2.796 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=7, log(init-update)=2]   2.868 m       │ 2.868 m       │ 2.868 m       │ 2.868 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=8, log(init-update)=2]   3.213 m       │ 3.213 m       │ 3.213 m       │ 3.213 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=9, log(init-update)=2]   2.944 m       │ 2.944 m       │ 2.944 m       │ 2.944 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=10, log(init-update)=2]  2.973 m       │ 2.973 m       │ 2.973 m       │ 2.973 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=11, log(init-update)=2]  2.993 m       │ 2.993 m       │ 2.993 m       │ 2.993 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=12, log(init-update)=2]  3.64 m        │ 3.64 m        │ 3.64 m        │ 3.64 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=13, log(init-update)=2]  2.799 m       │ 2.799 m       │ 2.799 m       │ 2.799 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=14, log(init-update)=2]  3.015 m       │ 3.015 m       │ 3.015 m       │ 3.015 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=15, log(init-update)=2]  2.86 m        │ 2.86 m        │ 2.86 m        │ 2.86 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=16, log(init-update)=2]  2.976 m       │ 2.976 m       │ 2.976 m       │ 2.976 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=17, log(init-update)=2]  2.813 m       │ 2.813 m       │ 2.813 m       │ 2.813 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=18, log(init-update)=2]  2.848 m       │ 2.848 m       │ 2.848 m       │ 2.848 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=19, log(init-update)=2]  2.901 m       │ 2.901 m       │ 2.901 m       │ 2.901 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=20, log(init-update)=2]  2.771 m       │ 2.771 m       │ 2.771 m       │ 2.771 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=21, log(init-update)=2]  3.063 m       │ 3.063 m       │ 3.063 m       │ 3.063 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=22, log(init-update)=2]  3.71 m        │ 3.71 m        │ 3.71 m        │ 3.71 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=23, log(init-update)=2]  3.243 m       │ 3.243 m       │ 3.243 m       │ 3.243 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=24, log(init-update)=2]  4.042 m       │ 4.042 m       │ 4.042 m       │ 4.042 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=25, log(init-update)=2]  5.061 m       │ 5.061 m       │ 5.061 m       │ 5.061 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=26, log(init-update)=2]  7.563 m       │ 7.563 m       │ 7.563 m       │ 7.563 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]  13.48 m       │ 13.48 m       │ 13.48 m       │ 13.48 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=28, log(init-update)=2]  26.27 m       │ 26.27 m       │ 26.27 m       │ 26.27 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=29, log(init-update)=2]  1.03 h        │ 1.03 h        │ 1.03 h        │ 1.03 h        │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=0, log(init-update)=2]   
+Cache miss: Creating new IronPublicParameters for log_capacity = 32
+Loading SRS
