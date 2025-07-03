@@ -17,7 +17,7 @@ where
 {
     index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
     value: E::ScalarField,
-    batched_opening_proof: PC::BatchProof,
+    batched_opening_proof: PC::Proof,
     auxes: Vec<PC::Aux>,
 }
 
@@ -63,7 +63,7 @@ where
     pub fn new(
         index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: E::ScalarField,
-        batched_opening_proof: PC::BatchProof,
+        batched_opening_proof: PC::Proof,
         auxes: Vec<PC::Aux>,
     ) -> Self {
         Self {
@@ -80,7 +80,7 @@ where
     pub fn get_value(&self) -> E::ScalarField {
         self.value
     }
-    pub fn get_batched_opening_proof(&self) -> &PC::BatchProof {
+    pub fn get_batched_opening_proof(&self) -> &PC::Proof {
         &self.batched_opening_proof
     }
     pub fn get_auxes(&self) -> &[PC::Aux] {

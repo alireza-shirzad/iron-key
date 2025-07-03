@@ -313,19 +313,27 @@ where
         .to_vec();
         let mut transcript =
             <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
-        let update_proof = MvPCS::multi_open(
-            self.key.get_pcs_prover_param(),
-            &polys,
-            &index_boolean,
-            &auxes,
-            &mut transcript,
-        )
-        .unwrap();
-        Ok(IronLookupProof::new(
-            index_boolean,
-            update_proof.1,
-            update_proof.0,
-            auxes,
+        // let update_proof = MvPCS::multi_open(
+        //     self.key.get_pcs_prover_param(),
+        //     &polys,
+        //     &index_boolean,
+        //     &auxes,
+        //     &mut transcript,
+        // )
+        // .unwrap();
+
+    let update_proof = MvPCS::open(
+        self.key.get_pcs_prover_param(),
+        &*label_ref,
+        &index_boolean,
+        &last_reg_message.get_label_aux().clone(),
+    )
+    .unwrap();
+    Ok(IronLookupProof::new(
+        index_boolean,
+        update_proof.1,
+        update_proof.0,
+        auxes,
         ))
     }
 
