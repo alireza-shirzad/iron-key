@@ -6,12 +6,13 @@ use std::{
 use ark_bn254::{Bn254, Fr};
 use divan::Bencher;
 use iron_key::{
-    VKD, VKDServer,
+    VKD, // Make sure this import is correct
+    VKDPublicParameters,
+    VKDServer,
     bb::dummybb::DummyBB,
     ironkey::IronKey,
     server::IronServer,
-    structs::{IronLabel, IronSpecification},
-    structs::pp::IronPublicParameters, // Make sure this import is correct
+    structs::{IronLabel, IronSpecification, pp::IronPublicParameters},
 };
 use once_cell::sync::Lazy; // Added Lazy
 use subroutines::pcs::kzh2::KZH2;
@@ -48,11 +49,17 @@ fn server_with_updates(
     IronServer<Bn254, KZH2<Bn254>, IronLabel>,
     DummyBB<Bn254, KZH2<Bn254>>,
 ) {
-    let  batch_size: usize = 1<< (log_capacity-2); // This BATCH_SIZE is for the initial updates, not log_capacity
-
+    let batch_size: usize = 1 << (log_capacity - 2); // This BATCH_SIZE is for the initial updates, not log_capacity
+    println!(
+        "Preparing server with updates for log_capacity = {}, batch_size = {}",
+        log_capacity, batch_size
+    );
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
-
+    println!(
+        "Using IronPublicParameters with log_capacity = {}",
+        pp_arc.get_capacity()
+    );
     // Initialize server with the (potentially cached) public parameters
     let mut server = IronServer::<Bn254, KZH2<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
     let mut bb = DummyBB::default();
@@ -62,13 +69,26 @@ fn server_with_updates(
     let updates: HashMap<IronLabel, Fr> = (1..=batch_size)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
-
+    println!(
+        "Prepared {} updates for the server with log_capacity = {}",
+        updates.len(),
+        log_capacity
+    );
     // // Perform initial updates if required by the benchmark scenario
     // if batch_size > 0 { // Only update if BATCH_SIZE is meaningful
-        server.update_reg(&updates, &mut bb).unwrap(); // Assuming update_reg is part of your server's API
-        server.update_keys(&updates, &mut bb).unwrap();
+    server.update_reg(&updates, &mut bb).unwrap(); // Assuming update_reg is part of your server's API
+    println!(
+        "Server updated with {} initial keys for log_capacity = {}",
+        updates.len(),
+        log_capacity
+    );
+    server.update_keys(&updates, &mut bb).unwrap();
     // }
-    
+    println!(
+        "Server with log_capacity = {} is ready with {} updates",
+        log_capacity,
+        updates.len()
+    );
     (server, bb)
 }
 
