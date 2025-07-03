@@ -87,30 +87,36 @@ where
         <MvPCS as PolynomialCommitmentScheme<E>>::Commitment:
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     {
-        // // TODO: Fix this for real scenarios
-        // let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
-        // let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
-        // let mut transcript = IOPTranscript::new(b"lookup");
-        // let b = MvPCS::batch_verify(
-        //     self.key.get_pcs_verifier_param(),
-        //     &[
-        //         last_keys_message.get_value_commitment().clone(),
-        //         last_reg_message.get_label_commitment().clone(),
-        //     ],
-        //     proof.get_auxes(),
-        //     &proof.get_index(),
-        //     &[value, label.to_field()],
-        //     proof.get_batched_opening_proof(),
-        //     &mut transcript,
-        // )
-        // .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
-        // let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
-        //     &self.label.to_string(),
-        //     0,
-        //     self.key.get_log_capacity(),
-        // );
-        // Ok(b)
-        todo!()
+        // TODO: Fix this for real scenarios
+        let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
+        let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
+        let value_result = MvPCS::verify(
+            self.key.get_pcs_verifier_param(),
+            last_keys_message.get_value_commitment(),
+            &proof.get_index(),
+            &value,
+            &proof.get_auxes()[0],
+            proof.get_value_opening_proof().0,
+        )
+        .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
+
+        let label_result = MvPCS::verify(
+            self.key.get_pcs_verifier_param(),
+            last_reg_message.get_label_commitment(),
+            &proof.get_index(),
+            &label.to_field(),
+            &proof.get_auxes()[1],
+            proof.get_label_opening_proof().0,
+        )
+        .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
+
+        let b = value_result && label_result;
+        let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
+            &self.label.to_string(),
+            0,
+            self.key.get_log_capacity(),
+        );
+        Ok(b)
     }
 
     fn self_audit_verify(

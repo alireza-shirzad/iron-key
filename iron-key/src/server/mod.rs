@@ -305,35 +305,31 @@ where
         let label_ref = binding.borrow();
         let binding = self.dictionary.get_value_mle();
         let value_ref = binding.borrow();
-        let polys: Vec<&DenseOrSparseMLE<E::ScalarField>> = vec![&*label_ref, &*value_ref];
+        let label_opening_proof = MvPCS::open(
+            self.key.get_pcs_prover_param(),
+            &*label_ref,
+            &index_boolean,
+            last_reg_message.get_label_aux(),
+        )
+        .unwrap();
+        let value_opening_proof = MvPCS::open(
+            self.key.get_pcs_prover_param(),
+            &*value_ref,
+            &index_boolean,
+            last_keys_message.get_value_aux(),
+        )
+        .unwrap();
         let auxes = [
             last_reg_message.get_label_aux().clone(),
             last_keys_message.get_value_aux().clone(),
         ]
         .to_vec();
-        let mut transcript =
-            <PolyIOP<E::ScalarField> as ZeroCheck<E::ScalarField>>::init_transcript();
-        // let update_proof = MvPCS::multi_open(
-        //     self.key.get_pcs_prover_param(),
-        //     &polys,
-        //     &index_boolean,
-        //     &auxes,
-        //     &mut transcript,
-        // )
-        // .unwrap();
 
-    let update_proof = MvPCS::open(
-        self.key.get_pcs_prover_param(),
-        &*label_ref,
-        &index_boolean,
-        &last_reg_message.get_label_aux().clone(),
-    )
-    .unwrap();
-    Ok(IronLookupProof::new(
-        index_boolean,
-        update_proof.1,
-        update_proof.0,
-        auxes,
+        Ok(IronLookupProof::new(
+            index_boolean,
+            label_opening_proof,
+            value_opening_proof,
+            auxes,
         ))
     }
 
