@@ -340,4 +340,7 @@ Loading SRS
       ├─ [log(capacity)=32, log(|update|)=4, log(init-update)=2]   8.124 m       │ 8.124 m       │ 8.124 m       │ 8.124 m       │ 1       │ 1
       ├─ [log(capacity)=32, log(|update|)=5, log(init-update)=2]   7.779 m       │ 7.779 m       │ 7.779 m       │ 7.779 m       │ 1       │ 1
       ├─ [log(capacity)=32, log(|update|)=6, log(init-update)=2]   8.35 m        │ 8.35 m        │ 8.35 m        │ 8.35 m        │ 1       │ 1
-      ├─ [log(capacity)=32, log(|update|)=7, log(init-update)=2]
+      ├─ [log(capacity)=32, log(|update|)=7, log(init-update)=2]   11.41 m       │ 11.41 m       │ 11.41 m       │ 11.41 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=8, log(init-update)=2]   9.476 m       │ 9.476 m       │ 9.476 m       │ 9.476 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=9, log(init-update)=2]   12.11 m       │ 12.11 m       │ 12.11 m       │ 12.11 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=10, log(init-update)=2]
