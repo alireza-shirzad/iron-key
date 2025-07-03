@@ -301,9 +301,11 @@ where
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
-        let label_mle_clone = self.dictionary.get_label_mle().borrow().clone();
-        let value_mle_clone = self.dictionary.get_value_mle().borrow().clone();
-        let polys = [&label_mle_clone, &value_mle_clone];
+        let binding = self.dictionary.get_label_mle();
+        let label_ref = binding.borrow();
+        let binding = self.dictionary.get_value_mle();
+        let value_ref = binding.borrow();
+        let polys: Vec<&DenseOrSparseMLE<E::ScalarField>> = vec![&*label_ref, &*value_ref];
         let auxes = [
             last_reg_message.get_label_aux().clone(),
             last_keys_message.get_value_aux().clone(),
