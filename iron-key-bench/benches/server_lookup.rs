@@ -50,16 +50,8 @@ fn server_with_updates(
     DummyBB<Bn254, KZH2<Bn254>>,
 ) {
     let batch_size: usize = 1 << (log_capacity - 2); // This BATCH_SIZE is for the initial updates, not log_capacity
-    println!(
-        "Preparing server with updates for log_capacity = {}, batch_size = {}",
-        log_capacity, batch_size
-    );
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
-    println!(
-        "Using IronPublicParameters with log_capacity = {}",
-        pp_arc.get_capacity()
-    );
     // Initialize server with the (potentially cached) public parameters
     let mut server = IronServer::<Bn254, KZH2<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
     let mut bb = DummyBB::default();
@@ -69,33 +61,16 @@ fn server_with_updates(
     let updates: HashMap<IronLabel, Fr> = (1..=batch_size)
         .map(|i| (IronLabel::new(&i.to_string()), Fr::from(i as u64)))
         .collect();
-    println!(
-        "Prepared {} updates for the server with log_capacity = {}",
-        updates.len(),
-        log_capacity
-    );
     // // Perform initial updates if required by the benchmark scenario
     // if batch_size > 0 { // Only update if BATCH_SIZE is meaningful
     server.update_reg(&updates, &mut bb).unwrap(); // Assuming update_reg is part of your server's API
-    println!(
-        "Server updated with {} initial keys for log_capacity = {}",
-        updates.len(),
-        log_capacity
-    );
     server.update_keys(&updates, &mut bb).unwrap();
-    // }
-    println!(
-        "Server with log_capacity = {} is ready with {} updates",
-        log_capacity,
-        updates.len()
-    );
     (server, bb)
 }
 
-#[divan::bench(
-    max_time     = 10,
-    args         = [20,21,22,23,24,25,26,27,28,29,30,31,32]
-)]
+/// Benchmark `lookup_prove` after different-sized update batches.
+/// The `args` list controls `log_capacity` values.
+#[divan::bench(    max_time     = 60,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     // Use with_inputs to create a new server for each thread/argument set.
     // `log_capacity_arg` from `args` is passed to `server_with_updates`.
