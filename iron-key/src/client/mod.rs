@@ -1,6 +1,7 @@
 pub(crate) mod errors;
 
 use std::{
+    hash,
     marker::PhantomData,
     ops::{Add, Sub},
 };
@@ -8,6 +9,7 @@ use std::{
 use ark_ec::pairing::Pairing;
 
 use ark_poly::Polynomial;
+use ark_std::{end_timer, start_timer};
 use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 use transcript::IOPTranscript;
 
@@ -88,8 +90,13 @@ where
             Sub<Output = <MvPCS as PolynomialCommitmentScheme<E>>::Commitment>,
     {
         // TODO: Fix this for real scenarios
+        let timer = start_timer!(|| "lookup_verify");
+        let get_message_timer = start_timer!(|| "lookup_verify::get_last_reg_update_message");
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
+        end_timer!(get_message_timer);
+        let mvpcs_verify_timer = start_timer!(|| "lookup_verify::mvpcs_verify");
+        let mvpcs_verify_timer1 = start_timer!(|| "lookup_verify::mvpcs_verify1");
         let value_result = MvPCS::verify(
             self.key.get_pcs_verifier_param(),
             last_keys_message.get_value_commitment(),
@@ -99,7 +106,9 @@ where
             proof.get_value_opening_proof().0,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
-
+        end_timer!(mvpcs_verify_timer1);
+        let mvpcs_verify_timer2 = start_timer!(|| "lookup_verify::mvpcs_verify2");
+        self.index = Some(proof.get_index().clone());
         let label_result = MvPCS::verify(
             self.key.get_pcs_verifier_param(),
             last_reg_message.get_label_commitment(),
@@ -109,13 +118,18 @@ where
             proof.get_label_opening_proof().0,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
+        end_timer!(mvpcs_verify_timer2);
+        end_timer!(mvpcs_verify_timer);
 
         let b = value_result && label_result;
+        let hash = start_timer!(|| "lookup_verify::hash");
         let (_label, _) = hash_to_mu_bits_with_offset::<E::ScalarField>(
             &self.label.to_string(),
             0,
             self.key.get_log_capacity(),
         );
+        end_timer!(hash);
+        end_timer!(timer);
         Ok(b)
     }
 
