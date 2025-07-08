@@ -304,7 +304,7 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        let open_timer = start_timer!(|| "KZH::Open");
+        let open_timer = start_timer!(|| "KZH::Open_dense");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let (x0, y0) = point.split_at(prover_param.get_nu());
         let f_star = fix_last_variables(polynomial, x0);
@@ -319,16 +319,24 @@ impl<E: Pairing> KZH2<E> {
         point: &[E::ScalarField],
         _aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
-        let open_timer = start_timer!(|| "KZH::Open");
+        let open_timer = start_timer!(|| "KZH::Open_sparse");
+        let borrow_timer = start_timer!(|| "KZH::Open_sparse::Borrow");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
+        end_timer!(borrow_timer);
+        let split_timer = start_timer!(|| "KZH::Open_sparse::Split");
         let (x0, y0) = point.split_at(prover_param.get_nu());
+        end_timer!(split_timer);
+        let fstar_timer = start_timer!(|| "KZH::Open_sparse::f_star");
         let f_star = fix_last_variables_sparse(polynomial, x0);
+        end_timer!(fstar_timer);
+        let z0_timer = start_timer!(|| "KZH::Open_sparse::z0");
         let binding = fix_last_variables_sparse(&f_star, y0);
         let z0 = binding
             .evaluations
             .get(&0)
             .cloned()
             .unwrap_or(E::ScalarField::zero());
+        end_timer!(z0_timer);
         end_timer!(open_timer);
         Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
     }

@@ -297,14 +297,24 @@ where
         label: <Self::Dictionary as VKDDictionary<E>>::Label,
         bulletin_board: &mut Self::BulletinBoard,
     ) -> VKDResult<Self::LookupProof> {
+        let timer = start_timer!(|| "IronServer::lookup_prove");
+        let timer_index = start_timer!(|| "IronServer::lookup_prove::find_index");
         let index = self.dictionary.find_index(&label).unwrap();
+        end_timer!(timer_index);
+        let timer_get_message = start_timer!(|| "IronServer::lookup_prove::get_message");
         let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
         let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
+        end_timer!(timer_get_message);
+        let timer_index_boolean = start_timer!(|| "IronServer::lookup_prove::index_boolean");
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
+        end_timer!(timer_index_boolean);
+        let timer_get_mle = start_timer!(|| "IronServer::lookup_prove::get_mle");
         let binding = self.dictionary.get_label_mle();
         let label_ref = binding.borrow();
         let binding = self.dictionary.get_value_mle();
         let value_ref = binding.borrow();
+        end_timer!(timer_get_mle);
+        let timer_open = start_timer!(|| "IronServer::lookup_prove::open");
         let label_opening_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
             &*label_ref,
@@ -319,12 +329,15 @@ where
             last_keys_message.get_value_aux(),
         )
         .unwrap();
+        end_timer!(timer_open);
+        let timer_auxes = start_timer!(|| "IronServer::lookup_prove::auxes");
         let auxes = [
             last_reg_message.get_label_aux().clone(),
             last_keys_message.get_value_aux().clone(),
         ]
         .to_vec();
-
+        end_timer!(timer_auxes);
+        end_timer!(timer);
         Ok(IronLookupProof::new(
             index_boolean,
             label_opening_proof,

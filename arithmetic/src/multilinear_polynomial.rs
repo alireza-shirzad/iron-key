@@ -146,7 +146,10 @@ pub fn fix_first_variables<F: Field>(
         poly = fix_one_variable_helper(&poly, nv - i, point);
     }
 
-    DenseMultilinearExtension::<F>::from_evaluations_slice(nv - dim, &poly[..(1usize << (nv - dim))])
+    DenseMultilinearExtension::<F>::from_evaluations_slice(
+        nv - dim,
+        &poly[..(1usize << (nv - dim))],
+    )
 }
 
 fn fix_one_variable_helper<F: Field>(data: &[F], nv: usize, point: &F) -> Vec<F> {

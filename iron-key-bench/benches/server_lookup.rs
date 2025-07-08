@@ -48,8 +48,9 @@ fn server_with_updates(
 ) -> (
     IronServer<Bn254, KZH2<Bn254>, IronLabel>,
     DummyBB<Bn254, KZH2<Bn254>>,
+    IronLabel,
 ) {
-    let batch_size: usize = 1 << (log_capacity - 2); // This BATCH_SIZE is for the initial updates, not log_capacity
+    let batch_size: usize = 1 << (log_capacity / 2); // This BATCH_SIZE is for the initial updates, not log_capacity
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
     // Initialize server with the (potentially cached) public parameters
@@ -65,19 +66,20 @@ fn server_with_updates(
     // if batch_size > 0 { // Only update if BATCH_SIZE is meaningful
     server.update_reg(&updates, &mut bb).unwrap(); // Assuming update_reg is part of your server's API
     server.update_keys(&updates, &mut bb).unwrap();
-    (server, bb)
+    let label = IronLabel::new("1");
+
+    (server, bb, label)
 }
 
 /// Benchmark `lookup_prove` after different-sized update batches.
 /// The `args` list controls `log_capacity` values.
-#[divan::bench(    max_time     = 60,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
+#[divan::bench(    max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
-    // Use with_inputs to create a new server for each thread/argument set.
-    // `log_capacity_arg` from `args` is passed to `server_with_updates`.
     bencher
+        // build a brand-new (server, bb, label) for *each* iteration
         .with_inputs(|| server_with_updates(log_capacity_arg))
-        .bench_values(|(server, mut bb)| {
-            // The label "1" was inserted if BATCH_SIZE >= 1 in server_with_updates
-            server.lookup_prove(IronLabel::new("1"), &mut bb).unwrap()
+        // pass it *by reference* so the tuple itself is not dropped inside the timer
+        .bench_local_refs(|(server, bb, label)| {
+            server.lookup_prove(label.clone(), bb).unwrap();
         });
 }
