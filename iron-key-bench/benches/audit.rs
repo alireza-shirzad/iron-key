@@ -100,7 +100,7 @@ fn prepare_verifier_lookup_intput(
     (auditor, bulletin_board)
 }
 
-#[divan::bench(args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
+#[divan::bench(max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn audit(bencher: Bencher, batch_size: usize) {
     // batch_size here is effectively log_capacity
     let current_log_capacity = batch_size as u64;
@@ -116,11 +116,8 @@ fn audit(bencher: Bencher, batch_size: usize) {
                 log_second_batch_size,
             )
         })
-        .bench_values(|(auditor, bulletin_board)| {
+        .bench_local_refs(|(auditor, bulletin_board)| {
             // Corrected typo from bulltin_board
-            auditor.verify_update(&bulletin_board) // Assuming this is the method you want to benchmark
+            auditor.verify_update(bulletin_board) // Assuming this is the method you want to benchmark
         });
-    let (_, bulletin_board) = prepare_verifier_lookup_intput(current_log_capacity, 2, 2);
-
 }
-
