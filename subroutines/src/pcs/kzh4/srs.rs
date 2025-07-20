@@ -1,43 +1,55 @@
+use std::sync::Arc;
+
 use crate::{PCSError, StructuredReferenceString};
-use ark_ec::{pairing::Pairing, AffineRepr, ScalarMul};
+use ark_ec::{pairing::Pairing, CurveGroup, ScalarMul};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter_mut, rand::Rng, UniformRand, Zero};
-use std::{ops::Mul, sync::Arc};
+use ark_std::{
+    cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, UniformRand, Zero,
+};
+#[cfg(feature = "parallel")]
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
+    IntoParallelRefMutIterator, ParallelIterator,
+};
 /// Universal Parameter
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug)]
 pub struct KZH4UniversalParams<E: Pairing> {
-    pub num_vars_x: usize,
-    pub num_vars_y: usize,
-    pub num_vars_z: usize,
-    pub num_vars_t: usize,
+    num_vars_x: usize,
+    num_vars_y: usize,
+    num_vars_z: usize,
+    num_vars_t: usize,
 
-    pub h_xyzt: Arc<Vec<E::G1Affine>>,
-    pub h_yzt: Arc<Vec<E::G1Affine>>,
-    pub h_zt: Arc<Vec<E::G1Affine>>,
-    pub h_t: Arc<Vec<E::G1Affine>>,
+    h_xyzt: Arc<Vec<E::G1Affine>>,
+    h_yzt: Arc<Vec<E::G1Affine>>,
+    h_zt: Arc<Vec<E::G1Affine>>,
+    h_t: Arc<Vec<E::G1Affine>>,
 
-    pub v_x: Arc<Vec<E::G2Affine>>,
-    pub v_y: Arc<Vec<E::G2Affine>>,
-    pub v_z: Arc<Vec<E::G2Affine>>,
-    pub v_t: Arc<Vec<E::G2Affine>>,
+    v_x: Arc<Vec<E::G2Affine>>,
+    v_y: Arc<Vec<E::G2Affine>>,
+    v_z: Arc<Vec<E::G2Affine>>,
+    v_t: Arc<Vec<E::G2Affine>>,
 
-    pub minus_v: E::G2Affine,
+    minus_v: E::G2Affine,
 }
 
 impl<E: Pairing> KZH4UniversalParams<E> {
+    /// Create a new universal parameter
     pub fn new(
         num_vars_x: usize,
         num_vars_y: usize,
         num_vars_z: usize,
         num_vars_t: usize,
+
         h_xyzt: Arc<Vec<E::G1Affine>>,
         h_yzt: Arc<Vec<E::G1Affine>>,
         h_zt: Arc<Vec<E::G1Affine>>,
         h_t: Arc<Vec<E::G1Affine>>,
+
         v_x: Arc<Vec<E::G2Affine>>,
         v_y: Arc<Vec<E::G2Affine>>,
         v_z: Arc<Vec<E::G2Affine>>,
         v_t: Arc<Vec<E::G2Affine>>,
+
         minus_v: E::G2Affine,
     ) -> Self {
         Self {
@@ -56,6 +68,7 @@ impl<E: Pairing> KZH4UniversalParams<E> {
             minus_v,
         }
     }
+
     pub fn get_num_vars_x(&self) -> usize {
         self.num_vars_x
     }
@@ -282,21 +295,21 @@ impl<E: Pairing> StructuredReferenceString<E> for KZH4UniversalParams<E> {
             self.extract_verifier_param(supported_num_vars),
         ))
     }
-
-fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
+    fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCSError> {
         let (num_vars_x, num_vars_y, num_vars_z, num_vars_t) =
             Self::get_num_vars_from_maximum_num_vars(num_vars);
         let (degree_x, degree_y, degree_z, degree_t) = (
-            1usize << num_vars_x,
-            1usize << num_vars_y,
-            1usize << num_vars_z,
-            1usize << num_vars_t,
+            1 << num_vars_x,
+            1 << num_vars_y,
+            1 << num_vars_z,
+            1 << num_vars_t,
         );
 
         // Note: Your code uses E::G1::rand(rng) which is likely Projective.
-        // If batch_mul is a method on Affine, you might need g.into() or g_affine = g.into()
-        // For this example, I'm assuming g and v are the correct types expected by batch_mul.
-        // If batch_mul is a method on Projective (as in my placeholder), this is fine.
+        // If batch_mul is a method on Affine, you might need g.into() or g_affine =
+        // g.into() For this example, I'm assuming g and v are the correct types
+        // expected by batch_mul. If batch_mul is a method on Projective (as in
+        // my placeholder), this is fine.
         let g_proj = E::G1::rand(rng); // Assuming G1 is Projective type
         let v_proj = E::G2::rand(rng); // Assuming G2 is Projective type
 
@@ -305,7 +318,8 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
         let tau_z: Vec<E::ScalarField> = (0..degree_z).map(|_| E::ScalarField::rand(rng)).collect();
         let tau_t: Vec<E::ScalarField> = (0..degree_t).map(|_| E::ScalarField::rand(rng)).collect();
 
-        // These variables will be assigned the results from the parallel/sequential blocks.
+        // These variables will be assigned the results from the parallel/sequential
+        // blocks.
         let h_xyzt: Vec<E::G1Affine>;
         let h_yzt: Vec<E::G1Affine>;
         let h_zt: Vec<E::G1Affine>;
@@ -323,16 +337,17 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
         let tau_z_s = &tau_z;
         let tau_t_s = &tau_t;
 
-
         #[cfg(feature = "parallel")]
         {
             use rayon::prelude::*;
 
             // Define closures for each computation. Each returns its respective Vec.
             let task_h_xyzt = || {
-                let mut scalars = vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
+                let mut scalars =
+                    vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
                 scalars.par_iter_mut().enumerate().for_each(|(i, slot)| {
-                    let (i_x, i_y, i_z, i_t) = Self::decompose_index(i, degree_y, degree_z, degree_t);
+                    let (i_x, i_y, i_z, i_t) =
+                        Self::decompose_index(i, degree_y, degree_z, degree_t);
                     *slot = tau_x_s[i_x] * tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
                 });
                 g_base_ref.batch_mul(&scalars)
@@ -368,21 +383,21 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
 
             // Use nested rayon::join to execute tasks in parallel and get results.
             // join(A, join(B, join(C, D))) pattern is common for >2 tasks.
-            let (res_h_xyzt, (res_h_yzt, (res_h_zt, (res_h_t, (res_v_x, (res_v_y, (res_v_z, res_v_t))))))) =
-                rayon::join(task_h_xyzt,
-                    || rayon::join(task_h_yzt,
-                        || rayon::join(task_h_zt,
-                            || rayon::join(task_h_t,
-                                || rayon::join(task_v_x,
-                                    || rayon::join(task_v_y,
-                                        || rayon::join(task_v_z, task_v_t)
-                                    )
-                                )
-                            )
-                        )
-                    )
-                );
-            
+            let (
+                res_h_xyzt,
+                (res_h_yzt, (res_h_zt, (res_h_t, (res_v_x, (res_v_y, (res_v_z, res_v_t)))))),
+            ) = rayon::join(task_h_xyzt, || {
+                rayon::join(task_h_yzt, || {
+                    rayon::join(task_h_zt, || {
+                        rayon::join(task_h_t, || {
+                            rayon::join(task_v_x, || {
+                                rayon::join(task_v_y, || rayon::join(task_v_z, task_v_t))
+                            })
+                        })
+                    })
+                })
+            });
+
             h_xyzt = res_h_xyzt;
             h_yzt = res_h_yzt;
             h_zt = res_h_zt;
@@ -395,7 +410,8 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
         #[cfg(not(feature = "parallel"))]
         {
             // Sequential version
-            let mut scalars_h_xyzt = vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
+            let mut scalars_h_xyzt =
+                vec![E::ScalarField::zero(); degree_x * degree_y * degree_z * degree_t];
             scalars_h_xyzt.iter_mut().enumerate().for_each(|(i, slot)| {
                 let (i_x, i_y, i_z, i_t) = Self::decompose_index(i, degree_y, degree_z, degree_t);
                 *slot = tau_x_s[i_x] * tau_y_s[i_y] * tau_z_s[i_z] * tau_t_s[i_t];
@@ -449,10 +465,10 @@ fn gen_srs_for_testing<R: Rng>(rng: &mut R, num_vars: usize) -> Result<Self, PCS
             v_y: v_y_arc,
             v_z: v_z_arc,
             v_t: v_t_arc,
-            minus_v: (-v_proj).into(), // Convert final v to affine if KZH4UniversalParams expects affine
+            minus_v: (-v_proj).into(), /* Convert final v to affine if KZH4UniversalParams
+                                        * expects affine */
         })
     }
-
 }
 
 impl<E: Pairing> KZH4UniversalParams<E> {

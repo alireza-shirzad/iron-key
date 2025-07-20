@@ -6,7 +6,7 @@ use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
 use derivative::Derivative;
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::ops::Add;
+use std::{fmt, ops::Add};
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -240,4 +240,3 @@ impl<E: Pairing> KZH4BatchOpeningProof<E> {
         self.batch_proof.clone()
     }
 }
-

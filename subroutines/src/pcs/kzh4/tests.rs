@@ -1,68 +1,57 @@
-// use super::*;
-// use ark_bn254::{Bn254 as E, Fr};
-// use ark_ec::pairing::Pairing;
-// use ark_std::{rand::Rng, test_rng, vec::Vec, UniformRand};
-// use std::sync::Arc;
-// #[cfg(feature = "parallel")]
-// use rayon::vec;
-// fn test_single_helper<R: Rng>(
-//     params: &KZH4UniversalParams<E>,
-//     poly: &DenseOrSparseMLE<Fr>,
-//     rng: &mut R,
-// ) -> Result<(), PCSError> {
-//     let nv = poly.num_vars();
-//     assert_ne!(nv, 0);
-//     let (ck, vk) = KZH4::trim(params, None, Some(nv))?;
-//     let point: Vec<_> = (0..nv).map(|_| Fr::rand(rng)).collect();
-//     let timer = start_timer!(|| "Commit");
-//     let com = KZH4::commit(&ck, poly)?;
-//     let aux = KZH4::comp_aux(&ck, poly, &com)?;
-//     end_timer!(timer);
-//     let (proof, value) = KZH4::open(&ck, poly, &point)?;
+use super::*;
+use ark_bn254::{Bn254 as E, Fr};
+use ark_std::{test_rng, vec::Vec, UniformRand};
 
-//     assert_eq!(poly.evaluate(&point), value);
-//     KZH4::verify(&vk, &com, &point, &value, &aux, &proof)?;
+fn test_single_helper(nv: usize, is_sparse: bool) -> Result<(), PCSError> {
+    let mut rng = test_rng();
+    let poly = if is_sparse {
+        DenseOrSparseMLE::Sparse(SparseMultilinearExtension::rand(nv, &mut rng))
+    } else {
+        DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng))
+    };
+    let params = KZH4::<E>::gen_srs_for_testing(&mut rng, nv)?;
+    let (ck, vk) = KZH4::trim(params, None, Some(nv))?;
+    let point: Vec<_> = (0..nv).map(|_| Fr::rand(&mut rng)).collect();
+    let com = KZH4::commit(&ck, &poly)?;
+    let aux = KZH4::comp_aux(&ck, &poly, &com)?;
+    let (proof, value) = KZH4::open(&ck, &poly, &point, &aux)?;
+    assert!(KZH4::verify(&vk, &com, &point, &value, &aux, &proof)?);
 
-//     // let value = Fr::rand(rng);
-//     // assert!(!KZH4::verify(&vk, &com, &point, &value, &proof)?);
+    Ok(())
+}
 
-//     Ok(())
-// }
-
-// #[test]
-// fn test_single_commit() -> Result<(), PCSError> {
-//     let nv = 7;
-//     let mut rng = test_rng();
-//     let params = KZH4::<E>::gen_srs_for_testing(&mut rng, nv)?;
-
-//     // normal polynomials
-//     let poly1 = DenseOrSparseMLE::Dense(DenseMultilinearExtension::rand(nv, &mut rng));
-//     // let poly1 = DenseMultilinearExtension::from_evaluations_vec(nv,
-//     // vec![Fr::zero(); 1usize << nv]);
-//     test_single_helper(&params, &poly1, &mut rng)?;
-
-//     // // single-variate polynomials
-//     // let poly2 = DenseMultilinearExtension::rand(nv, &mut rng);
-//     // test_single_helper(&params, &poly2, &mut rng)?;
-
-//     Ok(())
-// }
-
-// #[test]
-// fn setup_commit_verify_constant_polynomial() {
-//     let mut rng = test_rng();
-
-//     // normal polynomials
-//     assert!(KZH4::<E>::gen_srs_for_testing(&mut rng, 0).is_err());
-// }
-
-// #[test]
-// fn test() {
-//     let poly: DenseMultilinearExtension<Fr> = DenseMultilinearExtension::from_evaluations_vec(
-//         2,
-//         vec![Fr::from(1), Fr::from(2), Fr::from(3), Fr::from(4)],
-//     );
-//     dbg!(&poly.evaluations);
-
-//     let eval = poly.evaluate(&vec![Fr::from(0), Fr::from(1)]);
-// }
+#[test]
+fn test_dense() -> Result<(), PCSError> {
+    test_single_helper(2, false)?;
+    test_single_helper(3, false)?;
+    test_single_helper(4, false)?;
+    test_single_helper(5, false)?;
+    test_single_helper(6, false)?;
+    test_single_helper(7, false)?;
+    test_single_helper(8, false)?;
+    test_single_helper(9, false)?;
+    test_single_helper(10, false)?;
+    test_single_helper(11, false)?;
+    test_single_helper(12, false)?;
+    test_single_helper(13, false)?;
+    test_single_helper(14, false)?;
+    test_single_helper(15, false)?;
+    Ok(())
+}
+#[test]
+fn test_sparse() -> Result<(), PCSError> {
+    test_single_helper(2, true)?;
+    test_single_helper(3, true)?;
+    test_single_helper(4, true)?;
+    test_single_helper(5, true)?;
+    test_single_helper(6, true)?;
+    test_single_helper(8, true)?;
+    test_single_helper(9, true)?;
+    test_single_helper(10, true)?;
+    test_single_helper(11, true)?;
+    test_single_helper(12, true)?;
+    test_single_helper(13, true)?;
+    test_single_helper(14, true)?;
+    test_single_helper(15, true)?;
+    Ok(())
+}
