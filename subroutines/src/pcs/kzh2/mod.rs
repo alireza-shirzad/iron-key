@@ -263,7 +263,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         poly: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
-        let commit_timer = start_timer!(|| "KZH::Commit");
+        let commit_timer = start_timer!(|| "KZH::Commit_Dense");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         let com = E::G1::msm(&prover_param.get_h_mat(), &poly.evaluations).unwrap();
         end_timer!(commit_timer);
@@ -274,6 +274,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH2Commitment<E>, PCSError> {
+        let commit_timer = start_timer!(|| "KZH::Commit_Sparse");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
         // The scalars for the MSM are the values from the sparse polynomial's
         // evaluation map.
@@ -291,7 +292,7 @@ impl<E: Pairing> KZH2<E> {
         assert_eq!(bases.len(), scalars.len());
 
         let com = E::G1::msm(&bases, &scalars).unwrap();
-
+        end_timer!(commit_timer);
         Ok(KZH2Commitment::new(
             com.into_affine(),
             sparse_poly.num_vars(),

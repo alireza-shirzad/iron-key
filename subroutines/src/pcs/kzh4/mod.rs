@@ -7,28 +7,22 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
-use arithmetic::{
-    build_eq_x_r, evaluate_last_dense, evaluate_last_sparse, fix_last_variables,
-    fix_last_variables_sparse,
-};
+
 use ark_ec::{
     pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
-use ark_ff::{Field, One, Zero};
+use ark_ff::{Field, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
 #[cfg(feature = "parallel")]
-use rayon::{iter::IntoParallelIterator, join};
+use rayon::join;
 
 use crate::pcs::{kzh4::srs::KZH4UniversalParams, StructuredReferenceString};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_chunks, cfg_iter_mut, end_timer, rand::Rng, start_timer, test_rng};
+use ark_std::{cfg_iter_mut, end_timer, rand::Rng, start_timer};
 #[cfg(feature = "parallel")]
-use rayon::{
-    iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator},
-    prelude::ParallelSlice,
-};
+use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -278,6 +272,11 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         // Evaluation check
         let p5 = proof.get_f_star().evaluate(&split_input[3]) == *value;
         end_timer!(verify_timer);
+        dbg!(p1);
+        dbg!(p2);
+        dbg!(p3);
+        dbg!(p4);
+        dbg!(p5);
         Ok(p1 && p2 && p3 && p4 && p5)
         // Ok(true)
     }
@@ -318,7 +317,7 @@ impl<E: Pairing> KZH4<E> {
         prover_param: impl Borrow<KZH4ProverParam<E>>,
         poly: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH4Commitment<E>, PCSError> {
-        let commit_timer = start_timer!(|| "KZH::Commit");
+        let commit_timer = start_timer!(|| "KZH::Commit_Dense");
         let prover_param: &KZH4ProverParam<E> = prover_param.borrow();
         let com = E::G1::msm_unchecked(&prover_param.get_h_xyzt(), &poly.evaluations);
         end_timer!(commit_timer);
@@ -329,6 +328,7 @@ impl<E: Pairing> KZH4<E> {
         prover_param: impl Borrow<KZH4ProverParam<E>>,
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZH4Commitment<E>, PCSError> {
+        let commit_timer = start_timer!(|| "KZH::Commit_Sparse");
         let prover_param: &KZH4ProverParam<E> = prover_param.borrow();
         let len = sparse_poly.evaluations.len();
         let mut bases = vec![E::G1Affine::zero(); len];
@@ -341,6 +341,7 @@ impl<E: Pairing> KZH4<E> {
             .map(|(_, &v)| v)
             .collect::<Vec<_>>();
         let com = E::G1::msm_unchecked(&bases, &scalars);
+        end_timer!(commit_timer);
         Ok(KZH4Commitment::new(
             com.into_affine(),
             sparse_poly.num_vars(),
@@ -392,7 +393,7 @@ impl<E: Pairing> KZH4<E> {
                 let bases = &aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i
                     ..(1 << prover_param.get_num_vars_x()) * i
                         + (1 << prover_param.get_num_vars_x())];
-                E::G1::msm_unchecked(bases, &scalars).into()
+                E::G1::msm_unchecked(bases, scalars).into()
             })
             .collect::<Vec<_>>();
 
@@ -458,7 +459,7 @@ impl<E: Pairing> KZH4<E> {
             .map(|i| {
                 let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
                     // TODO: Fix this
-                    &polynomial,
+                    polynomial,
                     i,
                     prover_param.get_num_vars_t(),
                 );
@@ -477,7 +478,7 @@ impl<E: Pairing> KZH4<E> {
                 let bit_index = split_input[0].iter().fold(0usize, |acc, b| {
                     acc << 1 | if *b == E::ScalarField::ONE { 1 } else { 0 }
                 });
-                aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index].into()
+                aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index]
             })
             .collect::<Vec<_>>();
 
@@ -532,11 +533,8 @@ impl<E: Pairing> KZH4<E> {
         let eval_dx = |i: usize| -> E::G1Affine {
             E::G1::msm_unchecked(
                 &prover_param.get_h_yzt(),
-                &Self::get_dense_partial_evaluation_for_boolean_input(
-                    polynomial,
-                    i,
-                    degree_y * degree_z * degree_t,
-                ),
+                &polynomial.evaluations[(degree_y * degree_z * degree_t) * i
+                    ..(degree_y * degree_z * degree_t) * i + (degree_y * degree_z * degree_t)],
             )
             .into()
         };
@@ -544,11 +542,8 @@ impl<E: Pairing> KZH4<E> {
         let eval_dxy = |i: usize| -> E::G1Affine {
             E::G1::msm_unchecked(
                 &prover_param.get_h_zt(),
-                &Self::get_dense_partial_evaluation_for_boolean_input(
-                    polynomial,
-                    i,
-                    degree_z * degree_t,
-                ),
+                &polynomial.evaluations
+                    [(degree_z * degree_t) * i..(degree_z * degree_t) * i + (degree_z * degree_t)],
             )
             .into()
         };
