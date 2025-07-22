@@ -1,5 +1,4 @@
 use ark_bn254::{Bn254 as E, Bn254, Fr};
-use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
     VKD,
@@ -100,7 +99,7 @@ fn prepare_verifier_lookup_intput(
     (auditor, bulletin_board)
 }
 
-#[divan::bench(max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
+#[divan::bench(max_time     = 1,args = [32])]
 fn audit(bencher: Bencher, batch_size: usize) {
     // batch_size here is effectively log_capacity
     let current_log_capacity = batch_size as u64;
