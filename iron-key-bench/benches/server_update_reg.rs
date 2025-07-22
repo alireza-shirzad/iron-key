@@ -90,7 +90,6 @@ fn prepare_prover_update_prove_inputs(
             .unwrap();
     }
 
-
     // Batch whose size we actually benchmark.
     let update_batch_size = 1 << log_update_size;
     let update_batch: HashMap<_, _> = (1..=update_batch_size)
@@ -117,9 +116,9 @@ pub const PARAMS: &[Params] = &{
 
     const fn build_params() -> [Params; PARAMS_ARRAY_SIZE] {
         let mut out = [Params(4, 0, 0); PARAMS_ARRAY_SIZE];
-        let mut i:usize = 0;
+        let mut i: usize = 0;
 
-        let mut n:usize = 20; // log_capacity starts from 20
+        let mut n: usize = 32; // log_capacity starts from 20
         while n <= 32 {
             let mut k = 10; // log_update_size
             while k <= n - 2 {

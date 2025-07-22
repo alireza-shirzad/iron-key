@@ -1,0 +1,209 @@
+Cache miss: Creating new IronPublicParameters for log_capacity = 20
+Loading SRS
+188.2 ms      │ 188.2 ms      │ 188.2 ms      │ 188.2 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=11, log(init-update)=2]  183.5 ms      │ 183.5 ms      │ 183.5 ms      │ 183.5 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=12, log(init-update)=2]  186.7 ms      │ 186.7 ms      │ 186.7 ms      │ 186.7 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=13, log(init-update)=2]  188.5 ms      │ 188.5 ms      │ 188.5 ms      │ 188.5 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=14, log(init-update)=2]  241.4 ms      │ 241.4 ms      │ 241.4 ms      │ 241.4 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=15, log(init-update)=2]  247.4 ms      │ 247.4 ms      │ 247.4 ms      │ 247.4 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=16, log(init-update)=2]  296.9 ms      │ 296.9 ms      │ 296.9 ms      │ 296.9 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=17, log(init-update)=2]  435.5 ms      │ 435.5 ms      │ 435.5 ms      │ 435.5 ms      │ 1       │ 1
+      ├─ [log(capacity)=20, log(|update|)=18, log(init-update)=2]  770.8 ms      │ 770.8 ms      │ 770.8 ms      │ 770.8 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 21
+Loading SRS
+304.6 ms      │ 304.6 ms      │ 304.6 ms      │ 304.6 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=11, log(init-update)=2]  284.7 ms      │ 284.7 ms      │ 284.7 ms      │ 284.7 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=12, log(init-update)=2]  322.7 ms      │ 322.7 ms      │ 322.7 ms      │ 322.7 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=13, log(init-update)=2]  294.8 ms      │ 294.8 ms      │ 294.8 ms      │ 294.8 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=14, log(init-update)=2]  311.1 ms      │ 311.1 ms      │ 311.1 ms      │ 311.1 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=15, log(init-update)=2]  344.3 ms      │ 344.3 ms      │ 344.3 ms      │ 344.3 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=16, log(init-update)=2]  413.5 ms      │ 413.5 ms      │ 413.5 ms      │ 413.5 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=17, log(init-update)=2]  551.3 ms      │ 551.3 ms      │ 551.3 ms      │ 551.3 ms      │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=18, log(init-update)=2]  842 ms        │ 842 ms        │ 842 ms        │ 842 ms        │ 1       │ 1
+      ├─ [log(capacity)=21, log(|update|)=19, log(init-update)=2]  1.468 s       │ 1.468 s       │ 1.468 s       │ 1.468 s       │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 22
+Loading SRS
+463 ms        │ 463 ms        │ 463 ms        │ 463 ms        │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=11, log(init-update)=2]  488.2 ms      │ 488.2 ms      │ 488.2 ms      │ 488.2 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=12, log(init-update)=2]  492.2 ms      │ 492.2 ms      │ 492.2 ms      │ 492.2 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=13, log(init-update)=2]  487.9 ms      │ 487.9 ms      │ 487.9 ms      │ 487.9 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=14, log(init-update)=2]  530.1 ms      │ 530.1 ms      │ 530.1 ms      │ 530.1 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=15, log(init-update)=2]  540.5 ms      │ 540.5 ms      │ 540.5 ms      │ 540.5 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=16, log(init-update)=2]  618.6 ms      │ 618.6 ms      │ 618.6 ms      │ 618.6 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=17, log(init-update)=2]  746.2 ms      │ 746.2 ms      │ 746.2 ms      │ 746.2 ms      │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=18, log(init-update)=2]  1.014 s       │ 1.014 s       │ 1.014 s       │ 1.014 s       │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=19, log(init-update)=2]  1.615 s       │ 1.615 s       │ 1.615 s       │ 1.615 s       │ 1       │ 1
+      ├─ [log(capacity)=22, log(|update|)=20, log(init-update)=2]  3.109 s       │ 3.109 s       │ 3.109 s       │ 3.109 s       │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 23
+Loading SRS
+827.9 ms      │ 827.9 ms      │ 827.9 ms      │ 827.9 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=11, log(init-update)=2]  835 ms        │ 835 ms        │ 835 ms        │ 835 ms        │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=12, log(init-update)=2]  865.1 ms      │ 865.1 ms      │ 865.1 ms      │ 865.1 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=13, log(init-update)=2]  840.2 ms      │ 840.2 ms      │ 840.2 ms      │ 840.2 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=14, log(init-update)=2]  868.7 ms      │ 868.7 ms      │ 868.7 ms      │ 868.7 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=15, log(init-update)=2]  866.7 ms      │ 866.7 ms      │ 866.7 ms      │ 866.7 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=16, log(init-update)=2]  958.4 ms      │ 958.4 ms      │ 958.4 ms      │ 958.4 ms      │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=17, log(init-update)=2]  1.126 s       │ 1.126 s       │ 1.126 s       │ 1.126 s       │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=18, log(init-update)=2]  1.411 s       │ 1.411 s       │ 1.411 s       │ 1.411 s       │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=19, log(init-update)=2]  1.939 s       │ 1.939 s       │ 1.939 s       │ 1.939 s       │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=20, log(init-update)=2]  3.422 s       │ 3.422 s       │ 3.422 s       │ 3.422 s       │ 1       │ 1
+      ├─ [log(capacity)=23, log(|update|)=21, log(init-update)=2]  6.946 s       │ 6.946 s       │ 6.946 s       │ 6.946 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 24
+Loading SRS
+1.526 s       │ 1.526 s       │ 1.526 s       │ 1.526 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=11, log(init-update)=2]  1.528 s       │ 1.528 s       │ 1.528 s       │ 1.528 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=12, log(init-update)=2]  1.661 s       │ 1.661 s       │ 1.661 s       │ 1.661 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=13, log(init-update)=2]  1.514 s       │ 1.514 s       │ 1.514 s       │ 1.514 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=14, log(init-update)=2]  1.561 s       │ 1.561 s       │ 1.561 s       │ 1.561 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=15, log(init-update)=2]  1.579 s       │ 1.579 s       │ 1.579 s       │ 1.579 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=16, log(init-update)=2]  1.646 s       │ 1.646 s       │ 1.646 s       │ 1.646 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=17, log(init-update)=2]  1.914 s       │ 1.914 s       │ 1.914 s       │ 1.914 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=18, log(init-update)=2]  2.046 s       │ 2.046 s       │ 2.046 s       │ 2.046 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=19, log(init-update)=2]  2.608 s       │ 2.608 s       │ 2.608 s       │ 2.608 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=20, log(init-update)=2]  4.063 s       │ 4.063 s       │ 4.063 s       │ 4.063 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=21, log(init-update)=2]  7.363 s       │ 7.363 s       │ 7.363 s       │ 7.363 s       │ 1       │ 1
+      ├─ [log(capacity)=24, log(|update|)=22, log(init-update)=2]  15.21 s       │ 15.21 s       │ 15.21 s       │ 15.21 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 25
+Loading SRS
+2.826 s       │ 2.826 s       │ 2.826 s       │ 2.826 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=11, log(init-update)=2]  3.041 s       │ 3.041 s       │ 3.041 s       │ 3.041 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=12, log(init-update)=2]  2.959 s       │ 2.959 s       │ 2.959 s       │ 2.959 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=13, log(init-update)=2]  2.972 s       │ 2.972 s       │ 2.972 s       │ 2.972 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=14, log(init-update)=2]  2.953 s       │ 2.953 s       │ 2.953 s       │ 2.953 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=15, log(init-update)=2]  3.105 s       │ 3.105 s       │ 3.105 s       │ 3.105 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=16, log(init-update)=2]  2.983 s       │ 2.983 s       │ 2.983 s       │ 2.983 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=17, log(init-update)=2]  3.177 s       │ 3.177 s       │ 3.177 s       │ 3.177 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=18, log(init-update)=2]  3.417 s       │ 3.417 s       │ 3.417 s       │ 3.417 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=19, log(init-update)=2]  4.051 s       │ 4.051 s       │ 4.051 s       │ 4.051 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=20, log(init-update)=2]  5.383 s       │ 5.383 s       │ 5.383 s       │ 5.383 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=21, log(init-update)=2]  8.662 s       │ 8.662 s       │ 8.662 s       │ 8.662 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=22, log(init-update)=2]  15.65 s       │ 15.65 s       │ 15.65 s       │ 15.65 s       │ 1       │ 1
+      ├─ [log(capacity)=25, log(|update|)=23, log(init-update)=2]  33.04 s       │ 33.04 s       │ 33.04 s       │ 33.04 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 26
+Loading SRS
+5.807 s       │ 5.807 s       │ 5.807 s       │ 5.807 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=11, log(init-update)=2]  5.568 s       │ 5.568 s       │ 5.568 s       │ 5.568 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=12, log(init-update)=2]  5.613 s       │ 5.613 s       │ 5.613 s       │ 5.613 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=13, log(init-update)=2]  5.49 s        │ 5.49 s        │ 5.49 s        │ 5.49 s        │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=14, log(init-update)=2]  5.635 s       │ 5.635 s       │ 5.635 s       │ 5.635 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=15, log(init-update)=2]  5.599 s       │ 5.599 s       │ 5.599 s       │ 5.599 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=16, log(init-update)=2]  5.538 s       │ 5.538 s       │ 5.538 s       │ 5.538 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=17, log(init-update)=2]  5.935 s       │ 5.935 s       │ 5.935 s       │ 5.935 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=18, log(init-update)=2]  6.417 s       │ 6.417 s       │ 6.417 s       │ 6.417 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=19, log(init-update)=2]  6.763 s       │ 6.763 s       │ 6.763 s       │ 6.763 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=20, log(init-update)=2]  8.15 s        │ 8.15 s        │ 8.15 s        │ 8.15 s        │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=21, log(init-update)=2]  11.26 s       │ 11.26 s       │ 11.26 s       │ 11.26 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=22, log(init-update)=2]  18.7 s        │ 18.7 s        │ 18.7 s        │ 18.7 s        │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=23, log(init-update)=2]  35.33 s       │ 35.33 s       │ 35.33 s       │ 35.33 s       │ 1       │ 1
+      ├─ [log(capacity)=26, log(|update|)=24, log(init-update)=2]  1.228 m       │ 1.228 m       │ 1.228 m       │ 1.228 m       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 27
+Loading SRS
+11.13 s       │ 11.13 s       │ 11.13 s       │ 11.13 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=11, log(init-update)=2]  10.75 s       │ 10.75 s       │ 10.75 s       │ 10.75 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=12, log(init-update)=2]  11.32 s       │ 11.32 s       │ 11.32 s       │ 11.32 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=13, log(init-update)=2]  12.54 s       │ 12.54 s       │ 12.54 s       │ 12.54 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=14, log(init-update)=2]  10.79 s       │ 10.79 s       │ 10.79 s       │ 10.79 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=15, log(init-update)=2]  11.22 s       │ 11.22 s       │ 11.22 s       │ 11.22 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=16, log(init-update)=2]  11.27 s       │ 11.27 s       │ 11.27 s       │ 11.27 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=17, log(init-update)=2]  11.45 s       │ 11.45 s       │ 11.45 s       │ 11.45 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=18, log(init-update)=2]  11.29 s       │ 11.29 s       │ 11.29 s       │ 11.29 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=19, log(init-update)=2]  12.74 s       │ 12.74 s       │ 12.74 s       │ 12.74 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=20, log(init-update)=2]  14.27 s       │ 14.27 s       │ 14.27 s       │ 14.27 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=21, log(init-update)=2]  17.02 s       │ 17.02 s       │ 17.02 s       │ 17.02 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=22, log(init-update)=2]  25.65 s       │ 25.65 s       │ 25.65 s       │ 25.65 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=23, log(init-update)=2]  42.79 s       │ 42.79 s       │ 42.79 s       │ 42.79 s       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=24, log(init-update)=2]  1.305 m       │ 1.305 m       │ 1.305 m       │ 1.305 m       │ 1       │ 1
+      ├─ [log(capacity)=27, log(|update|)=25, log(init-update)=2]  2.785 m       │ 2.785 m       │ 2.785 m       │ 2.785 m       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 28
+Loading SRS
+22.48 s       │ 22.48 s       │ 22.48 s       │ 22.48 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=11, log(init-update)=2]  22.8 s        │ 22.8 s        │ 22.8 s        │ 22.8 s        │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=12, log(init-update)=2]  22.77 s       │ 22.77 s       │ 22.77 s       │ 22.77 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=13, log(init-update)=2]  23.08 s       │ 23.08 s       │ 23.08 s       │ 23.08 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=14, log(init-update)=2]  22.26 s       │ 22.26 s       │ 22.26 s       │ 22.26 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=15, log(init-update)=2]  24.49 s       │ 24.49 s       │ 24.49 s       │ 24.49 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=16, log(init-update)=2]  22.95 s       │ 22.95 s       │ 22.95 s       │ 22.95 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=17, log(init-update)=2]  22.34 s       │ 22.34 s       │ 22.34 s       │ 22.34 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=18, log(init-update)=2]  23.63 s       │ 23.63 s       │ 23.63 s       │ 23.63 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=19, log(init-update)=2]  23.48 s       │ 23.48 s       │ 23.48 s       │ 23.48 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=20, log(init-update)=2]  24.51 s       │ 24.51 s       │ 24.51 s       │ 24.51 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=21, log(init-update)=2]  27.95 s       │ 27.95 s       │ 27.95 s       │ 27.95 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=22, log(init-update)=2]  35.64 s       │ 35.64 s       │ 35.64 s       │ 35.64 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=23, log(init-update)=2]  50.78 s       │ 50.78 s       │ 50.78 s       │ 50.78 s       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=24, log(init-update)=2]  1.425 m       │ 1.425 m       │ 1.425 m       │ 1.425 m       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=25, log(init-update)=2]  2.626 m       │ 2.626 m       │ 2.626 m       │ 2.626 m       │ 1       │ 1
+      ├─ [log(capacity)=28, log(|update|)=26, log(init-update)=2]  5.354 m       │ 5.354 m       │ 5.354 m       │ 5.354 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 29
+Loading SRS
+45.89 s       │ 45.89 s       │ 45.89 s       │ 45.89 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=11, log(init-update)=2]  43.84 s       │ 43.84 s       │ 43.84 s       │ 43.84 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=12, log(init-update)=2]  44.55 s       │ 44.55 s       │ 44.55 s       │ 44.55 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=13, log(init-update)=2]  44.39 s       │ 44.39 s       │ 44.39 s       │ 44.39 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=14, log(init-update)=2]  44.65 s       │ 44.65 s       │ 44.65 s       │ 44.65 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=15, log(init-update)=2]  44.07 s       │ 44.07 s       │ 44.07 s       │ 44.07 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=16, log(init-update)=2]  44.14 s       │ 44.14 s       │ 44.14 s       │ 44.14 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=17, log(init-update)=2]  44.52 s       │ 44.52 s       │ 44.52 s       │ 44.52 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=18, log(init-update)=2]  44.61 s       │ 44.61 s       │ 44.61 s       │ 44.61 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=19, log(init-update)=2]  45.77 s       │ 45.77 s       │ 45.77 s       │ 45.77 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=20, log(init-update)=2]  47.71 s       │ 47.71 s       │ 47.71 s       │ 47.71 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=21, log(init-update)=2]  52.51 s       │ 52.51 s       │ 52.51 s       │ 52.51 s       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=22, log(init-update)=2]  1.019 m       │ 1.019 m       │ 1.019 m       │ 1.019 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=23, log(init-update)=2]  1.288 m       │ 1.288 m       │ 1.288 m       │ 1.288 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=24, log(init-update)=2]  1.879 m       │ 1.879 m       │ 1.879 m       │ 1.879 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=25, log(init-update)=2]  3.098 m       │ 3.098 m       │ 3.098 m       │ 3.098 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=26, log(init-update)=2]  5.587 m       │ 5.587 m       │ 5.587 m       │ 5.587 m       │ 1       │ 1
+      ├─ [log(capacity)=29, log(|update|)=27, log(init-update)=2]  11.54 m       │ 11.54 m       │ 11.54 m       │ 11.54 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 30
+Computing SRS
+1.422 m       │ 1.422 m       │ 1.422 m       │ 1.422 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=11, log(init-update)=2]  1.486 m       │ 1.486 m       │ 1.486 m       │ 1.486 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=12, log(init-update)=2]  1.494 m       │ 1.494 m       │ 1.494 m       │ 1.494 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=13, log(init-update)=2]  1.48 m        │ 1.48 m        │ 1.48 m        │ 1.48 m        │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=14, log(init-update)=2]  1.534 m       │ 1.534 m       │ 1.534 m       │ 1.534 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=15, log(init-update)=2]  1.477 m       │ 1.477 m       │ 1.477 m       │ 1.477 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=16, log(init-update)=2]  1.463 m       │ 1.463 m       │ 1.463 m       │ 1.463 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=17, log(init-update)=2]  1.577 m       │ 1.577 m       │ 1.577 m       │ 1.577 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=18, log(init-update)=2]  1.5 m         │ 1.5 m         │ 1.5 m         │ 1.5 m         │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=19, log(init-update)=2]  1.472 m       │ 1.472 m       │ 1.472 m       │ 1.472 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=20, log(init-update)=2]  1.537 m       │ 1.537 m       │ 1.537 m       │ 1.537 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=21, log(init-update)=2]  1.67 m        │ 1.67 m        │ 1.67 m        │ 1.67 m        │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=22, log(init-update)=2]  1.722 m       │ 1.722 m       │ 1.722 m       │ 1.722 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=23, log(init-update)=2]  2.026 m       │ 2.026 m       │ 2.026 m       │ 2.026 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=24, log(init-update)=2]  2.61 m        │ 2.61 m        │ 2.61 m        │ 2.61 m        │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=25, log(init-update)=2]  3.902 m       │ 3.902 m       │ 3.902 m       │ 3.902 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=26, log(init-update)=2]  6.734 m       │ 6.734 m       │ 6.734 m       │ 6.734 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=27, log(init-update)=2]  14.71 m       │ 14.71 m       │ 14.71 m       │ 14.71 m       │ 1       │ 1
+      ├─ [log(capacity)=30, log(|update|)=28, log(init-update)=2]  29.63 m       │ 29.63 m       │ 29.63 m       │ 29.63 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 31
+Computing SRS
+5.125 m       │ 5.125 m       │ 5.125 m       │ 5.125 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=11, log(init-update)=2]  3.956 m       │ 3.956 m       │ 3.956 m       │ 3.956 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=12, log(init-update)=2]  2.895 m       │ 2.895 m       │ 2.895 m       │ 2.895 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=13, log(init-update)=2]  3.032 m       │ 3.032 m       │ 3.032 m       │ 3.032 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=14, log(init-update)=2]  3.041 m       │ 3.041 m       │ 3.041 m       │ 3.041 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=15, log(init-update)=2]  3.423 m       │ 3.423 m       │ 3.423 m       │ 3.423 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=16, log(init-update)=2]  4.348 m       │ 4.348 m       │ 4.348 m       │ 4.348 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=17, log(init-update)=2]  3.024 m       │ 3.024 m       │ 3.024 m       │ 3.024 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=18, log(init-update)=2]  3.04 m        │ 3.04 m        │ 3.04 m        │ 3.04 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=19, log(init-update)=2]  2.95 m        │ 2.95 m        │ 2.95 m        │ 2.95 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=20, log(init-update)=2]  3.137 m       │ 3.137 m       │ 3.137 m       │ 3.137 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=21, log(init-update)=2]  3.15 m        │ 3.15 m        │ 3.15 m        │ 3.15 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=22, log(init-update)=2]  3.474 m       │ 3.474 m       │ 3.474 m       │ 3.474 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=23, log(init-update)=2]  3.558 m       │ 3.558 m       │ 3.558 m       │ 3.558 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=24, log(init-update)=2]  4.24 m        │ 4.24 m        │ 4.24 m        │ 4.24 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=25, log(init-update)=2]  5.99 m        │ 5.99 m        │ 5.99 m        │ 5.99 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=26, log(init-update)=2]  8.113 m       │ 8.113 m       │ 8.113 m       │ 8.113 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]  14.8 m        │ 14.8 m        │ 14.8 m        │ 14.8 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=28, log(init-update)=2]  30.44 m       │ 30.44 m       │ 30.44 m       │ 30.44 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=29, log(init-update)=2]  
