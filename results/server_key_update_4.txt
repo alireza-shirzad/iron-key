@@ -1,0 +1,31 @@
+Loading SRS
+16.55 ms      │ 31.18 ms      │ 18.38 ms      │ 18.52 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=1, log(init-update)=2]   13.29 ms      │ 21.57 ms      │ 18.44 ms      │ 18.36 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=2, log(init-update)=2]   14.02 ms      │ 21.84 ms      │ 18.85 ms      │ 18.72 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=3, log(init-update)=2]   14.06 ms      │ 20.75 ms      │ 19.09 ms      │ 18.94 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=4, log(init-update)=2]   14.29 ms      │ 21.96 ms      │ 19.29 ms      │ 19.34 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=5, log(init-update)=2]   14.88 ms      │ 22.78 ms      │ 19.88 ms      │ 20 ms         │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=6, log(init-update)=2]   15.18 ms      │ 24.53 ms      │ 21.24 ms      │ 20.98 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=7, log(init-update)=2]   15.6 ms       │ 30.04 ms      │ 24.37 ms      │ 24.12 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=8, log(init-update)=2]   16.2 ms       │ 48.77 ms      │ 28.18 ms      │ 28.62 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=9, log(init-update)=2]   22.99 ms      │ 58.38 ms      │ 37.89 ms      │ 38.56 ms      │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=10, log(init-update)=2]  18.93 ms      │ 140.6 ms      │ 77.22 ms      │ 78.5 ms       │ 100     │ 100
+      ├─ [log(capacity)=32, log(|update|)=11, log(init-update)=2]  18.67 ms      │ 215.6 ms      │ 110.9 ms      │ 112.5 ms      │ 90      │ 90
+      ├─ [log(capacity)=32, log(|update|)=12, log(init-update)=2]  21.2 ms       │ 287.3 ms      │ 148.2 ms      │ 151.1 ms      │ 68      │ 68
+      ├─ [log(capacity)=32, log(|update|)=13, log(init-update)=2]  29.42 ms      │ 457.3 ms      │ 195 ms        │ 211.6 ms      │ 48      │ 48
+      ├─ [log(capacity)=32, log(|update|)=14, log(init-update)=2]  41.56 ms      │ 664.7 ms      │ 271.9 ms      │ 304.5 ms      │ 35      │ 35
+      ├─ [log(capacity)=32, log(|update|)=15, log(init-update)=2]  55.47 ms      │ 867.6 ms      │ 375.6 ms      │ 407.6 ms      │ 26      │ 26
+      ├─ [log(capacity)=32, log(|update|)=16, log(init-update)=2]  99.57 ms      │ 1.215 s       │ 581.6 ms      │ 605.6 ms      │ 18      │ 18
+      ├─ [log(capacity)=32, log(|update|)=17, log(init-update)=2]  194 ms        │ 1.626 s       │ 879.2 ms      │ 861.1 ms      │ 12      │ 12
+      ├─ [log(capacity)=32, log(|update|)=18, log(init-update)=2]  386.5 ms      │ 2.338 s       │ 1.269 s       │ 1.304 s       │ 8       │ 8
+      ├─ [log(capacity)=32, log(|update|)=19, log(init-update)=2]  765.3 ms      │ 3.992 s       │ 2.196 s       │ 2.283 s       │ 6       │ 6
+      ├─ [log(capacity)=32, log(|update|)=20, log(init-update)=2]  1.805 s       │ 5.542 s       │ 3.811 s       │ 3.742 s       │ 4       │ 4
+      ├─ [log(capacity)=32, log(|update|)=21, log(init-update)=2]  3.904 s       │ 6.934 s       │ 5.419 s       │ 5.419 s       │ 2       │ 2
+      ├─ [log(capacity)=32, log(|update|)=22, log(init-update)=2]  9.156 s       │ 17.14 s       │ 13.14 s       │ 13.14 s       │ 2       │ 2
+      ├─ [log(capacity)=32, log(|update|)=23, log(init-update)=2]  19.69 s       │ 19.69 s       │ 19.69 s       │ 19.69 s       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=24, log(init-update)=2]  44.46 s       │ 44.46 s       │ 44.46 s       │ 44.46 s       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=25, log(init-update)=2]  1.617 m       │ 1.617 m       │ 1.617 m       │ 1.617 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=26, log(init-update)=2]  3.907 m       │ 3.907 m       │ 3.907 m       │ 3.907 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=27, log(init-update)=2]  8.54 m        │ 8.54 m        │ 8.54 m        │ 8.54 m        │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=28, log(init-update)=2]  20.42 m       │ 20.42 m       │ 20.42 m       │ 20.42 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=29, log(init-update)=2]  49.3 m        │ 49.3 m        │ 49.3 m        │ 49.3 m        │ 1       │ 1
