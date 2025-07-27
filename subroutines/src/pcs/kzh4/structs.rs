@@ -106,14 +106,14 @@ impl<E: Pairing> KZH4AuxInfo<E> {
     pub fn new(d_x: Vec<E::G1Affine>, d_xy: Vec<E::G1Affine>, d_xyz: Vec<E::G1Affine>) -> Self {
         Self { d_x, d_xy, d_xyz }
     }
-    pub fn get_d_x(&self) -> Vec<E::G1Affine> {
-        self.d_x.clone()
+    pub fn get_d_x(&self) -> &[E::G1Affine] {
+        &self.d_x
     }
-    pub fn get_d_xy(&self) -> Vec<E::G1Affine> {
-        self.d_xy.clone()
+    pub fn get_d_xy(&self) -> &[E::G1Affine] {
+        &self.d_xy
     }
-    pub fn get_d_xyz(&self) -> Vec<E::G1Affine> {
-        self.d_xyz.clone()
+    pub fn get_d_xyz(&self) -> &[E::G1Affine] {
+        &self.d_xyz
     }
 }
 
@@ -230,17 +230,17 @@ impl<E: Pairing> KZH4OpeningProof<E> {
     }
 
     /// Get the evaluation of quotients
-    pub fn get_d_z(&self) -> Vec<E::G1Affine> {
-        self.d_z.clone()
+    pub fn get_d_z(&self) -> &[E::G1Affine] {
+        &self.d_z
     }
 
     /// Get the evaluation of quotients
-    pub fn get_d_y(&self) -> Vec<E::G1Affine> {
-        self.d_y.clone()
+    pub fn get_d_y(&self) -> &[E::G1Affine] {
+        &self.d_y
     }
     /// Get the f_star
-    pub fn get_f_star(&self) -> DenseOrSparseMLE<E::ScalarField> {
-        self.f_star.clone()
+    pub fn get_f_star(&self) -> &DenseOrSparseMLE<E::ScalarField> {
+        &self.f_star
     }
 }
 #[derive(CanonicalSerialize, CanonicalDeserialize, Clone, Debug, PartialEq, Eq)]

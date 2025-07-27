@@ -206,7 +206,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             point,
             E::ScalarField::zero(),
         );
-        let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d_x());
+        let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d_x().iter().copied());
         let v_x = verifier_param.get_v_x();
         let g2_pairing_elements =
             std::iter::once(verifier_param.get_minus_v()).chain(v_x.iter().copied());
@@ -223,7 +223,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         .unwrap()
         .into();
 
-        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_y());
+        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_y().iter().copied());
         let v_y = verifier_param.get_v_y();
         let g2_pairing_elements =
             std::iter::once(verifier_param.get_minus_v()).chain(v_y.iter().copied());
@@ -241,7 +241,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         .unwrap()
         .into();
 
-        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_z());
+        let g1_pairing_elements = std::iter::once(new_c).chain(proof.get_d_z().iter().copied());
         let v_z = verifier_param.get_v_z();
         let g2_pairing_elements =
             std::iter::once(verifier_param.get_minus_v()).chain(v_z.iter().copied());
