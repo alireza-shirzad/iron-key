@@ -214,6 +214,7 @@ impl<E: Pairing> Sub for KZH4AuxInfo<E> {
 /// proof of opening
 pub struct KZH4OpeningProof<E: Pairing> {
     /// Evaluation of quotients
+    d_x: Vec<E::G1Affine>,
     d_y: Vec<E::G1Affine>,
     d_z: Vec<E::G1Affine>,
     f_star: DenseOrSparseMLE<E::ScalarField>,
@@ -222,16 +223,27 @@ pub struct KZH4OpeningProof<E: Pairing> {
 impl<E: Pairing> KZH4OpeningProof<E> {
     /// Create a new opening proof
     pub fn new(
+        d_x: Vec<E::G1Affine>,
         d_y: Vec<E::G1Affine>,
         d_z: Vec<E::G1Affine>,
         f_star: DenseOrSparseMLE<E::ScalarField>,
     ) -> Self {
-        Self { d_y, d_z, f_star }
+        Self {
+            d_x,
+            d_y,
+            d_z,
+            f_star,
+        }
     }
 
     /// Get the evaluation of quotients
     pub fn get_d_z(&self) -> &[E::G1Affine] {
         &self.d_z
+    }
+
+    /// Get the evaluation of quotients
+    pub fn get_d_x(&self) -> &[E::G1Affine] {
+        &self.d_x
     }
 
     /// Get the evaluation of quotients

@@ -15,7 +15,7 @@ fn test_single_helper(nv: usize, is_sparse: bool) -> Result<(), PCSError> {
     let com = KZH2::commit(&ck, &poly)?;
     let aux = KZH2::comp_aux(&ck, &poly, &com)?;
     let (proof, value) = KZH2::open(&ck, &poly, &point, &aux)?;
-    assert!(KZH2::verify(&vk, &com, &point, &value, &aux, &proof)?);
+    assert!(KZH2::verify(&vk, &com, &point, &value, Some(&aux), &proof)?);
 
     Ok(())
 }

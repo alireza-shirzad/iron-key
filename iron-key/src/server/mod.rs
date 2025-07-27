@@ -330,19 +330,11 @@ where
         )
         .unwrap();
         end_timer!(timer_open);
-        let timer_auxes = start_timer!(|| "IronServer::lookup_prove::auxes");
-        let auxes = [
-            last_reg_message.get_label_aux().clone(),
-            last_keys_message.get_value_aux().clone(),
-        ]
-        .to_vec();
-        end_timer!(timer_auxes);
         end_timer!(timer);
         Ok(IronLookupProof::new(
             index_boolean,
             label_opening_proof,
             value_opening_proof,
-            auxes,
         ))
     }
 

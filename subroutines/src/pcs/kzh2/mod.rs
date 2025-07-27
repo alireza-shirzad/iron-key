@@ -188,14 +188,15 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
         commitment: &Self::Commitment,
         point: &<Self::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: &E::ScalarField,
-        aux: &Self::Aux,
+        aux: Option<&Self::Aux>,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError> {
         let verify_timer = start_timer!(|| "KZH::Verify");
         let (x0, y0) = point.split_at(verifier_param.get_nu());
         // Check 1: Pairing check for commitment switching
         let check1_timer = start_timer!(|| "KZH::Verify::Check1");
-        let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d());
+        let g1_pairing_elements =
+            std::iter::once(commitment.get_commitment()).chain(proof.get_d_x().iter().copied());
         let g2_pairing_elements = std::iter::once(verifier_param.get_minus_v_prime())
             .chain(verifier_param.get_v_vec().iter().copied());
         let p1 = E::multi_pairing(g1_pairing_elements, g2_pairing_elements).is_zero();
@@ -214,7 +215,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             .get_h_vec()
             .iter()
             .copied()
-            .chain(aux.get_d().iter().copied())
+            .chain(proof.get_d_x().iter().copied())
             .collect();
         let p2 = E::G1::msm(&bases, &scalars).unwrap().is_zero();
         end_timer!(check2_timer);
@@ -233,18 +234,16 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         commitments: &[Self::Commitment],
-        auxs: &[Self::Aux],
+        auxs: Option<&[Self::Aux]>,
         points: &Self::Point,
         values: &[E::ScalarField],
         batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
         let mut aggr_comm = Self::Commitment::default();
-        let mut aggr_aux = KZH2AuxInfo::new(vec![E::G1Affine::zero(); auxs[0].get_d().len()]);
         let mut aggr_value = E::ScalarField::zero();
         for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
             aggr_comm = aggr_comm + *comm;
-            aggr_aux = aggr_aux + aux.clone();
             aggr_value += value;
         }
 
@@ -253,7 +252,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH2<E> {
             &aggr_comm,
             points,
             &aggr_value,
-            &aggr_aux,
+            None,
             batch_proof,
         )
     }
@@ -303,7 +302,7 @@ impl<E: Pairing> KZH2<E> {
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
-        _aux: &KZH2AuxInfo<E>,
+        aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open_dense");
         let prover_param: &KZH2ProverParam<E> = prover_param.borrow();
@@ -311,14 +310,17 @@ impl<E: Pairing> KZH2<E> {
         let f_star = fix_last_variables(polynomial, x0);
         let z0 = fix_last_variables(&f_star, y0).evaluations[0];
         end_timer!(open_timer);
-        Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Dense(f_star)), z0))
+        Ok((
+            KZH2OpeningProof::new(aux.get_d(), DenseOrSparseMLE::Dense(f_star)),
+            z0,
+        ))
     }
 
     fn open_sparse(
         prover_param: impl Borrow<KZH2ProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
-        _aux: &KZH2AuxInfo<E>,
+        aux: &KZH2AuxInfo<E>,
     ) -> Result<(KZH2OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open_sparse");
         let borrow_timer = start_timer!(|| "KZH::Open_sparse::Borrow");
@@ -339,7 +341,7 @@ impl<E: Pairing> KZH2<E> {
             .unwrap_or(E::ScalarField::zero());
         end_timer!(z0_timer);
         end_timer!(open_timer);
-        Ok((KZH2OpeningProof::new(DenseOrSparseMLE::Sparse(f_star)), z0))
+        Ok((KZH2OpeningProof::new(aux.get_d(), DenseOrSparseMLE::Sparse(f_star)), z0))
     }
 
     fn comp_aux_dense(

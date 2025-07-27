@@ -3,7 +3,10 @@ pub mod structs;
 #[cfg(test)]
 mod tests;
 use crate::{
-    pcs::kzh4::srs::{KZH4ProverParam, KZH4VerifierParam},
+    pcs::{
+        kzh4::srs::{KZH4ProverParam, KZH4UniversalParams, KZH4VerifierParam},
+        StructuredReferenceString,
+    },
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
@@ -14,15 +17,13 @@ use ark_ff::{Field, One, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
-use rayon::iter::IntoParallelRefIterator;
-#[cfg(feature = "parallel")]
-use rayon::join;
-
-use crate::pcs::{kzh4::srs::KZH4UniversalParams, StructuredReferenceString};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_iter_mut, end_timer, rand::Rng, start_timer};
+use ark_std::{cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer};
+use rand::RngCore;
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
+#[cfg(feature = "parallel")]
+use rayon::{iter::IntoParallelRefIterator, join};
 use std::{
     borrow::Borrow,
     collections::BTreeMap,
@@ -193,7 +194,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         commitment: &Self::Commitment,
         point: &<Self::Polynomial as Polynomial<E::ScalarField>>::Point,
         value: &E::ScalarField,
-        aux: &Self::Aux,
+        aux: Option<&Self::Aux>,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError> {
         let verify_timer = start_timer!(|| "KZH::Verify");
@@ -206,7 +207,8 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             point,
             E::ScalarField::zero(),
         );
-        let g1_pairing_elements = std::iter::once(commitment.get_commitment()).chain(aux.get_d_x().iter().copied());
+        let g1_pairing_elements =
+            std::iter::once(commitment.get_commitment()).chain(proof.get_d_x().iter().copied());
         let v_x = verifier_param.get_v_x();
         let g2_pairing_elements =
             std::iter::once(verifier_param.get_minus_v()).chain(v_x.iter().copied());
@@ -217,7 +219,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         // Second pairing check
 
         let new_c = E::G1::msm(
-            aux.get_d_x().to_vec().as_slice(),
+            proof.get_d_x().to_vec().as_slice(),
             EqPolynomial::new(split_input[0].clone()).evals().as_slice(),
         )
         .unwrap()
@@ -280,12 +282,13 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         commitments: &[Self::Commitment],
-        auxs: &[Self::Aux],
+        auxs: Option<&[Self::Aux]>,
         points: &Self::Point,
         values: &[E::ScalarField],
         batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
+        let auxs = auxs.unwrap();
         let mut aggr_comm = Self::Commitment::default();
         let mut aggr_aux = KZH4AuxInfo::new(
             vec![E::G1Affine::zero(); auxs[0].get_d_x().len()],
@@ -304,7 +307,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             &aggr_comm,
             points,
             &aggr_value,
-            &aggr_aux,
+            Some(&aggr_aux),
             batch_proof,
         )
     }
@@ -451,7 +454,10 @@ impl<E: Pairing> KZH4<E> {
         );
         let evaluation = f_star.evaluate(&split_input[3]);
         end_timer!(open_timer);
-        Ok((KZH4OpeningProof::new(d_y, d_z, f_star), evaluation))
+        Ok((
+            KZH4OpeningProof::new(aux.get_d_x().to_vec(), d_y, d_z, f_star),
+            evaluation,
+        ))
     }
 
     fn open_sparse(
@@ -488,8 +494,7 @@ impl<E: Pairing> KZH4<E> {
             let eq_evals = EqPolynomial::new(split_input[0].clone()).evals();
             end_timer!(timer);
             let timer = start_timer!(|| "3");
-            let i = eq_evals
-                .par_iter()
+            let i = cfg_iter!(eq_evals)
                 .position_first(|x| x.is_one())
                 .expect("eq_evals should contain exactly one '1'");
             end_timer!(timer);
@@ -506,8 +511,7 @@ impl<E: Pairing> KZH4<E> {
             let eq_evals = EqPolynomial::new(combined_input.clone()).evals();
             end_timer!(timer);
             let timer = start_timer!(|| "7");
-            let i = eq_evals
-                .par_iter()
+            let i = cfg_iter!(eq_evals)
                 .position_first(|x| x.is_one())
                 .expect("eq_evals should contain exactly one '1'");
             end_timer!(timer);
@@ -581,7 +585,10 @@ impl<E: Pairing> KZH4<E> {
         );
         let evaluation = f_star.evaluate(&split_input[3]);
         end_timer!(open_timer);
-        Ok((KZH4OpeningProof::new(d_y, d_z, f_star), evaluation))
+        Ok((
+            KZH4OpeningProof::new(aux.get_d_x().to_vec(), d_y, d_z, f_star),
+            evaluation,
+        ))
     }
 
     fn comp_aux_dense(

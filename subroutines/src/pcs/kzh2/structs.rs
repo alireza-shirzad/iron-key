@@ -146,19 +146,26 @@ impl<E: Pairing> Sub for KZH2AuxInfo<E> {
 /// proof of opening
 pub struct KZH2OpeningProof<E: Pairing> {
     /// Evaluation of quotients
+    d_x: Vec<E::G1Affine>,
     f_star: DenseOrSparseMLE<E::ScalarField>,
 }
 
 impl<E: Pairing> KZH2OpeningProof<E> {
     pub fn rand(rng: &mut impl Rng, nu: usize) -> Self {
         KZH2OpeningProof {
+            d_x: (0..nu).map(|_| E::G1Affine::zero()).collect(),
             f_star: DenseOrSparseMLE::rand(nu, rng),
         }
     }
 
     /// Create a new opening proof
-    pub fn new(f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
-        Self { f_star }
+    pub fn new(d_x: Vec<E::G1Affine>, f_star: DenseOrSparseMLE<E::ScalarField>) -> Self {
+        Self { d_x, f_star }
+    }
+
+    /// Get the evaluation of quotients
+    pub fn get_d_x(&self) -> &[E::G1Affine] {
+        &self.d_x
     }
 
     /// Get the opening proof

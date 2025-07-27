@@ -16,9 +16,7 @@ where
     index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
     label_opening_proof: (PC::Proof, PC::Evaluation),
     value_opening_proof: (PC::Proof, PC::Evaluation),
-    auxes: Vec<PC::Aux>,
 }
-
 
 impl<E, PC> IronLookupProof<E, PC>
 where
@@ -33,13 +31,11 @@ where
         index: <PC::Polynomial as Polynomial<E::ScalarField>>::Point,
         label_opening_proof: (PC::Proof, PC::Evaluation),
         value_opening_proof: (PC::Proof, PC::Evaluation),
-        auxes: Vec<PC::Aux>,
     ) -> Self {
         Self {
             index,
             label_opening_proof,
             value_opening_proof,
-            auxes,
         }
     }
 
@@ -52,9 +48,5 @@ where
 
     pub fn get_value_opening_proof(&self) -> (&PC::Proof, &PC::Evaluation) {
         (&self.value_opening_proof.0, &self.value_opening_proof.1)
-    }
-
-    pub fn get_auxes(&self) -> &[PC::Aux] {
-        &self.auxes
     }
 }

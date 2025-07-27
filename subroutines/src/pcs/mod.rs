@@ -87,14 +87,14 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         commitment: &Self::Commitment,
         point: &Self::Point,
         value: &E::ScalarField,
-        aux: &Self::Aux,
+        aux: Option<&Self::Aux>,
         proof: &Self::Proof,
     ) -> Result<bool, PCSError>;
 
     fn batch_verify(
         _verifier_param: &Self::VerifierParam,
         _commitments: &[Self::Commitment],
-        _auxs: &[Self::Aux],
+        _auxs: Option<&[Self::Aux]>,
         _point: &Self::Point,
         _values: &[E::ScalarField],
         _batch_proof: &Self::BatchProof,
