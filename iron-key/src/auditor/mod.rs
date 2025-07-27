@@ -123,15 +123,13 @@ where
                 let last_label_commitment = last_reg.get_label_commitment();
                 let second_last_label_commitment = second_last_reg.get_label_commitment();
                 // Get the last two label auxs
-                let last_label_aux = last_reg.get_label_aux();
-                let second_last_label_aux = second_last_reg.get_label_aux();
                 MvPCS::batch_verify(
                     self.key.get_pcs_verifier_param(),
                     &[
                         last_label_commitment.clone(),
                         second_last_label_commitment.clone(),
                     ],
-                    &[last_label_aux.clone(), second_last_label_aux.clone()],
+                    None,
                     &zerocheck_proof.point,
                     &[E::ScalarField::ZERO, E::ScalarField::ZERO],
                     last_reg

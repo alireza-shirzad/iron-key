@@ -102,7 +102,7 @@ where
             last_keys_message.get_value_commitment(),
             &proof.get_index(),
             &value,
-            &proof.get_auxes()[0],
+            None,
             proof.get_value_opening_proof().0,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
@@ -114,7 +114,7 @@ where
             last_reg_message.get_label_commitment(),
             &proof.get_index(),
             &label.to_field(),
-            &proof.get_auxes()[1],
+            None,
             proof.get_label_opening_proof().0,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
