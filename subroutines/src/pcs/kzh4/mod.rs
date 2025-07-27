@@ -486,36 +486,20 @@ impl<E: Pairing> KZH4<E> {
         );
         let (d_y, d_z) = if is_boolean_point {
             let open_boolean = start_timer!(|| "KZH::Open_sparse::boolean");
-            let timer = start_timer!(|| "1");
             let d_xy = aux.get_d_xy();
             let d_xyz = aux.get_d_xyz();
-            end_timer!(timer);
-            let timer = start_timer!(|| "2");
             let eq_evals = EqPolynomial::new(split_input[0].clone()).evals();
-            end_timer!(timer);
-            let timer = start_timer!(|| "3");
             let i = Self::index_of_one(&eq_evals);
-            end_timer!(timer);
-            let timer = start_timer!(|| "4");
             let d_y: Vec<<E as Pairing>::G1Affine> = (0..1 << prover_param.get_num_vars_y())
                 .map(|j| d_xy[(1 << prover_param.get_num_vars_x()) * i + j])
                 .collect::<Vec<_>>();
-            end_timer!(timer);
-            let timer = start_timer!(|| "5");
             let combined_input: Vec<_> =
                 [split_input[0].as_slice(), split_input[1].as_slice()].concat();
-            end_timer!(timer);
-            let timer = start_timer!(|| "6");
             let eq_evals = EqPolynomial::new(combined_input.clone()).evals();
-            end_timer!(timer);
-            let timer = start_timer!(|| "7");
             let i = Self::index_of_one(&eq_evals);
-            end_timer!(timer);
-            let timer = start_timer!(|| "8");
             let d_z: Vec<<E as Pairing>::G1Affine> = (0..(1 << prover_param.get_num_vars_z()))
                 .map(|j| d_xyz[i * (1 << prover_param.get_num_vars_z()) + j])
                 .collect::<Vec<_>>();
-            end_timer!(timer);
             end_timer!(open_boolean);
             (d_y, d_z)
         } else {
