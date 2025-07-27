@@ -72,6 +72,10 @@ where
         }
     }
 
+    fn get_key(&self) -> &Self::ClientKey {
+        &self.key
+    }
+
     fn get_label(&self) -> <Self::Dictionary as VKDDictionary<E>>::Label {
         self.label.clone()
     }

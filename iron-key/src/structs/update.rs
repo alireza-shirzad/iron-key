@@ -75,9 +75,7 @@ where
         + Send,
 {
     value_commitment: MvPCS::Commitment,
-    value_aux: MvPCS::Aux,
     difference_accumulator: MvPCS::Commitment,
-    difference_aux: MvPCS::Aux,
 }
 
 impl<E, MvPCS> IronEpochKeyMessage<E, MvPCS>
@@ -92,15 +90,11 @@ where
 {
     pub fn new(
         difference_accumulator: MvPCS::Commitment,
-        difference_aux: MvPCS::Aux,
         value_commitment: MvPCS::Commitment,
-        value_aux: MvPCS::Aux,
     ) -> Self {
         Self {
             value_commitment,
             difference_accumulator,
-            value_aux,
-            difference_aux,
         }
     }
 
@@ -110,12 +104,7 @@ where
     pub fn get_difference_accumulator(&self) -> &MvPCS::Commitment {
         &self.difference_accumulator
     }
-    pub fn get_value_aux(&self) -> &MvPCS::Aux {
-        &self.value_aux
-    }
-    pub fn get_difference_aux(&self) -> &MvPCS::Aux {
-        &self.difference_aux
-    }
+
 }
 
 #[derive(CanonicalSerialize, Clone)]
@@ -130,7 +119,6 @@ where
         + Send,
 {
     label_commitment: MvPCS::Commitment,
-    label_aux: MvPCS::Aux,
     update_proof: Option<IronUpdateProof<E, MvPCS>>,
 }
 
@@ -147,12 +135,10 @@ where
     pub fn new(
         label_commitment: MvPCS::Commitment,
         update_proof: Option<IronUpdateProof<E, MvPCS>>,
-        label_aux: MvPCS::Aux,
     ) -> Self {
         Self {
             label_commitment,
             update_proof,
-            label_aux,
         }
     }
 
@@ -162,7 +148,5 @@ where
     pub fn get_update_proof(&self) -> &Option<IronUpdateProof<E, MvPCS>> {
         &self.update_proof
     }
-    pub fn get_label_aux(&self) -> &MvPCS::Aux {
-        &self.label_aux
-    }
+
 }

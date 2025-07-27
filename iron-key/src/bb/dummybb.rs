@@ -87,7 +87,7 @@ impl<
     }
 }
 
-#[derive(Derivative)]
+#[derive(Derivative, CanonicalSerialize)]
 #[derivative(Default(bound = ""))]
 pub struct DummyBB<
     E: Pairing,

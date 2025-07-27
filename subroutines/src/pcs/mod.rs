@@ -9,7 +9,7 @@ use ark_ff::Field;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::rand::Rng;
 use errors::PCSError;
-use std::{borrow::Borrow, fmt::Debug, hash::Hash};
+use std::{borrow::Borrow, default, fmt::Debug, hash::Hash};
 use transcript::IOPTranscript;
 
 /// This trait defines APIs for polynomial commitment schemes.
@@ -39,6 +39,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         + PartialEq
         + Eq
         + Send
+        + Default
         + Sync;
 
     fn gen_srs_for_testing<R: Rng>(

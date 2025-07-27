@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt};
 
 use ark_bn254::{Bn254, Fr};
+use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
     VKD,
@@ -94,7 +95,7 @@ fn prepare_prover_update_prove_inputs(
 
 pub const PARAMS: &[Params] = &{
     const INIT: u64 = 2;
-    const ARRAY_SIZE: usize = (SHARED_LOG_CAPACITY-1) as usize;
+    const ARRAY_SIZE: usize = (SHARED_LOG_CAPACITY - 1) as usize;
 
     const fn build_light() -> [Params; ARRAY_SIZE] {
         let mut out = [Params(0, 0, 0); ARRAY_SIZE];
@@ -124,8 +125,14 @@ fn light_update_keys(bencher: Bencher, Params(cap, upd, init): Params) {
 
     let (mut server, update_batch, mut bb) =
         prepare_prover_update_prove_inputs(pp_ref, cap, upd, init);
-
+    let bb_in_size = bb.serialized_size(ark_serialize::Compress::Yes);
     bencher.bench_local(|| {
         server.update_keys(&update_batch, &mut bb).unwrap();
     });
+
+    let bb_out_size = bb.serialized_size(ark_serialize::Compress::Yes);
+    println!(
+        "Posted bulletin board message size: {} bytes\n",
+        bb_out_size - bb_in_size
+    );
 }

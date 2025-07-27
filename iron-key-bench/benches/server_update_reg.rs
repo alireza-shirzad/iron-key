@@ -5,6 +5,7 @@ use std::{
 };
 
 use ark_bn254::{Bn254, Fr};
+use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
     VKD,
@@ -148,9 +149,15 @@ fn light_update_reg(bencher: Bencher, Params(cap, _upd_log_size, init): Params) 
     let (mut server, update_batch, mut bb) =
         prepare_prover_update_prove_inputs(cap, _upd_log_size, init);
 
+    let bb_in_size = bb.serialized_size(ark_serialize::Compress::Yes);
     bencher.bench_local(|| {
         // This benchmarks the update_reg with the `update_batch`
         // whose size is determined by `_upd_log_size`.
         server.update_reg(&update_batch, &mut bb).unwrap();
     });
+    let bb_out_size = bb.serialized_size(ark_serialize::Compress::Yes);
+    println!(
+        "Posted bulletin board message size: {} bytes\n",
+        bb_out_size - bb_in_size
+    );
 }

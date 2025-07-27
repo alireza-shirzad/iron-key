@@ -39,6 +39,9 @@ pub struct IronServer<
 > {
     dictionary: IronDictionary<E, T>,
     key: IronServerKey<E, MvPCS>,
+    pub label_aux: MvPCS::Aux,
+    pub value_aux: MvPCS::Aux,
+    pub diff_aux: MvPCS::Aux,
 }
 
 impl<E, MvPCS, T> VKDServer<E, MvPCS> for IronServer<E, MvPCS, T>
@@ -75,6 +78,9 @@ where
         Self {
             dictionary: IronDictionary::new_with_capacity(pp.get_capacity()),
             key: pp.to_server_key(),
+            label_aux: MvPCS::Aux::default(),
+            value_aux: MvPCS::Aux::default(),
+            diff_aux: MvPCS::Aux::default(),
         }
     }
 
@@ -134,15 +140,16 @@ where
         let iron_epoch_reg_message = match bulletin_board.get_last_reg_update_message() {
             // If it's the first time, the diff info is the new info
             None => {
+                self.label_aux = diff_label_aux;
                 // Send the commitment
-                IronEpochRegMessage::new(diff_label_com, None, diff_label_aux.clone())
+                IronEpochRegMessage::new(diff_label_com, None)
             },
             // If it's not the first time, we need to do a zerocheck
             Some(last_reg_message) => {
                 // Get the last label commitment
                 let last_label_comm = last_reg_message.get_label_commitment();
                 // Get the last label aux
-                let last_label_aux = last_reg_message.get_label_aux();
+                let last_label_aux = &self.label_aux;
                 // The new commitment is the last one plus the diff
                 let new_label_comm = last_label_comm.clone() + diff_label_com;
                 // The new aux is the last one plus the diff
@@ -202,7 +209,8 @@ where
                     current_reg_eval,
                     update_proof.unwrap().0,
                 );
-                IronEpochRegMessage::new(new_label_comm, Some(iron_update_proof), new_label_aux)
+                self.label_aux = new_label_aux;
+                IronEpochRegMessage::new(new_label_comm, Some(iron_update_proof))
             },
         };
 
@@ -261,28 +269,22 @@ where
         // Check if the bulletin board has a key message
         let iron_epoch_key_message = match bulletin_board.get_last_key_update_message() {
             // If it's the first time, the diff info is the new info
-            None => IronEpochKeyMessage::new(
-                diff_value_com.clone(),
-                diff_value_aux.clone(),
-                diff_value_com,
-                diff_value_aux,
-            ),
+            None => {
+                self.value_aux = diff_value_aux.clone();
+                IronEpochKeyMessage::new(diff_value_com.clone(), diff_value_com)
+            },
             // If there's already a key message, we need to accumulate the diff to the rlc
             // polynomial
             Some(last_key_message) => {
                 let last_value_comm = last_key_message.get_value_commitment();
                 let new_value_comm = last_value_comm.clone() + diff_value_com.clone();
-                let new_value_aux =
-                    last_key_message.get_value_aux().clone() + diff_value_aux.clone();
+                let new_value_aux = self.value_aux.clone() + diff_value_aux.clone();
                 let last_diff_accumulator = last_key_message.get_difference_accumulator();
                 let difference_accumulator = last_diff_accumulator.clone() + diff_value_com;
-                let difference_aux = last_key_message.get_difference_aux().clone() + diff_value_aux;
-                IronEpochKeyMessage::new(
-                    new_value_comm,
-                    new_value_aux,
-                    difference_accumulator,
-                    difference_aux,
-                )
+                let difference_aux = self.diff_aux.clone() + diff_value_aux;
+                self.value_aux = new_value_aux;
+                self.diff_aux = difference_aux;
+                IronEpochKeyMessage::new(new_value_comm, difference_accumulator)
             },
         };
 
@@ -302,8 +304,6 @@ where
         let index = self.dictionary.find_index(&label).unwrap();
         end_timer!(timer_index);
         let timer_get_message = start_timer!(|| "IronServer::lookup_prove::get_message");
-        let last_reg_message = bulletin_board.get_last_reg_update_message().unwrap();
-        let last_keys_message = bulletin_board.get_last_key_update_message().unwrap();
         end_timer!(timer_get_message);
         let timer_index_boolean = start_timer!(|| "IronServer::lookup_prove::index_boolean");
         let index_boolean = Self::usize_to_field_bits(index, self.dictionary.log_max_size());
@@ -319,14 +319,14 @@ where
             self.key.get_pcs_prover_param(),
             &*label_ref,
             &index_boolean,
-            last_reg_message.get_label_aux(),
+            &self.label_aux,
         )
         .unwrap();
         let value_opening_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
             &*value_ref,
             &index_boolean,
-            last_keys_message.get_value_aux(),
+            &self.value_aux,
         )
         .unwrap();
         end_timer!(timer_open);

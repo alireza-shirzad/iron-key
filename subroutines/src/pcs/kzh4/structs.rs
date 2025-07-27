@@ -132,6 +132,12 @@ impl<E: Pairing> Add for KZH4AuxInfo<E> {
 
     fn add(self, rhs: Self) -> Self::Output {
         // sanity-checks (optional)
+        if self == KZH4AuxInfo::default() {
+            return rhs;
+        }
+        if rhs == KZH4AuxInfo::default() {
+            return self;
+        }
         assert_eq!(self.d_x.len(), rhs.d_x.len());
         assert_eq!(self.d_xy.len(), rhs.d_xy.len());
         assert_eq!(self.d_xyz.len(), rhs.d_xyz.len());

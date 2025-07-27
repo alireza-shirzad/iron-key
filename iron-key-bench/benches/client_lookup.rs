@@ -4,6 +4,7 @@ use std::{
 };
 
 use ark_bn254::{Bn254, Fr};
+use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
     VKD, VKDClient, VKDPublicParameters, VKDServer,
@@ -80,9 +81,13 @@ fn server_with_updates(
 #[divan::bench(    max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     bencher
-        // build a brand-new (server, bb, label) for *each* iteration
-        .with_inputs(|| server_with_updates(log_capacity_arg))
-        // pass it *by reference* so the tuple itself is not dropped inside the timer
+        .with_inputs(|| {
+            let inputs = server_with_updates(log_capacity_arg); 
+            println!("proof size = {}", inputs.1.serialized_size(ark_serialize::Compress::Yes));
+            println!("client key size = {}", inputs.0.get_key().serialized_size(ark_serialize::Compress::Yes));
+            inputs
+        })
+        // verify inside the timing loop
         .bench_local_refs(|(client, proof, bb)| {
             client.lookup_verify(client.get_label(), Fr::from(1u64), proof, bb)
         });

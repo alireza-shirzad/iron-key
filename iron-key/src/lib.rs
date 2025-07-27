@@ -111,7 +111,7 @@ where
         proof: Self::SelfAuditProof,
         bulletin_board: &Self::BulletinBoard,
     ) -> VKDResult<()>;
-
+    fn get_key(&self) -> &Self::ClientKey;
     fn get_label(&self) -> <Self::Dictionary as VKDDictionary<E>>::Label;
 }
 
