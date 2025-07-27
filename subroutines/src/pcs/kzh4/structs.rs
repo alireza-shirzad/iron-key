@@ -84,6 +84,7 @@ impl<E: Pairing> KZH4Commitment<E> {
 pub struct KZH4AuxInfo<E: Pairing> {
     d_x: Vec<E::G1Affine>,
     d_xy: Vec<E::G1Affine>,
+    d_xyz: Vec<E::G1Affine>,
 }
 impl<E> ark_serialize::CanonicalSerialize for KZH4AuxInfo<E>
 where
@@ -102,14 +103,17 @@ where
     }
 }
 impl<E: Pairing> KZH4AuxInfo<E> {
-    pub fn new(d_x: Vec<E::G1Affine>, d_xy: Vec<E::G1Affine>) -> Self {
-        Self { d_x, d_xy }
+    pub fn new(d_x: Vec<E::G1Affine>, d_xy: Vec<E::G1Affine>, d_xyz: Vec<E::G1Affine>) -> Self {
+        Self { d_x, d_xy, d_xyz }
     }
     pub fn get_d_x(&self) -> Vec<E::G1Affine> {
         self.d_x.clone()
     }
     pub fn get_d_xy(&self) -> Vec<E::G1Affine> {
         self.d_xy.clone()
+    }
+    pub fn get_d_xyz(&self) -> Vec<E::G1Affine> {
+        self.d_xyz.clone()
     }
 }
 
@@ -118,6 +122,7 @@ impl<E: Pairing> Default for KZH4AuxInfo<E> {
         KZH4AuxInfo {
             d_x: vec![E::G1Affine::zero(); 0],
             d_xy: vec![E::G1Affine::zero(); 0],
+            d_xyz: vec![E::G1Affine::zero(); 0],
         }
     }
 }
@@ -129,29 +134,36 @@ impl<E: Pairing> Add for KZH4AuxInfo<E> {
         // sanity-checks (optional)
         assert_eq!(self.d_x.len(), rhs.d_x.len());
         assert_eq!(self.d_xy.len(), rhs.d_xy.len());
+        assert_eq!(self.d_xyz.len(), rhs.d_xyz.len());
 
         let len_x = self.d_x.len();
         let len_y = self.d_xy.len();
-        let mut all = vec![E::G1Affine::zero(); len_x + len_y];
+        let len_z = self.d_xyz.len();
+        let mut all = vec![E::G1Affine::zero(); len_x + len_y + len_z];
 
         // --- single parallel loop -------------------------------------------------
         cfg_iter_mut!(all).enumerate().for_each(|(idx, slot)| {
             *slot = if idx < len_x {
                 // first quarter → d_x
                 (self.d_x[idx] + rhs.d_x[idx]).into()
-            } else {
+            } else if idx < len_x + len_y {
                 // second quarter → d_y
                 let j = idx - len_x;
                 (self.d_xy[j] + rhs.d_xy[j]).into()
+            } else {
+                // third quarter → d_z
+                let j = idx - len_x - len_y;
+                (self.d_xyz[j] + rhs.d_xyz[j]).into()
             };
         });
         // --------------------------------------------------------------------------
 
         // split back *without copying*.
+        let d_xyz = all.split_off(len_x + len_y); // tail part
         let d_xy = all.split_off(len_x); // tail part
         let d_x = all; // head part
 
-        Self { d_x, d_xy }
+        Self { d_x, d_xy, d_xyz }
     }
 }
 
@@ -162,29 +174,36 @@ impl<E: Pairing> Sub for KZH4AuxInfo<E> {
         // sanity-checks (optional)
         assert_eq!(self.d_x.len(), rhs.d_x.len());
         assert_eq!(self.d_xy.len(), rhs.d_xy.len());
+        assert_eq!(self.d_xyz.len(), rhs.d_xyz.len());
 
         let len_x = self.d_x.len();
         let len_y = self.d_xy.len();
-        let mut all = vec![E::G1Affine::zero(); len_x + len_y];
+        let len_z = self.d_xyz.len();
+        let mut all = vec![E::G1Affine::zero(); len_x + len_y + len_z];
 
         // --- single parallel loop -------------------------------------------------
         cfg_iter_mut!(all).enumerate().for_each(|(idx, slot)| {
             *slot = if idx < len_x {
                 // first quarter → d_x
                 (self.d_x[idx] - rhs.d_x[idx]).into()
-            } else {
+            } else if idx < len_x + len_y {
                 // second quarter → d_y
                 let j = idx - len_x;
                 (self.d_xy[j] - rhs.d_xy[j]).into()
+            } else {
+                // third quarter → d_z
+                let j = idx - len_x - len_y;
+                (self.d_xyz[j] - rhs.d_xyz[j]).into()
             };
         });
         // --------------------------------------------------------------------------
 
         // split back *without copying*.
+        let d_xyz = all.split_off(len_x + len_y); // tail part
         let d_xy = all.split_off(len_x); // tail part
         let d_x = all; // head part
 
-        Self { d_x, d_xy }
+        Self { d_x, d_xy, d_xyz }
     }
 }
 

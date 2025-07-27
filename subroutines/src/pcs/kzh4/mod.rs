@@ -7,14 +7,14 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
-
 use ark_ec::{
     pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
-use ark_ff::{Field, Zero};
+use ark_ff::{Field, One, Zero};
 use ark_poly::{
     DenseMultilinearExtension, MultilinearExtension, Polynomial, SparseMultilinearExtension,
 };
+use rayon::iter::IntoParallelRefIterator;
 #[cfg(feature = "parallel")]
 use rayon::join;
 
@@ -152,6 +152,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         let mut aggr_aux: KZH4AuxInfo<E> = KZH4AuxInfo::new(
             vec![E::G1Affine::zero(); auxes[0].get_d_x().len()],
             vec![E::G1Affine::zero(); auxes[0].get_d_xy().len()],
+            vec![E::G1Affine::zero(); auxes[0].get_d_xyz().len()],
         );
         let (agg_poly, aggr_aux) = match polynomials[0] {
             DenseOrSparseMLE::Dense(_) => {
@@ -289,6 +290,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
         let mut aggr_aux = KZH4AuxInfo::new(
             vec![E::G1Affine::zero(); auxs[0].get_d_x().len()],
             vec![E::G1Affine::zero(); auxs[0].get_d_xy().len()],
+            vec![E::G1Affine::zero(); auxs[0].get_d_xyz().len()],
         );
         let mut aggr_value = E::ScalarField::zero();
         for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
@@ -350,6 +352,7 @@ impl<E: Pairing> KZH4<E> {
         aux: &KZH4AuxInfo<E>,
     ) -> Result<(KZH4OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open_dense");
+        let is_boolean_point = point.iter().all(|&x| x.is_zero() || x.is_one());
         let prover_param = prover_param.borrow();
         let len = prover_param.get_num_vars_x()
             + prover_param.get_num_vars_y()
@@ -367,30 +370,55 @@ impl<E: Pairing> KZH4<E> {
             E::ScalarField::zero(),
         );
 
-        let d_z = (0..1 << prover_param.get_num_vars_z())
-            .map(|i| {
-                let scalars = Self::get_dense_partial_evaluation_for_boolean_input(
-                    &polynomial.fix_variables(
-                        [split_input[0].as_slice(), split_input[1].as_slice()]
-                            .concat()
-                            .as_slice(),
-                    ),
-                    i,
-                    prover_param.get_num_vars_t(),
-                );
-                E::G1::msm_unchecked(prover_param.get_h_t().as_slice(), &scalars).into()
-            })
-            .collect::<Vec<_>>();
-        let d_y = (0..1 << prover_param.get_num_vars_y())
-            .map(|i| {
-                let evals_vec = EqPolynomial::new(split_input[0].clone()).evals();
-                let scalars = evals_vec.as_slice();
-                let bases = &aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i
-                    ..(1 << prover_param.get_num_vars_x()) * i
-                        + (1 << prover_param.get_num_vars_x())];
-                E::G1::msm_unchecked(bases, scalars).into()
-            })
-            .collect::<Vec<_>>();
+        let (d_y, d_z) = if is_boolean_point {
+            let eq_evals = EqPolynomial::new(split_input[0].clone()).evals();
+
+            let i = eq_evals
+                .iter()
+                .position(|x| x.is_one())
+                .expect("eq_evals should contain exactly one '1'");
+            let d_y = (0..1 << prover_param.get_num_vars_y())
+                .map(|j| aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + j])
+                .collect::<Vec<_>>();
+            let combined_input: Vec<_> =
+                [split_input[0].as_slice(), split_input[1].as_slice()].concat();
+            let eq_evals = EqPolynomial::new(combined_input.clone()).evals();
+            let i = eq_evals
+                .iter()
+                .position(|x| x.is_one())
+                .expect("eq_evals should contain exactly one '1'");
+
+            let d_z = (0..(1 << prover_param.get_num_vars_z()))
+                .map(|j| aux.get_d_xyz()[i * (1 << prover_param.get_num_vars_z()) + j])
+                .collect::<Vec<_>>();
+            (d_y, d_z)
+        } else {
+            let d_z = (0..1 << prover_param.get_num_vars_z())
+                .map(|i| {
+                    let scalars = Self::get_dense_partial_evaluation_for_boolean_input(
+                        &polynomial.fix_variables(
+                            [split_input[0].as_slice(), split_input[1].as_slice()]
+                                .concat()
+                                .as_slice(),
+                        ),
+                        i,
+                        prover_param.get_num_vars_t(),
+                    );
+                    E::G1::msm_unchecked(prover_param.get_h_t().as_slice(), &scalars).into()
+                })
+                .collect::<Vec<_>>();
+            let d_y = (0..1 << prover_param.get_num_vars_y())
+                .map(|i| {
+                    let evals_vec = EqPolynomial::new(split_input[0].clone()).evals();
+                    let scalars = evals_vec.as_slice();
+                    let bases = &aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i
+                        ..(1 << prover_param.get_num_vars_x()) * i
+                            + (1 << prover_param.get_num_vars_x())];
+                    E::G1::msm_unchecked(bases, scalars).into()
+                })
+                .collect::<Vec<_>>();
+            (d_y, d_z)
+        };
 
         assert_eq!(
             split_input[0].len(),
@@ -433,6 +461,7 @@ impl<E: Pairing> KZH4<E> {
         aux: &KZH4AuxInfo<E>,
     ) -> Result<(KZH4OpeningProof<E>, E::ScalarField), PCSError> {
         let open_timer = start_timer!(|| "KZH::Open_sparse");
+        let is_boolean_point = point.iter().all(|&x| x.is_zero() || x.is_one());
         let prover_param = prover_param.borrow();
         let len = prover_param.get_num_vars_x()
             + prover_param.get_num_vars_y()
@@ -449,33 +478,77 @@ impl<E: Pairing> KZH4<E> {
             point,
             E::ScalarField::zero(),
         );
-
-        let d_z = (0..1 << prover_param.get_num_vars_z())
-            .map(|i| {
-                let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
-                    // TODO: Fix this
-                    polynomial,
-                    i,
-                    prover_param.get_num_vars_t(),
-                );
-                let indices = scalars_map.keys().cloned().collect::<Vec<_>>();
-                let mut bases = vec![E::G1Affine::zero(); indices.len()];
-                cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
-                    *base = prover_param.get_h_t()[indices[i]];
-                });
-                let scalars = scalars_map.values().cloned().collect::<Vec<_>>();
-                E::G1::msm_unchecked(&bases, &scalars).into()
-            })
-            .collect::<Vec<_>>();
-        let d_y = (0..1 << prover_param.get_num_vars_y())
-            .map(|i| {
-                // TODO: Check if this is correct
-                let bit_index = split_input[0].iter().fold(0usize, |acc, b| {
-                    acc << 1 | if *b == E::ScalarField::ONE { 1 } else { 0 }
-                });
-                aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index]
-            })
-            .collect::<Vec<_>>();
+        let (d_y, d_z) = if is_boolean_point {
+            let open_boolean = start_timer!(|| "KZH::Open_sparse::boolean");
+            let timer = start_timer!(|| "1");
+            let d_xy = aux.get_d_xy();
+            let d_xyz = aux.get_d_xyz();
+            end_timer!(timer);
+            let timer = start_timer!(|| "2");
+            let eq_evals = EqPolynomial::new(split_input[0].clone()).evals();
+            end_timer!(timer);
+            let timer = start_timer!(|| "3");
+            let i = eq_evals
+                .par_iter()
+                .position_first(|x| x.is_one())
+                .expect("eq_evals should contain exactly one '1'");
+            end_timer!(timer);
+            let timer = start_timer!(|| "4");
+            let d_y: Vec<<E as Pairing>::G1Affine> = (0..1 << prover_param.get_num_vars_y())
+                .map(|j| d_xy[(1 << prover_param.get_num_vars_x()) * i + j])
+                .collect::<Vec<_>>();
+            end_timer!(timer);
+            let timer = start_timer!(|| "5");
+            let combined_input: Vec<_> =
+                [split_input[0].as_slice(), split_input[1].as_slice()].concat();
+            end_timer!(timer);
+            let timer = start_timer!(|| "6");
+            let eq_evals = EqPolynomial::new(combined_input.clone()).evals();
+            end_timer!(timer);
+            let timer = start_timer!(|| "7");
+            let i = eq_evals
+                .par_iter()
+                .position_first(|x| x.is_one())
+                .expect("eq_evals should contain exactly one '1'");
+            end_timer!(timer);
+            let timer = start_timer!(|| "8");
+            let d_z: Vec<<E as Pairing>::G1Affine> = (0..(1 << prover_param.get_num_vars_z()))
+                .map(|j| d_xyz[i * (1 << prover_param.get_num_vars_z()) + j])
+                .collect::<Vec<_>>();
+            end_timer!(timer);
+            end_timer!(open_boolean);
+            (d_y, d_z)
+        } else {
+            let open_non_boolean = start_timer!(|| "KZH::Open_sparse::non_boolean");
+            let d_z: Vec<E::G1Affine> = (0..1 << prover_param.get_num_vars_z())
+                .map(|i| {
+                    let scalars_map = Self::get_sparse_partial_evaluation_for_boolean_input(
+                        // TODO: Fix this
+                        polynomial,
+                        i,
+                        prover_param.get_num_vars_t(),
+                    );
+                    let indices = scalars_map.keys().cloned().collect::<Vec<_>>();
+                    let mut bases = vec![E::G1Affine::zero(); indices.len()];
+                    cfg_iter_mut!(bases).enumerate().for_each(|(i, base)| {
+                        *base = prover_param.get_h_t()[indices[i]];
+                    });
+                    let scalars = scalars_map.values().cloned().collect::<Vec<_>>();
+                    E::G1::msm_unchecked(&bases, &scalars).into()
+                })
+                .collect::<Vec<_>>();
+            let d_y: Vec<E::G1Affine> = (0..1 << prover_param.get_num_vars_y())
+                .map(|i| {
+                    // TODO: Check if this is correct
+                    let bit_index = split_input[0].iter().fold(0usize, |acc, b| {
+                        acc << 1 | if *b == E::ScalarField::ONE { 1 } else { 0 }
+                    });
+                    aux.get_d_xy()[(1 << prover_param.get_num_vars_x()) * i + bit_index]
+                })
+                .collect::<Vec<_>>();
+            end_timer!(open_non_boolean);
+            (d_y, d_z)
+        };
 
         assert_eq!(
             split_input[0].len(),
@@ -542,25 +615,44 @@ impl<E: Pairing> KZH4<E> {
             )
             .into()
         };
+        let eval_dxyz = |i: usize| -> E::G1Affine {
+            E::G1::msm_unchecked(
+                &prover_param.get_h_zt(),
+                &polynomial.evaluations[(degree_t) * i..(degree_t) * i + (degree_t)],
+            )
+            .into()
+        };
 
         // allocate result buffers
         let mut d_x = vec![E::G1Affine::zero(); degree_x];
         let mut d_xy = vec![E::G1Affine::zero(); degree_x * degree_y];
+        let mut d_xyz = vec![E::G1Affine::zero(); degree_x * degree_y * degree_z];
 
         // fill them (parallel feature ⇒ two nested levels of parallelism)
         #[cfg(feature = "parallel")]
-        join(
-            || {
-                cfg_iter_mut!(d_x)
-                    .enumerate()
-                    .for_each(|(i, slot)| *slot = eval_dx(i));
-            },
-            || {
-                cfg_iter_mut!(d_xy)
-                    .enumerate()
-                    .for_each(|(i, slot)| *slot = eval_dxy(i));
-            },
-        );
+        {
+            join(
+                || {
+                    cfg_iter_mut!(d_x)
+                        .enumerate()
+                        .for_each(|(i, slot)| *slot = eval_dx(i));
+                },
+                || {
+                    join(
+                        || {
+                            cfg_iter_mut!(d_xy)
+                                .enumerate()
+                                .for_each(|(i, slot)| *slot = eval_dxy(i));
+                        },
+                        || {
+                            cfg_iter_mut!(d_xyz)
+                                .enumerate()
+                                .for_each(|(i, slot)| *slot = eval_dxyz(i));
+                        },
+                    );
+                },
+            );
+        }
 
         #[cfg(not(feature = "parallel"))]
         {
@@ -571,9 +663,13 @@ impl<E: Pairing> KZH4<E> {
             cfg_iter_mut!(d_xy)
                 .enumerate()
                 .for_each(|(i, slot)| *slot = eval_dxy(i));
+
+            cfg_iter_mut!(d_xyz)
+                .enumerate()
+                .for_each(|(i, slot)| *slot = eval_dxyz(i));
         }
         end_timer!(timer);
-        Ok(KZH4AuxInfo::new(d_x, d_xy))
+        Ok(KZH4AuxInfo::new(d_x, d_xy, d_xyz))
     }
 
     fn comp_aux_sparse(
@@ -630,9 +726,27 @@ impl<E: Pairing> KZH4<E> {
             E::G1::msm_unchecked(&bases, &scalars).into()
         };
 
+        let eval_dxyz = |i: usize| -> E::G1Affine {
+            let slice =
+                Self::get_sparse_partial_evaluation_for_boolean_input(polynomial, i, degree_t);
+            if slice.is_empty() {
+                return E::G1Affine::zero();
+            }
+            let (mut bases, mut scalars) = (
+                Vec::with_capacity(slice.len()),
+                Vec::with_capacity(slice.len()),
+            );
+            for (idx, coeff) in slice {
+                bases.push(prover_param.get_h_t()[idx]);
+                scalars.push(coeff);
+            }
+            E::G1::msm_unchecked(&bases, &scalars).into()
+        };
+
         // allocate result buffers
         let mut d_x = vec![E::G1Affine::zero(); degree_x];
         let mut d_xy = vec![E::G1Affine::zero(); degree_x * degree_y];
+        let mut d_xyz = vec![E::G1Affine::zero(); degree_x * degree_y * degree_z];
 
         // fill them (parallel feature ⇒ two nested levels of parallelism)
         #[cfg(feature = "parallel")]
@@ -643,9 +757,18 @@ impl<E: Pairing> KZH4<E> {
                     .for_each(|(i, slot)| *slot = eval_dx(i));
             },
             || {
-                cfg_iter_mut!(d_xy)
-                    .enumerate()
-                    .for_each(|(i, slot)| *slot = eval_dxy(i));
+                join(
+                    || {
+                        cfg_iter_mut!(d_xy)
+                            .enumerate()
+                            .for_each(|(i, slot)| *slot = eval_dxy(i));
+                    },
+                    || {
+                        cfg_iter_mut!(d_xyz)
+                            .enumerate()
+                            .for_each(|(i, slot)| *slot = eval_dxyz(i));
+                    },
+                );
             },
         );
 
@@ -658,9 +781,12 @@ impl<E: Pairing> KZH4<E> {
             cfg_iter_mut!(d_xy)
                 .enumerate()
                 .for_each(|(i, slot)| *slot = eval_dxy(i));
+            cfg_iter_mut!(d_xyz)
+                .enumerate()
+                .for_each(|(i, slot)| *slot = eval_dxyz(i));
         }
         end_timer!(timer);
-        Ok(KZH4AuxInfo::new(d_x, d_xy))
+        Ok(KZH4AuxInfo::new(d_x, d_xy, d_xyz))
     }
 }
 
