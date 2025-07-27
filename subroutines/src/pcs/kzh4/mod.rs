@@ -494,9 +494,7 @@ impl<E: Pairing> KZH4<E> {
             let eq_evals = EqPolynomial::new(split_input[0].clone()).evals();
             end_timer!(timer);
             let timer = start_timer!(|| "3");
-            let i = cfg_iter!(eq_evals)
-                .position_first(|x| x.is_one())
-                .expect("eq_evals should contain exactly one '1'");
+            let i = Self::index_of_one(&eq_evals);
             end_timer!(timer);
             let timer = start_timer!(|| "4");
             let d_y: Vec<<E as Pairing>::G1Affine> = (0..1 << prover_param.get_num_vars_y())
@@ -511,9 +509,7 @@ impl<E: Pairing> KZH4<E> {
             let eq_evals = EqPolynomial::new(combined_input.clone()).evals();
             end_timer!(timer);
             let timer = start_timer!(|| "7");
-            let i = cfg_iter!(eq_evals)
-                .position_first(|x| x.is_one())
-                .expect("eq_evals should contain exactly one '1'");
+            let i = Self::index_of_one(&eq_evals);
             end_timer!(timer);
             let timer = start_timer!(|| "8");
             let d_z: Vec<<E as Pairing>::G1Affine> = (0..(1 << prover_param.get_num_vars_z()))
@@ -805,7 +801,19 @@ impl<E: Pairing> KZH4<E> {
     ) -> Vec<E::ScalarField> {
         dense_poly.evaluations[n * index..n * index + n].to_vec()
     }
+    #[inline(always)] // let LLVM inline & unroll aggressively
+    fn index_of_one<F: Field>(eq_evals: &[F]) -> usize {
+        debug_assert!(eq_evals.iter().filter(|&&x| x == F::ONE).count() == 1);
 
+        // hand-rolled loop is the fastest way to walk a slice
+        for (idx, &val) in eq_evals.iter().enumerate() {
+            if val == F::ONE {
+                return idx;
+            }
+        }
+        // Safety-checked in debug build by the assert above
+        unreachable!("eq_evals should contain exactly one '1'");
+    }
     pub fn get_sparse_partial_evaluation_for_boolean_input(
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
         index: usize,
