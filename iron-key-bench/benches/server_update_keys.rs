@@ -98,8 +98,8 @@ pub const PARAMS: &[Params] = &{
     const ARRAY_SIZE: usize = (SHARED_LOG_CAPACITY - 1) as usize;
 
     const fn build_light() -> [Params; ARRAY_SIZE] {
-        let mut out = [Params(0, 0, 0); ARRAY_SIZE];
-        let mut i = 0;
+        let mut out = [Params(32, 1, 1); ARRAY_SIZE];
+        let mut i = 29;
         while i < ARRAY_SIZE {
             let k = i as u64;
             out[i] = Params(SHARED_LOG_CAPACITY, k, INIT);
