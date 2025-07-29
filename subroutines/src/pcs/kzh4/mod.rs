@@ -282,23 +282,16 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
     fn batch_verify(
         verifier_param: &Self::VerifierParam,
         commitments: &[Self::Commitment],
-        auxs: Option<&[Self::Aux]>,
+        _auxs: Option<&[Self::Aux]>,
         points: &Self::Point,
         values: &[E::ScalarField],
         batch_proof: &Self::BatchProof,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
-        let auxs = auxs.unwrap();
         let mut aggr_comm = Self::Commitment::default();
-        let mut aggr_aux = KZH4AuxInfo::new(
-            vec![E::G1Affine::zero(); auxs[0].get_d_x().len()],
-            vec![E::G1Affine::zero(); auxs[0].get_d_xy().len()],
-            vec![E::G1Affine::zero(); auxs[0].get_d_xyz().len()],
-        );
         let mut aggr_value = E::ScalarField::zero();
-        for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
+        for (comm, value) in commitments.iter().zip(values.iter()) {
             aggr_comm = aggr_comm + *comm;
-            aggr_aux = aggr_aux + aux.clone();
             aggr_value += value;
         }
 
@@ -307,7 +300,7 @@ impl<E: Pairing> PolynomialCommitmentScheme<E> for KZH4<E> {
             &aggr_comm,
             points,
             &aggr_value,
-            Some(&aggr_aux),
+            None,
             batch_proof,
         )
     }
