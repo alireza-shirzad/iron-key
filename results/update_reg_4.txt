@@ -497,3 +497,66 @@ Posted bulletin board message size: 30851 bytes
       ├─ [log(capacity)=31, log(|update|)=10, log(init-update)=2]  
 Cache miss: Creating new IronPublicParameters for log_capacity = 31
 Loading SRS
+Posted bulletin board message size: 35115 bytes
+
+4.549 m       │ 4.549 m       │ 4.549 m       │ 4.549 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=11, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.833 m       │ 3.833 m       │ 3.833 m       │ 3.833 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=12, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+4.32 m        │ 4.32 m        │ 4.32 m        │ 4.32 m        │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=13, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.765 m       │ 3.765 m       │ 3.765 m       │ 3.765 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=14, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.519 m       │ 3.519 m       │ 3.519 m       │ 3.519 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=15, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+4.184 m       │ 4.184 m       │ 4.184 m       │ 4.184 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=16, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.309 m       │ 3.309 m       │ 3.309 m       │ 3.309 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=17, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.469 m       │ 3.469 m       │ 3.469 m       │ 3.469 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=18, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+4.514 m       │ 4.514 m       │ 4.514 m       │ 4.514 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=19, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.444 m       │ 3.444 m       │ 3.444 m       │ 3.444 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=20, log(init-update)=2]  
+
+3.238 m       │ 3.238 m       │ 3.238 m       │ 3.238 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=21, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.247 m       │ 3.247 m       │ 3.247 m       │ 3.247 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=22, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+3.6 m         │ 3.6 m         │ 3.6 m         │ 3.6 m         │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=23, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+4.073 m       │ 4.073 m       │ 4.073 m       │ 4.073 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=24, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+4.755 m       │ 4.755 m       │ 4.755 m       │ 4.755 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=25, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+6.928 m       │ 6.928 m       │ 6.928 m       │ 6.928 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=26, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+8.394 m       │ 8.394 m       │ 8.394 m       │ 8.394 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+15.31 m       │ 15.31 m       │ 15.31 m       │ 15.31 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=28, log(init-update)=2]  
+
+35.61 m       │ 35.61 m       │ 35.61 m       │ 35.61 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=29, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+58.92 m       │ 58.92 m       │ 58.92 m       │ 58.92 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=10, log(init-update)=2]  
+Cache miss: Creating new IronPublicParameters for log_capacity = 32
+Loading SRS
