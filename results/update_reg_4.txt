@@ -560,3 +560,58 @@ Posted bulletin board message size: 35115 bytes
       ├─ [log(capacity)=32, log(|update|)=10, log(init-update)=2]  
 Cache miss: Creating new IronPublicParameters for log_capacity = 32
 Loading SRS
+Posted bulletin board message size: 40123 bytes
+
+10.7 m        │ 10.7 m        │ 10.7 m        │ 10.7 m        │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=11, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.048 m       │ 7.048 m       │ 7.048 m       │ 7.048 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=12, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.235 m       │ 7.235 m       │ 7.235 m       │ 7.235 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=13, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.071 m       │ 7.071 m       │ 7.071 m       │ 7.071 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=14, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.587 m       │ 7.587 m       │ 7.587 m       │ 7.587 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=15, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+9.351 m       │ 9.351 m       │ 9.351 m       │ 9.351 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=16, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.316 m       │ 7.316 m       │ 7.316 m       │ 7.316 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=17, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.229 m       │ 7.229 m       │ 7.229 m       │ 7.229 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=18, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+6.713 m       │ 6.713 m       │ 6.713 m       │ 6.713 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=19, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+6.583 m       │ 6.583 m       │ 6.583 m       │ 6.583 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=20, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.647 m       │ 7.647 m       │ 7.647 m       │ 7.647 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=21, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.005 m       │ 7.005 m       │ 7.005 m       │ 7.005 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=22, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.225 m       │ 7.225 m       │ 7.225 m       │ 7.225 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=23, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+7.773 m       │ 7.773 m       │ 7.773 m       │ 7.773 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=24, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+8.463 m       │ 8.463 m       │ 8.463 m       │ 8.463 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=25, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+8.88 m        │ 8.88 m        │ 8.88 m        │ 8.88 m        │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=26, log(init-update)=2]  Posted bulletin board message size: 40403 bytes
+
+13.69 m       │ 13.69 m       │ 13.69 m       │ 13.69 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=27, log(init-update)=2]    Posted bulletin board message size: 40403 bytes
+
+18.71 m       │ 18.71 m       │ 18.71 m       │ 18.71 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=28, log(init-update)=2] 
