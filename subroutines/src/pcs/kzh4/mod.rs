@@ -10,6 +10,7 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme,
 };
+use arithmetic::fix_last_variables_sparse;
 use ark_ec::{
     pairing::Pairing, scalar_mul::variable_base::VariableBaseMSM, AffineRepr, CurveGroup,
 };
@@ -543,19 +544,17 @@ impl<E: Pairing> KZH4<E> {
             "wrong length"
         );
 
-        // compute the partial evaluation of the polynomial
-        let f_star = DenseOrSparseMLE::Sparse(
-            polynomial.fix_variables(
-                {
-                    let mut res = Vec::new();
-                    res.extend_from_slice(split_input[0].as_slice());
-                    res.extend_from_slice(split_input[1].as_slice());
-                    res.extend_from_slice(split_input[2].as_slice());
-                    res
-                }
-                .as_slice(),
-            ),
-        );
+        let f_star = DenseOrSparseMLE::Sparse(fix_last_variables_sparse(
+            polynomial,
+            {
+                let mut res = Vec::new();
+                res.extend_from_slice(split_input[0].as_slice());
+                res.extend_from_slice(split_input[1].as_slice());
+                res.extend_from_slice(split_input[2].as_slice());
+                res
+            }
+            .as_slice(),
+        ));
         let evaluation = f_star.evaluate(&split_input[3]);
         end_timer!(open_timer);
         Ok((
