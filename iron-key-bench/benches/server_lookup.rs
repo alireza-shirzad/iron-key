@@ -14,10 +14,10 @@ use iron_key::{
     structs::{IronLabel, IronSpecification, pp::IronPublicParameters},
 };
 use once_cell::sync::Lazy; // Added Lazy
-use subroutines::pcs::kzh4::KZH4;
+use subroutines::pcs::kzh2::KZH2;
 
 // Type alias for the Public Parameters
-type AppPublicParameters = IronPublicParameters<Bn254, KZH4<Bn254>>;
+type AppPublicParameters = IronPublicParameters<Bn254, KZH2<Bn254>>;
 
 // Static cache for public parameters, keyed by log_capacity
 static PP_CACHE: Lazy<Mutex<HashMap<usize, Arc<AppPublicParameters>>>> =
@@ -34,7 +34,7 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
                 log_capacity
             );
             let spec = IronSpecification::new(1usize << log_capacity);
-            let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec)
+            let pp = IronKey::<Bn254, KZH2<Bn254>, IronLabel>::setup(spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)
         })
@@ -45,15 +45,15 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
 fn server_with_updates(
     log_capacity: usize,
 ) -> (
-    IronServer<Bn254, KZH4<Bn254>, IronLabel>,
-    DummyBB<Bn254, KZH4<Bn254>>,
+    IronServer<Bn254, KZH2<Bn254>, IronLabel>,
+    DummyBB<Bn254, KZH2<Bn254>>,
     IronLabel,
 ) {
     let batch_size: usize = 1 << (log_capacity / 2); // This BATCH_SIZE is for the initial updates, not log_capacity
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
     // Initialize server with the (potentially cached) public parameters
-    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
+    let mut server = IronServer::<Bn254, KZH2<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
     let mut bb = DummyBB::default();
 
     // Build `BATCH_SIZE` distinct (label, value) pairs for initial server state.
@@ -72,7 +72,7 @@ fn server_with_updates(
 
 /// Benchmark `lookup_prove` after different-sized update batches.
 /// The `args` list controls `log_capacity` values.
-#[divan::bench(    max_time     = 1,args = [30,31,32])]
+#[divan::bench(    max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     bencher
         // build a brand-new (server, bb, label) for *each* iteration
