@@ -119,9 +119,9 @@ pub const PARAMS: &[Params] = &{
         let mut out = [Params(4, 0, 0); PARAMS_ARRAY_SIZE];
         let mut i: usize = 0;
 
-        let mut n: usize = 32; // log_capacity starts from 20
+        let mut n: usize = 20; // log_capacity starts from 20
         while n <= 32 {
-            let mut k = 27; // log_update_size
+            let mut k = 0; // log_update_size
             while k <= n - 2 {
                 if i < PARAMS_ARRAY_SIZE {
                     out[i] = Params(n, k, INIT);
