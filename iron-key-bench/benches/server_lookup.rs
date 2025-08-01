@@ -79,7 +79,7 @@ fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
         // build a brand-new (server, bb, label) for *each* iteration
         .with_inputs(|| {let (server, bb, label) = server_with_updates(log_capacity_arg);
            let proof = server.lookup_prove(label.clone(), &mut bb.clone()).unwrap(); 
-            println!("Prepared server with updates: {:?}", proof.serialized_size(ark_serialize::Compress::Yes));
+            println!("Prepared server with updates: {:?}", proof.get_label_opening_proof().serialized_size(ark_serialize::Compress::Yes)+ proof.get_value_opening_proof().serialized_size(ark_serialize::Compress::Yes));
      (server, bb, label)})
         // pass it *by reference* so the tuple itself is not dropped inside the timer
         .bench_local_refs(|(server, bb, label)| {
