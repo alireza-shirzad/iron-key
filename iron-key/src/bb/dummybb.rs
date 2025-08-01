@@ -4,7 +4,7 @@ use ark_ec::pairing::Pairing;
 
 use ark_serialize::CanonicalSerialize;
 use derivative::Derivative;
-use subroutines::{poly::DenseOrSparseMLE, PolynomialCommitmentScheme};
+use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
 
 use crate::{
     VKDResult,
@@ -14,6 +14,7 @@ use crate::{
 
 use super::{BulletinBoard, errors::BulletinBoardError};
 
+#[derive(Clone)]
 pub enum IronEpochMessage<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -87,7 +88,7 @@ impl<
     }
 }
 
-#[derive(Derivative, CanonicalSerialize)]
+#[derive(Derivative, CanonicalSerialize, Clone)]
 #[derivative(Default(bound = ""))]
 pub struct DummyBB<
     E: Pairing,

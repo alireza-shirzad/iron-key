@@ -4,6 +4,7 @@ use std::{
 };
 
 use ark_bn254::{Bn254, Fr};
+use ark_serialize::CanonicalSerialize;
 use divan::Bencher;
 use iron_key::{
     VKD, // Make sure this import is correct
@@ -76,9 +77,13 @@ fn server_with_updates(
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     bencher
         // build a brand-new (server, bb, label) for *each* iteration
-        .with_inputs(|| server_with_updates(log_capacity_arg))
+        .with_inputs(|| {let (server, bb, label) = server_with_updates(log_capacity_arg);
+           let proof = server.lookup_prove(label.clone(), &mut bb.clone()).unwrap(); 
+            println!("Prepared server with updates: {:?}", proof.serialized_size(ark_serialize::Compress::Yes));
+     (server, bb, label)})
         // pass it *by reference* so the tuple itself is not dropped inside the timer
         .bench_local_refs(|(server, bb, label)| {
             server.lookup_prove(label.clone(), bb).unwrap();
         });
+        
 }
