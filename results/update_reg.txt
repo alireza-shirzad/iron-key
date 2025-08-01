@@ -915,5 +915,18 @@ Posted bulletin board message size: 1054179 bytes
 1.139 h       │ 1.139 h       │ 1.139 h       │ 1.139 h       │ 1       │ 1
       ├─ [log(capacity)=32, log(|update|)=0, log(init-update)=2]   
 Cache miss: Creating new IronPublicParameters for log_capacity = 32
-Computing SRS
+Loading SRS
+Posted bulletin board message size: 2102923 bytes
+
+9.837 m       │ 9.837 m       │ 9.837 m       │ 9.837 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=1, log(init-update)=2]   Posted bulletin board message size: 2102963 bytes
+
+8.316 m       │ 8.316 m       │ 8.316 m       │ 8.316 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=2, log(init-update)=2]   Posted bulletin board message size: 2103043 bytes
+
+8.813 m       │ 8.813 m       │ 8.813 m       │ 8.813 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=3, log(init-update)=2]   Posted bulletin board message size: 2103203 bytes
+
+8.281 m       │ 8.281 m       │ 8.281 m       │ 8.281 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=4, log(init-update)=2]   
  
