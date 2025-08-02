@@ -3,92 +3,82 @@ bench                             fastest       │ slowest       │ median    
    ╰─ lookup_prove_after_updates                │               │               │               │         │
       ├─ 20                       Cache miss: Creating new IronPublicParameters for log_capacity = 20
 Loading SRS
-
-[log_capacity=20] Lookup proof size: 66289 Bytes
-[log_capacity=20] Client key size: 98408 Bytes
-
-101.8 ms      │ 112.2 ms      │ 103.2 ms      │ 103.3 ms      │ 100     │ 100
+proof size = 66602
+client key size = 98408
+proof size = 66602
+client key size = 98408
+proof size = 66602
+client key size = 98408
+proof size = 66602
+client key size = 98408
+proof size = 66602
+client key size = 98408
+196.2 ms      │ 203.5 ms      │ 197.3 ms      │ 198.3 ms      │ 5       │ 5
       ├─ 21                       Cache miss: Creating new IronPublicParameters for log_capacity = 21
 Loading SRS
-
-[log_capacity=21] Lookup proof size: 66321 Bytes
-[log_capacity=21] Client key size: 131176 Bytes
-
-103 ms        │ 107.2 ms      │ 103.9 ms      │ 103.9 ms      │ 100     │ 100
+proof size = 66634
+client key size = 131176
+proof size = 66634
+client key size = 131176
+proof size = 66634
+client key size = 131176
+proof size = 66634
+client key size = 131176
+196.8 ms      │ 212.8 ms      │ 198.1 ms      │ 201.4 ms      │ 4       │ 4
       ├─ 22                       Cache miss: Creating new IronPublicParameters for log_capacity = 22
 Loading SRS
-
-[log_capacity=22] Lookup proof size: 131889 Bytes
-[log_capacity=22] Client key size: 196712 Bytes
-
-200.9 ms      │ 206.4 ms      │ 202.1 ms      │ 202.3 ms      │ 100     │ 100
+proof size = 132202
+client key size = 196712
+proof size = 132202
+client key size = 196712
+387.6 ms      │ 390.6 ms      │ 389.1 ms      │ 389.1 ms      │ 2       │ 2
       ├─ 23                       Cache miss: Creating new IronPublicParameters for log_capacity = 23
 Loading SRS
-
-[log_capacity=23] Lookup proof size: 131921 Bytes
-[log_capacity=23] Client key size: 262248 Bytes
-
-202.3 ms      │ 208.2 ms      │ 203.6 ms      │ 203.7 ms      │ 100     │ 100
+proof size = 132234
+client key size = 262248
+389.4 ms      │ 389.4 ms      │ 389.4 ms      │ 389.4 ms      │ 1       │ 1
       ├─ 24                       Cache miss: Creating new IronPublicParameters for log_capacity = 24
 Loading SRS
-
-[log_capacity=24] Lookup proof size: 263025 Bytes
-[log_capacity=24] Client key size: 393320 Bytes
-
-397.9 ms      │ 404.9 ms      │ 400.5 ms      │ 400.4 ms      │ 100     │ 100
+proof size = 263258
+client key size = 393320
+766.6 ms      │ 766.6 ms      │ 766.6 ms      │ 766.6 ms      │ 1       │ 1
       ├─ 25                       Cache miss: Creating new IronPublicParameters for log_capacity = 25
 Loading SRS
-
-[log_capacity=25] Lookup proof size: 263057 Bytes
-[log_capacity=25] Client key size: 524392 Bytes
-
-399.8 ms      │ 406.5 ms      │ 402.1 ms      │ 402.4 ms      │ 100     │ 100
+proof size = 263290
+client key size = 524392
+766 ms        │ 766 ms        │ 766 ms        │ 766 ms        │ 1       │ 1
       ├─ 26                       Cache miss: Creating new IronPublicParameters for log_capacity = 26
 Loading SRS
-
-[log_capacity=26] Lookup proof size: 525233 Bytes
-[log_capacity=26] Client key size: 786536 Bytes
-
-793.2 ms      │ 798.9 ms      │ 794.4 ms      │ 794.7 ms      │ 100     │ 100
+proof size = 525466
+client key size = 786536
+1.521 s       │ 1.521 s       │ 1.521 s       │ 1.521 s       │ 1       │ 1
       ├─ 27                       Cache miss: Creating new IronPublicParameters for log_capacity = 27
 Loading SRS
-
-[log_capacity=27] Lookup proof size: 525265 Bytes
-[log_capacity=27] Client key size: 1048680 Bytes
-
-792.6 ms      │ 803.1 ms      │ 795.9 ms      │ 796.1 ms      │ 100     │ 100
+proof size = 525498
+client key size = 1048680
+1.523 s       │ 1.523 s       │ 1.523 s       │ 1.523 s       │ 1       │ 1
       ├─ 28                       Cache miss: Creating new IronPublicParameters for log_capacity = 28
 Loading SRS
-
-[log_capacity=28] Lookup proof size: 1049625 Bytes
-[log_capacity=28] Client key size: 1572968 Bytes
-
-1.57 s        │ 1.589 s       │ 1.572 s       │ 1.574 s       │ 100     │ 100
+proof size = 1049978
+client key size = 1572968
+3.037 s       │ 3.037 s       │ 3.037 s       │ 3.037 s       │ 1       │ 1
       ├─ 29                       Cache miss: Creating new IronPublicParameters for log_capacity = 29
 Loading SRS
-
-[log_capacity=29] Lookup proof size: 1049657 Bytes
-[log_capacity=29] Client key size: 2097256 Bytes
-
-1.573 s       │ 1.588 s       │ 1.575 s       │ 1.575 s       │ 100     │ 100
+proof size = 1050010
+client key size = 2097256
+3.041 s       │ 3.041 s       │ 3.041 s       │ 3.041 s       │ 1       │ 1
       ├─ 30                       Cache miss: Creating new IronPublicParameters for log_capacity = 30
 Loading SRS
-
-[log_capacity=30] Lookup proof size: 2098225 Bytes
-[log_capacity=30] Client key size: 3145832 Bytes
-
-3.13 s        │ 3.16 s        │ 3.135 s       │ 3.136 s       │ 100     │ 100
+proof size = 2098298
+client key size = 3145832
+6.086 s       │ 6.086 s       │ 6.086 s       │ 6.086 s       │ 1       │ 1
       ├─ 31                       Cache miss: Creating new IronPublicParameters for log_capacity = 31
 Loading SRS
-
-[log_capacity=31] Lookup proof size: 2098257 Bytes
-[log_capacity=31] Client key size: 4194408 Bytes
-
-3.139 s       │ 3.288 s       │ 3.161 s       │ 3.192 s       │ 100     │ 100
+proof size = 2098330
+client key size = 4194408
+6.05 s        │ 6.05 s        │ 6.05 s        │ 6.05 s        │ 1       │ 1
       ╰─ 32                       Cache miss: Creating new IronPublicParameters for log_capacity = 32
 Loading SRS
-
-[log_capacity=32] Lookup proof size: 4195441 Bytes
-[log_capacity=32] Client key size: 6291560 Bytes
-
-6.268 s       │ 6.574 s       │ 6.32 s        │ 6.358 s       │ 100     │ 100
+proof size = 4195834
+client key size = 6291560
+12.2 s        │ 12.2 s        │ 12.2 s        │ 12.2 s        │ 1       │ 1
