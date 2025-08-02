@@ -13,13 +13,13 @@ use once_cell::sync::Lazy;
 use subroutines::{
     pcs::{
         PolynomialCommitmentScheme,
-        kzh2::{KZH2, srs::KZH2ProverParam, structs::KZH2Commitment},
+        kzh4::{KZH4, srs::KZH4ProverParam, structs::KZH4Commitment},
     },
     poly::DenseOrSparseMLE,
 };
 // ---
 
-type ProverKey = KZH2ProverParam<E>;
+type ProverKey = KZH4ProverParam<E>;
 
 // Static cache for prover and verifier keys, keyed by the number of variables
 // `nv`. This avoids re-generating the SRS for each benchmark combination.
@@ -35,10 +35,10 @@ fn get_or_create_keys(nv: usize) -> Arc<ProverKey> {
         .or_insert_with(|| {
             println!("\nCache miss: Creating new keys for nv = {}", nv);
             let mut rng = test_rng();
-            let params = KZH2::<E>::gen_srs_for_testing(&mut rng, nv)
+            let params = KZH4::<E>::gen_srs_for_testing(&mut rng, nv)
                 .expect("Failed to generate SRS for testing");
             let (ck, _) =
-                KZH2::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
+                KZH4::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
             Arc::new(ck)
         })
         .clone()
@@ -71,7 +71,7 @@ impl fmt::Display for BenchParams {
     }
 }
 
-/// Prepares all inputs required for the `KZH2::open` function.
+/// Prepares all inputs required for the `KZH4::open` function.
 /// This includes generating the polynomial, the point, and the auxiliary info.
 fn prepare_open_inputs(
     nv: usize,
@@ -81,7 +81,7 @@ fn prepare_open_inputs(
     Arc<ProverKey>,
     DenseOrSparseMLE<Fr>,
     Vec<Fr>,
-    KZH2Commitment<E>,
+    KZH4Commitment<E>,
 ) {
     let mut rng = test_rng();
     let ck = get_or_create_keys(nv);
@@ -109,7 +109,7 @@ fn prepare_open_inputs(
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
     // Commit to the polynomial to generate the auxiliary info required for opening.
-    let com = KZH2::commit(ck.clone(), &poly).unwrap();
+    let com = KZH4::commit(ck.clone(), &poly).unwrap();
     (ck, poly, point, com)
 }
 
@@ -172,11 +172,11 @@ fn bench_open(bencher: Bencher, params: BenchParams) {
 
     // Pre-compute aux info outside the benchmark loop.
     // We pass a reference to the ProverKey inside the Arc.
-    let aux = KZH2::comp_aux(&*ck, &poly, &com).unwrap();
+    let aux = KZH4::comp_aux(&*ck, &poly, &com).unwrap();
 
     bencher.bench_local(|| {
-        // This benchmarks the `KZH2::open` function.
+        // This benchmarks the `KZH4::open` function.
         // We also pass a reference here to avoid moving the Arc.
-        KZH2::open(&*ck, &poly, &point, &aux)
+        KZH4::open(&*ck, &poly, &point, &aux)
     });
 }

@@ -13,7 +13,7 @@ use iron_key::{
     structs::{IronLabel, IronSpecification},
 };
 use once_cell::sync::Lazy;
-use subroutines::pcs::kzh2::KZH2;
+use subroutines::pcs::kzh4::KZH4;
 
 const SHARED_LOG_CAPACITY: u64 = 32;
 /// Triplet carried around by Divan.
@@ -36,7 +36,7 @@ impl fmt::Display for Params {
 
 // Corrected type alias for the Public Parameters returned by setup and used by
 // init
-type AppPublicParameters = IronPublicParameters<Bn254, KZH2<Bn254>>;
+type AppPublicParameters = IronPublicParameters<Bn254, KZH4<Bn254>>;
 
 // Determine the shared log_capacity from your PARAMS definition.
 
@@ -51,7 +51,7 @@ static SHARED_PP: Lazy<AppPublicParameters> = Lazy::new(|| {
     // IronKey::<..., IronLabel> specifies the generics for the IronKey struct
     // itself, its `setup` method then returns Result<IronPublicParameters<E,
     // Pcs>, _>
-    IronKey::<Bn254, KZH2<Bn254>, IronLabel>::setup(system_spec)
+    IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(system_spec)
         .expect("Failed to setup shared IronPublicParameters")
 });
 
@@ -63,13 +63,13 @@ fn prepare_prover_update_prove_inputs(
     log_update_size: u64,
     log_initial_batch_size: u64,
 ) -> (
-    IronServer<Bn254, KZH2<Bn254>, IronLabel>,
+    IronServer<Bn254, KZH4<Bn254>, IronLabel>,
     HashMap<IronLabel, Fr>,
-    DummyBB<Bn254, KZH2<Bn254>>,
+    DummyBB<Bn254, KZH4<Bn254>>,
 ) {
     let initial_batch_size = 1 << log_initial_batch_size;
     // IronServer::init expects &IronPublicParameters<E, Pcs>
-    let mut server: IronServer<Bn254, KZH2<Bn254>, IronLabel> = IronServer::init(pp);
+    let mut server: IronServer<Bn254, KZH4<Bn254>, IronLabel> = IronServer::init(pp);
     let mut bulletin_board = DummyBB::default();
 
     // Warm-up batch
