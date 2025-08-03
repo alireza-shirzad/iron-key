@@ -48,3 +48,4 @@ Computing SRS
       ╰─ 32  
 Cache miss: Creating new IronPublicParameters for log_capacity = 32
 Computing SRS
+145 ms        │ 145 ms        │ 145 ms        │ 145 ms        │ 1       │ 1
