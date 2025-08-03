@@ -907,4 +907,12 @@ Posted bulletin board message size: 30195 bytes
       ├─ [log(capacity)=31, log(|update|)=26, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
 
 10.38 m       │ 10.38 m       │ 10.38 m       │ 10.38 m       │ 1       │ 1
-      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]   
+      ├─ [log(capacity)=31, log(|update|)=27, log(init-update)=2]  Posted bulletin board message size: 35115 bytes
+
+16.72 m       │ 16.72 m       │ 16.72 m       │ 16.72 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=28, log(init-update)=2]  Posted bulletin board message size: 35115 bytes 
+
+33.53 m       │ 33.53 m       │ 33.53 m       │ 33.53 m       │ 1       │ 1
+      ├─ [log(capacity)=31, log(|update|)=29, log(init-update)=2]   Posted bulletin board message size: 35115 bytes
+
+1.267 h       │ 1.267 h       │ 1.267 h       │ 1.267 h       │ 1       │ 1
