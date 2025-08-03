@@ -915,4 +915,31 @@ Posted bulletin board message size: 30195 bytes
 33.53 m       │ 33.53 m       │ 33.53 m       │ 33.53 m       │ 1       │ 1
       ├─ [log(capacity)=31, log(|update|)=29, log(init-update)=2]   Posted bulletin board message size: 35115 bytes
 
-1.267 h       │ 1.267 h       │ 1.267 h       │ 1.267 h       │ 1       │ 1
+1.267 h       │ 1.267 h       │ 1.267 h       │ 1.267 h       │ 1       │ 1 
+Creating new IronPublicParameters for log_capacity = 32
+Loading SRS
+Posted bulletin board message size: 30363 bytes
+
+8.096 m       │ 8.096 m       │ 8.096 m       │ 8.096 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=1, log(init-update)=2]   Posted bulletin board message size: 30403 bytes
+
+7.621 m       │ 7.621 m       │ 7.621 m       │ 7.621 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=2, log(init-update)=2]   Posted bulletin board message size: 30483 bytes
+
+9.204 m       │ 9.204 m       │ 9.204 m       │ 9.204 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=3, log(init-update)=2]   Posted bulletin board message size: 30603 bytes
+
+7.856 m       │ 7.856 m       │ 7.856 m       │ 7.856 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=4, log(init-update)=2]   Posted bulletin board message size: 30923 bytes
+
+7.054 m       │ 7.054 m       │ 7.054 m       │ 7.054 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=5, log(init-update)=2]   Posted bulletin board message size: 31523 bytes
+
+7.632 m       │ 7.632 m       │ 7.632 m       │ 7.632 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=6, log(init-update)=2]   Posted bulletin board message size: 32683 bytes
+
+8.143 m       │ 8.143 m       │ 8.143 m       │ 8.143 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=7, log(init-update)=2]   Posted bulletin board message size: 34443 bytes
+
+7.633 m       │ 7.633 m       │ 7.633 m       │ 7.633 m       │ 1       │ 1
+      ├─ [log(capacity)=32, log(|update|)=8, log(init-update)=2]
