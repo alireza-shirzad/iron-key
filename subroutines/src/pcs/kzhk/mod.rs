@@ -8,7 +8,7 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use arithmetic::{build_eq_x_r, eq_eval};
+use arithmetic::{build_eq_x_r, eq_eval, fix_last_variables};
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{Field, One};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
@@ -171,10 +171,14 @@ where
         end_timer!(cj_check_timer);
         // Evaluation Check
         let eval_check_timer = start_timer!(|| "KZH::Verify::EvalCheck");
-        assert_eq!(
-            proof.get_f().fix_variables(&decomposed_point[k - 1])[0],
-            *value
-        );
+        match proof.get_f() {
+            DenseOrSparseMLE::Dense(f) => {
+                assert_eq!(fix_last_variables(f, &decomposed_point[k - 1])[0], *value);
+            },
+            DenseOrSparseMLE::Sparse(_) => {
+                panic!("Sparse proof not supported");
+            },
+        }
         end_timer!(eval_check_timer);
         end_timer!(timer);
         Ok(true)
@@ -336,10 +340,10 @@ impl<E: Pairing> KZHK<E> {
             }
             d.push(dj);
 
-            partial_polynomial = partial_polynomial.fix_variables(point_part);
+            partial_polynomial = fix_last_variables(&partial_polynomial, point_part);
         }
         let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
-        let eval = partial_polynomial.fix_variables(&decomposed_point[k - 1])[0];
+        let eval = fix_last_variables(&partial_polynomial, &decomposed_point[k - 1])[0];
         end_timer!(timer);
         Ok((KZHKOpeningProof::new(d, f), eval))
     }
