@@ -5,7 +5,9 @@ mod kzh_opening;
 mod server_lookup;
 mod server_update_keys;
 mod server_update_reg;
+use ark_bn254 as E;
 use ark_bn254::Fr;
+use ark_ec::VariableBaseMSM;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;
 use sha2::{Digest, Sha256};
@@ -32,6 +34,16 @@ fn sha256_hash(bencher: Bencher) {
         hasher.update(&x_bytes);
         hasher.finalize()
     });
+}
+#[divan::bench]
+fn zk(bencher: Bencher) {
+    let mut rng = ark_std::test_rng();
+    let num = 4096;
+    let scalars = (0..num).map(|_| Fr::rand(&mut rng)).collect::<Vec<_>>();
+    let bases = (0..num)
+        .map(|_| E::G1Affine::rand(&mut rng))
+        .collect::<Vec<_>>();
+    bencher.bench(|| <E::G1Projective as VariableBaseMSM>::msm(&bases, &scalars));
 }
 
 fn main() {

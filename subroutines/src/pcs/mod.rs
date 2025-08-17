@@ -1,6 +1,7 @@
 mod errors;
-pub mod kzh2;
-pub mod kzh4;
+// pub mod kzh2;
+// pub mod kzh4;
+pub mod kzhk;
 pub mod prelude;
 mod structs;
 
@@ -15,6 +16,7 @@ use transcript::IOPTranscript;
 /// This trait defines APIs for polynomial commitment schemes.
 /// Note that for our usage of PCS, we do not require the hiding property.
 pub trait PolynomialCommitmentScheme<E: Pairing> {
+    type Config: Clone + Debug + Default;
     type ProverParam: Clone + Sync;
     type VerifierParam: Clone + CanonicalSerialize + CanonicalDeserialize;
     type SRS: Clone + Debug + CanonicalSerialize + CanonicalDeserialize;
@@ -43,6 +45,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         + Sync;
 
     fn gen_srs_for_testing<R: Rng>(
+        conf: Self::Config,
         rng: &mut R,
         supported_size: usize,
     ) -> Result<Self::SRS, PCSError>;
@@ -78,6 +81,8 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         _polynomials: &[&Self::Polynomial],
         _point: &Self::Point,
         _auxes: &[Self::Aux],
+        _boolean: bool,
+        _sparse: bool,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
         unimplemented!()
@@ -139,5 +144,9 @@ pub trait StructuredReferenceString<E: Pairing>: Sized {
     ///
     /// WARNING: THIS FUNCTION IS FOR TESTING PURPOSE ONLY.
     /// THE OUTPUT SRS SHOULD NOT BE USED IN PRODUCTION.
-    fn gen_srs_for_testing<R: Rng>(rng: &mut R, supported_size: usize) -> Result<Self, PCSError>;
+    fn gen_srs_for_testing<R: Rng>(
+        rng: &mut R,
+        k: usize,
+        supported_size: usize,
+    ) -> Result<Self, PCSError>;
 }

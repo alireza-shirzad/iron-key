@@ -6,17 +6,18 @@ edition = "2021"
 
 [dependencies]
 arithmetic = { path = "../arithmetic" }
-ark-bn254 = {workspace = true}
-ark-ec = {workspace = true}
-ark-ff = {workspace = true}
-ark-poly = {workspace = true}
-ark-serialize = {workspace = true}
-ark-std = {workspace = true}
-derivative = {workspace = true}
-displaydoc = {workspace = true}
-rand_chacha = {workspace = true}
-rayon = {workspace = true, optional = true}
-rand = {workspace = true}
+ark-bn254 = { workspace = true }
+ark-ec = { workspace = true }
+ark-ff = { workspace = true }
+ark-poly = { workspace = true }
+ark-serialize = { workspace = true }
+ark-std = { workspace = true }
+derivative = { workspace = true }
+displaydoc = { workspace = true }
+rand_chacha = { workspace = true }
+rayon = { workspace = true, optional = true }
+rand = { workspace = true }
+ndarray = { workspace = true, features = ["serde"] }
 transcript = { path = "../transcript" }
 util = { path = "../util" }
 
@@ -33,5 +34,6 @@ parallel = [
     "ark-ec/parallel",
     "util/parallel",
     "arithmetic/parallel",
+    "ndarray/rayon",
 ]
 print-trace = ["arithmetic/print-trace", "ark-std/print-trace"]

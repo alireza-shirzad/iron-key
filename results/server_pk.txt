@@ -3,7 +3,6 @@
 -rw-r--r-- 1 as22323 as22323 257M Jul 31 12:28 srs_22.bin
 -rw-r--r-- 1 as22323 as22323 513M Jul 31 12:28 srs_23.bin
 -rw-r--r-- 1 as22323 as22323 1.1G Jul 31 12:28 srs_24.bin
--rw-r--r-- 1 as22323 as22323 2.2K Jul 31 12:28 srs_4.bin
 -rw-r--r-- 1 as22323 as22323 2.1G Jul 31 12:33 srs_25.bin
 -rw-r--r-- 1 as22323 as22323 4.1G Jul 31 12:36 srs_26.bin
 -rw-r--r-- 1 as22323 as22323 8.1G Jul 31 12:41 srs_27.bin
