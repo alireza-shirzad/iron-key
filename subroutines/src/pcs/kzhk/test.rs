@@ -158,33 +158,3 @@ fn test_dense_boolean_k5() -> Result<(), PCSError> {
     test_single_helper(15, false, true, 5)?;
     Ok(())
 }
-
-#[test]
-fn test_single_helperr() -> Result<(), PCSError> {
-    let nv = 10;
-    let is_sparse = false;
-    let is_boolean = true;
-    let k = 6;
-
-    let mut rng = test_rng();
-    let poly = if is_sparse {
-        DenseOrSparseMLE::Sparse(SparseMultilinearExtension::<Fr>::rand(nv, &mut rng))
-    } else {
-        DenseOrSparseMLE::Dense(DenseMultilinearExtension::<Fr>::rand(nv, &mut rng))
-    };
-    let params = KZHK::<E>::gen_srs_for_testing(k, &mut rng, nv)?;
-    let (ck, vk) = KZHK::trim(params, None, Some(nv))?;
-    let point = match is_boolean {
-        true => (0..nv)
-            .map(|_| Fr::from((usize::rand(&mut rng) % 2) as i64))
-            .collect::<Vec<_>>(),
-        false => (0..nv).map(|_| Fr::rand(&mut rng)).collect::<Vec<_>>(),
-    };
-    let com = KZHK::<E>::commit(&ck, &poly)?;
-    let aux = KZHK::<E>::comp_aux(&ck, &poly, &com)?;
-    let (proof, value) = KZHK::<E>::open(&ck, &poly, &point, &aux)?;
-    dbg!(&proof);
-    dbg!(&value);
-
-    Ok(())
-}

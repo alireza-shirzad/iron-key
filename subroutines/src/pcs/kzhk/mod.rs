@@ -351,7 +351,6 @@ impl<E: Pairing> KZHK<E> {
     ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
         let timer = start_timer!(|| "KZH::Open_Dense_Boolean");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
-        dbg!(prover_param.get_dimensions());
         let aux_d_bool = aux.get_d_bool();
         let mut d = Vec::new();
         let k = prover_param.get_dimensions().len();
