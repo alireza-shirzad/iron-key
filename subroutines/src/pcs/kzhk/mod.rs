@@ -264,7 +264,7 @@ impl<E: Pairing> KZHK<E> {
             prefix_vars += dimensions[j];
 
             // Number of i's (outer loop) and length of each partial evaluation
-            let outer = 1usize << prefix_vars;
+            let dj_size = 1usize << prefix_vars;
             let rem_vars = polynomial.num_vars() - prefix_vars;
             let eval_len = 1usize << rem_vars;
 
@@ -273,14 +273,9 @@ impl<E: Pairing> KZHK<E> {
             let h_slice = prover_param.get_h_tensors()[j + 1]
                 .as_slice_memory_order()
                 .expect("H_t must be contiguous (standard layout)");
-            debug_assert_eq!(
-                h_slice.len(),
-                eval_len,
-                "H_t length must equal partial eval length"
-            );
 
-            // Build d_{j+1}
-            let d_j = (0..outer)
+            // Build d_{j}
+            let d_j = (0..dj_size)
                 .map(|i| {
                     let scalars =
                         KZHK::<E>::partially_eval_dense_poly_on_bool_point(polynomial, i, eval_len);
@@ -356,27 +351,25 @@ impl<E: Pairing> KZHK<E> {
     ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
         let timer = start_timer!(|| "KZH::Open_Dense_Boolean");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        dbg!(prover_param.get_dimensions());
         let aux_d_bool = aux.get_d_bool();
         let mut d = Vec::new();
         let k = prover_param.get_dimensions().len();
         let decomposed_point = KZHK::<E>::decompose_point(prover_param.get_dimensions(), point);
         let mut partial_polynomial = polynomial.clone();
         let mut current_point: Vec<E::ScalarField> = Vec::new();
-        for (j, point_part) in decomposed_point.iter().take(k - 1).enumerate() {
-            current_point.extend_from_slice(point_part);
-            let mut dj: Vec<E::G1Affine> = Vec::new();
-            // Now start iterating over the boolean partial evaluations
-            for i in 0..1 << prover_param.get_dimensions()[j] {
-                let mut current_point_concate_b = current_point.clone();
-                current_point_concate_b.extend_from_slice(&Self::usize_to_bits_be(
-                    i,
-                    prover_param.get_dimensions()[j],
-                ));
-                let index = KZHK::<E>::bits_be_to_usize(&current_point);
-                dj.push(aux_d_bool[j][index]);
-            }
-            d.push(dj);
-            partial_polynomial = fix_last_variables(&partial_polynomial, point_part);
+        // Loop begins
+        for (j, partial_point) in decomposed_point.iter().take(k - 1).enumerate() {
+            let block_dim = prover_param.get_dimensions()[j];
+            let eb = Self::bits_le_to_usize(&current_point);
+            let start = eb << block_dim; // == eb * 2^(block_dim)
+            // let start = Self::bits_le_to_usize(&current_point);
+            let end = start + (1 << block_dim);
+            let aux_vec = &aux_d_bool[j];
+            debug_assert!(end <= aux_vec.len(), "aux slice OOB");
+            d.push(aux_vec[start..end].to_vec());
+            current_point.splice(0..0, partial_point.iter().cloned());
+            partial_polynomial = fix_last_variables(&partial_polynomial, partial_point);
         }
         let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
         let eval = fix_last_variables(&partial_polynomial, &decomposed_point[k - 1])[0];

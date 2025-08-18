@@ -189,7 +189,9 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
         let d = num_vars / k;
         let remainder_d = num_vars % k;
         let mut dimensions = vec![d; k];
-        dimensions[k - 1] += remainder_d;
+        for dim in dimensions.iter_mut().take(remainder_d) {
+            *dim += 1;
+        }
         let _num_vars = vec![1 << d; k];
         // Sampling generators
         let g = E::G1::rand(rng);
