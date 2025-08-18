@@ -354,7 +354,34 @@ impl<E: Pairing> KZHK<E> {
         point: &[E::ScalarField],
         aux: &KZHKAuxInfo<E>,
     ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
-        todo!()
+        let timer = start_timer!(|| "KZH::Open_Dense_Boolean");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let aux_d_bool = aux.get_d_bool();
+        let mut d = Vec::new();
+        let k = prover_param.get_dimensions().len();
+        let decomposed_point = KZHK::<E>::decompose_point(prover_param.get_dimensions(), point);
+        let mut partial_polynomial = polynomial.clone();
+        let mut current_point: Vec<E::ScalarField> = Vec::new();
+        for (j, point_part) in decomposed_point.iter().take(k - 1).enumerate() {
+            current_point.extend_from_slice(point_part);
+            let mut dj: Vec<E::G1Affine> = Vec::new();
+            // Now start iterating over the boolean partial evaluations
+            for i in 0..1 << prover_param.get_dimensions()[j] {
+                let mut current_point_concate_b = current_point.clone();
+                current_point_concate_b.extend_from_slice(&Self::usize_to_bits_be(
+                    i,
+                    prover_param.get_dimensions()[j],
+                ));
+                let index = KZHK::<E>::bits_be_to_usize(&current_point);
+                dj.push(aux_d_bool[j][index]);
+            }
+            d.push(dj);
+            partial_polynomial = fix_last_variables(&partial_polynomial, point_part);
+        }
+        let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
+        let eval = fix_last_variables(&partial_polynomial, &decomposed_point[k - 1])[0];
+        end_timer!(timer);
+        Ok((KZHKOpeningProof::new(d, f), eval))
     }
     fn open_sparse(
         prover_param: impl Borrow<KZHKProverParam<E>>,
@@ -392,5 +419,80 @@ impl<E: Pairing> KZHK<E> {
             start = end;
         }
         decomposed
+    }
+
+    #[inline]
+    pub fn bits_le_to_usize<F: Field>(bits: &[F]) -> usize {
+        assert!(
+            bits.len() <= usize::BITS as usize,
+            "too many bits for usize"
+        );
+        assert!(
+            bits.iter().all(|b| b.is_zero() || b.is_one()),
+            "non-boolean bit"
+        );
+        let mut out: usize = 0;
+        for (i, bit) in bits.iter().enumerate() {
+            if bit.is_one() {
+                out |= 1usize << i;
+            }
+        }
+        out
+    }
+
+    /// Interpret bits as BIG-ENDIAN (bits[0] is the most-significant bit).
+    #[inline]
+    pub fn bits_be_to_usize<F: Field>(bits: &[F]) -> usize {
+        assert!(
+            bits.len() <= usize::BITS as usize,
+            "too many bits for usize"
+        );
+        assert!(
+            bits.iter().all(|b| b.is_zero() || b.is_one()),
+            "non-boolean bit"
+        );
+        let mut out: usize = 0;
+        let n = bits.len();
+        for (i, bit) in bits.iter().enumerate() {
+            if bit.is_one() {
+                out |= 1usize << (n - 1 - i);
+            }
+        }
+        out
+    }
+
+    /// LITTLE-ENDIAN: out[0] is LSB.
+    /// Panics if `x` doesn't fit in `n_bits`.
+    #[inline]
+    pub fn usize_to_bits_le<F: Field>(x: usize, n_bits: usize) -> Vec<F> {
+        assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
+        let mut out = Vec::with_capacity(n_bits);
+        let mut v = x;
+        for _ in 0..n_bits {
+            out.push(if (v & 1) == 1 { F::one() } else { F::zero() });
+            v >>= 1;
+        }
+        assert!(v == 0, "value {} does not fit in {} bits", x, n_bits);
+        out
+    }
+
+    /// BIG-ENDIAN: out[0] is MSB.
+    /// Panics if `x` doesn't fit in `n_bits`.
+    #[inline]
+    pub fn usize_to_bits_be<F: Field>(x: usize, n_bits: usize) -> Vec<F> {
+        assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
+        let mut out = vec![F::zero(); n_bits];
+        for i in 0..n_bits {
+            let bit = ((x >> i) & 1) == 1;
+            out[n_bits - 1 - i] = if bit { F::one() } else { F::zero() };
+        }
+        // If n_bits < needed, the highest shifted bits would be non-zero.
+        assert!(
+            (x >> n_bits) == 0,
+            "value {} does not fit in {} bits",
+            x,
+            n_bits
+        );
+        out
     }
 }
