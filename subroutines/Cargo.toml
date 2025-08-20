@@ -23,11 +23,8 @@ util = { path = "../util" }
 
 
 [features]
-# extensive sanity checks that are useful for debugging
-extensive_sanity_checks = []
 parallel = [
     "rayon",
-    # "itertools",
     "ark-std/parallel",
     "ark-ff/parallel",
     "ark-poly/parallel",
