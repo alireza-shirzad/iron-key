@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, marker::PhantomData};
+use std::{borrow::Borrow, collections::BTreeMap, marker::PhantomData};
 
 use crate::{
     pcs::kzhk::{
@@ -8,7 +8,7 @@ use crate::{
     poly::DenseOrSparseMLE,
     PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use arithmetic::{build_eq_x_r, eq_eval, fix_last_variables};
+use arithmetic::{build_eq_x_r, eq_eval, fix_last_variables, fix_last_variables_sparse};
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::{Field, One};
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
@@ -175,8 +175,11 @@ where
             DenseOrSparseMLE::Dense(f) => {
                 assert_eq!(fix_last_variables(f, &decomposed_point[k - 1])[0], *value);
             },
-            DenseOrSparseMLE::Sparse(_) => {
-                panic!("Sparse proof not supported");
+            DenseOrSparseMLE::Sparse(f) => {
+                assert_eq!(
+                    fix_last_variables_sparse(f, &decomposed_point[k - 1])[0],
+                    *value
+                );
             },
         }
         end_timer!(eval_check_timer);
@@ -205,7 +208,7 @@ impl<E: Pairing> KZHK<E> {
         let commit_timer = start_timer!(|| "KZH::Commit_Dense");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
         let com = E::G1::msm(
-            &prover_param.get_h_tensors()[0]
+            prover_param.get_h_tensors()[0]
                 .as_slice_memory_order()
                 .unwrap(),
             &poly.evaluations,
@@ -296,7 +299,54 @@ impl<E: Pairing> KZHK<E> {
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         com: &KZHKCommitment<E>,
     ) -> Result<KZHKAuxInfo<E>, PCSError> {
-        todo!()
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let dimensions = prover_param.get_dimensions();
+        let k = dimensions.len();
+        assert!(k >= 2, "need at least 2 blocks to build d_i's");
+
+        let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
+        let mut prefix_vars: usize = 0;
+
+        for j in 0..(k - 1) {
+            // Update prefix sum of variables up to and including block j
+            prefix_vars += dimensions[j];
+
+            // Number of i's (outer loop) and length of each partial evaluation
+            let dj_size = 1usize << prefix_vars;
+            let rem_vars = polynomial.num_vars() - prefix_vars;
+            let eval_len = 1usize << rem_vars;
+
+            // Choose H_t. Natural generalization uses [j]; if you intended to always use
+            // [0], replace `j` with `0` below.
+            let h_slice = prover_param.get_h_tensors()[j + 1]
+                .as_slice_memory_order()
+                .expect("H_t must be contiguous (standard layout)");
+
+            // Build d_{j}
+            let d_j = (0..dj_size)
+                .map(|i| {
+                    let scalars_map = KZHK::<E>::partially_eval_sparse_poly_on_bool_point(
+                        polynomial, i, eval_len,
+                    );
+                    let mut bases = Vec::with_capacity(scalars_map.len());
+                    let mut scalars = Vec::with_capacity(scalars_map.len());
+                    for (&local_idx, s) in scalars_map.iter() {
+                        bases.push(h_slice[local_idx]); // h_slice: &[E::G1Affine]
+                        scalars.push(*s); // E::ScalarField: Clone
+                    }
+
+                    if scalars.is_empty() {
+                        E::G1Affine::zero()
+                    } else {
+                        E::G1::msm(&bases, &scalars).unwrap().into_affine()
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            d_bool.push(d_j);
+        }
+
+        Ok(KZHKAuxInfo::new(d_bool))
     }
 
     fn open_dense(
@@ -362,16 +412,18 @@ impl<E: Pairing> KZHK<E> {
             let block_dim = prover_param.get_dimensions()[j];
             let eb = Self::bits_le_to_usize(&current_point);
             let start = eb << block_dim; // == eb * 2^(block_dim)
-            // let start = Self::bits_le_to_usize(&current_point);
+                                         // let start = Self::bits_le_to_usize(&current_point);
             let end = start + (1 << block_dim);
             let aux_vec = &aux_d_bool[j];
             debug_assert!(end <= aux_vec.len(), "aux slice OOB");
             d.push(aux_vec[start..end].to_vec());
             current_point.splice(0..0, partial_point.iter().cloned());
-            partial_polynomial = fix_last_variables(&partial_polynomial, partial_point);
+            partial_polynomial =
+                Self::fix_last_variables_boolean(&partial_polynomial, partial_point);
         }
         let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
-        let eval = fix_last_variables(&partial_polynomial, &decomposed_point[k - 1])[0];
+        let eval =
+            Self::fix_last_variables_boolean(&partial_polynomial, &decomposed_point[k - 1])[0];
         end_timer!(timer);
         Ok((KZHKOpeningProof::new(d, f), eval))
     }
@@ -379,9 +431,60 @@ impl<E: Pairing> KZHK<E> {
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
-        aux: &KZHKAuxInfo<E>,
+        _aux: &KZHKAuxInfo<E>,
     ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
-        todo!()
+        let timer = start_timer!(|| "KZH::Open_Sparse");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let mut d = Vec::new();
+        let k = prover_param.get_dimensions().len();
+        let decomposed_point = KZHK::<E>::decompose_point(prover_param.get_dimensions(), point);
+        let mut partial_polynomial = polynomial.clone();
+
+        for (j, point_part) in decomposed_point.iter().take(k - 1).enumerate() {
+            let mut dj: Vec<E::G1Affine> = Vec::new();
+
+            // Same partitioning as dense:
+            let num_chunks = 1usize << prover_param.get_dimensions()[j]; // 2^{block_j}
+            let chunk_len =
+                1usize << (partial_polynomial.num_vars - prover_param.get_dimensions()[j]); // 2^{remaining - block_j}
+            let domain_len = 1usize << partial_polynomial.num_vars;
+            debug_assert_eq!(num_chunks * chunk_len, domain_len);
+
+            let h_slice = prover_param.get_h_tensors()[j + 1]
+                .as_slice_memory_order()
+                .expect("H_t must be contiguous");
+            debug_assert_eq!(h_slice.len(), chunk_len);
+
+            // Iterate windows in increasing "x-index" order (matches dense & verifier eq
+            // order)
+            for i in 0..num_chunks {
+                let base = i * chunk_len;
+                // Gather non-zeros in [base, base+chunk_len) and rebase to local [0..chunk_len)
+                let mut bases = Vec::new();
+                let mut scalars = Vec::new();
+                for (&gidx, &val) in partial_polynomial.evaluations.range(base..base + chunk_len) {
+                    let local = gidx - base;
+                    bases.push(h_slice[local]);
+                    scalars.push(val);
+                }
+
+                let acc = if scalars.is_empty() {
+                    E::G1Affine::zero()
+                } else {
+                    E::G1::msm(&bases, &scalars).unwrap().into_affine()
+                };
+                dj.push(acc);
+            }
+            d.push(dj);
+
+            // Reduce the last block by the point part (must match dense orientation)
+            partial_polynomial = fix_last_variables_sparse(&partial_polynomial, point_part);
+        }
+
+        let f = DenseOrSparseMLE::Sparse(partial_polynomial.clone());
+        let eval = fix_last_variables_sparse(&partial_polynomial, &decomposed_point[k - 1])[0];
+        end_timer!(timer);
+        Ok((KZHKOpeningProof::new(d, f), eval))
     }
     fn open_sparse_bool(
         prover_param: impl Borrow<KZHKProverParam<E>>,
@@ -389,7 +492,34 @@ impl<E: Pairing> KZHK<E> {
         point: &[E::ScalarField],
         aux: &KZHKAuxInfo<E>,
     ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
-        todo!()
+        let timer = start_timer!(|| "KZH::Open_Sparse_Boolean");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let aux_d_bool = aux.get_d_bool();
+        let mut d = Vec::new();
+        let k = prover_param.get_dimensions().len();
+        let decomposed_point = KZHK::<E>::decompose_point(prover_param.get_dimensions(), point);
+        let mut partial_polynomial = polynomial.clone();
+        let mut current_point: Vec<E::ScalarField> = Vec::new();
+        // Loop begins
+        for (j, partial_point) in decomposed_point.iter().take(k - 1).enumerate() {
+            let block_dim = prover_param.get_dimensions()[j];
+            let eb = Self::bits_le_to_usize(&current_point);
+            let start = eb << block_dim; // == eb * 2^(block_dim)
+                                         // let start = Self::bits_le_to_usize(&current_point);
+            let end = start + (1 << block_dim);
+            let aux_vec = &aux_d_bool[j];
+            debug_assert!(end <= aux_vec.len(), "aux slice OOB");
+            d.push(aux_vec[start..end].to_vec());
+            current_point.splice(0..0, partial_point.iter().cloned());
+            partial_polynomial =
+                Self::fix_last_variables_boolean_sparse(&partial_polynomial, partial_point);
+        }
+        let f = DenseOrSparseMLE::Sparse(partial_polynomial.clone());
+        let eval =
+            Self::fix_last_variables_boolean_sparse(&partial_polynomial, &decomposed_point[k - 1])
+                [0];
+        end_timer!(timer);
+        Ok((KZHKOpeningProof::new(d, f), eval))
     }
     pub fn partially_eval_dense_poly_on_bool_point(
         dense_poly: &DenseMultilinearExtension<E::ScalarField>,
@@ -399,6 +529,53 @@ impl<E: Pairing> KZHK<E> {
         dense_poly.evaluations[n * index..n * index + n].to_vec()
     }
 
+    pub fn partially_eval_sparse_poly_on_bool_point(
+        sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
+        index: usize,
+        n: usize,
+    ) -> BTreeMap<usize, E::ScalarField> {
+        debug_assert!(n > 0 && n.is_power_of_two(), "n must be a power of two");
+        let total = 1usize << sparse_poly.num_vars;
+        debug_assert!(n <= total, "n must be <= 2^num_vars");
+        debug_assert!(total % n == 0, "n must divide 2^num_vars");
+        let num_prefix_assignments = total / n;
+        debug_assert!(index < num_prefix_assignments, "index out of range");
+
+        let base = index * n;
+
+        // Collect only the non-zero entries (i.e., those present in the sparse map)
+        // that fall in the contiguous window [base, base + n), and rebase to [0, n).
+        sparse_poly
+        .evaluations
+        .range(base..base + n) // end is exclusive
+        .map(|(&global_idx, v)| (global_idx - base, v.clone()))
+        .collect()
+    }
+    pub fn fix_last_variables_boolean(
+        poly: &DenseMultilinearExtension<E::ScalarField>,
+        point: &[E::ScalarField],
+    ) -> DenseMultilinearExtension<E::ScalarField> {
+        let n = poly.num_vars() - point.len();
+        let index = Self::bits_le_to_usize(point);
+        DenseMultilinearExtension::from_evaluations_vec(
+            n,
+            Self::partially_eval_dense_poly_on_bool_point(poly, index, 1 << n),
+        )
+    }
+    pub fn fix_last_variables_boolean_sparse(
+        poly: &SparseMultilinearExtension<E::ScalarField>,
+        point: &[E::ScalarField],
+    ) -> SparseMultilinearExtension<E::ScalarField> {
+        // remaining vars after fixing the last |point| variables
+        let n = poly.num_vars() - point.len();
+        // little-endian: point[0] is LSB of the last block
+        let index = Self::bits_le_to_usize(point);
+        // grab the contiguous window and rebase indices to [0 .. 2^n)
+        let evals_map = Self::partially_eval_sparse_poly_on_bool_point(poly, index, 1 << n);
+        let evals: Vec<(usize, E::ScalarField)> = evals_map.into_iter().collect();
+
+        SparseMultilinearExtension::from_evaluations(n, &evals)
+    }
     pub fn decompose_point(
         dimensions: &[usize],
         point: &[E::ScalarField],
@@ -487,4 +664,29 @@ impl<E: Pairing> KZHK<E> {
         );
         out
     }
+}
+#[test]
+fn sparse_to_evaluations_copies_all_nonzeros() {
+    use ark_bn254::Fr;
+
+    // 3 variables → 8 evaluations
+    // Non-zeros at indices 1, 3, and 6.
+    let v1 = Fr::from(11u64);
+    let v3 = Fr::from(33u64);
+    let v6 = Fr::from(66u64);
+
+    let sparse = SparseMultilinearExtension::from_evaluations(
+        3,
+        &[(1usize, v1), (3usize, v3), (6usize, v6)],
+    );
+
+    let got = sparse.to_evaluations();
+
+    // Expected dense vector: zeros everywhere except indices 1, 3, and 6.
+    let mut expected = vec![Fr::from(0u64); 8];
+    expected[1] = v1;
+    expected[3] = v3;
+    expected[6] = v6;
+
+    assert_eq!(got, expected, "to_evaluations must copy ALL sparse entries");
 }

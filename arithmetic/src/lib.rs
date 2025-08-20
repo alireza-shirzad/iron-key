@@ -12,7 +12,7 @@ mod virtual_polynomial;
 
 pub use errors::ArithErrors;
 pub use multilinear_polynomial::{
-    evaluate_last_dense, evaluate_opt, fix_first_variables, fix_last_variables,
+    evaluate_last_dense, evaluate_opt, fix_first_variables, fix_last_variables,fix_last_variables_sparse,
     identity_permutation, identity_permutation_mles, random_mle_list, random_permutation,
     random_permutation_mles, random_zero_mle_list, DenseMultilinearExtension,
 };
