@@ -16,11 +16,12 @@ use iron_key::{
     structs::pp::IronPublicParameters, // Ensure this path is correct for your project
     structs::{IronLabel, IronSpecification},
 };
+use iron_key_bench::KZH_PARAM;
 use once_cell::sync::Lazy; // Added Lazy
-use subroutines::pcs::kzh4::KZH4;
+use subroutines::pcs::kzhk::KZHK;
 
 // Type alias for the Public Parameters
-type AppPublicParameters = IronPublicParameters<Bn254, KZH4<Bn254>>;
+type AppPublicParameters = IronPublicParameters<Bn254, KZHK<Bn254>>;
 
 // Static cache for public parameters, keyed by log_capacity (u64)
 static PP_CACHE: Lazy<Mutex<HashMap<u64, Arc<AppPublicParameters>>>> =
@@ -36,8 +37,8 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
                 "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let system_spec = IronSpecification::new(1 << log_capacity);
-            let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(system_spec)
+            let system_spec = IronSpecification::new(KZH_PARAM, 1 << log_capacity);
+            let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(system_spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)
         })
@@ -70,9 +71,9 @@ fn prepare_prover_update_prove_inputs(
     log_update_size: usize,
     log_initial_batch_size: usize,
 ) -> (
-    IronServer<Bn254, KZH4<Bn254>, IronLabel>,
+    IronServer<Bn254, KZHK<Bn254>, IronLabel>,
     HashMap<IronLabel, Fr>,
-    DummyBB<Bn254, KZH4<Bn254>>,
+    DummyBB<Bn254, KZHK<Bn254>>,
 ) {
     let initial_batch_size_val = 1 << log_initial_batch_size; // Renamed to avoid conflict if log_initial_batch_size was 0
     // Get PP from cache or create it if it's not there for the given log_capacity

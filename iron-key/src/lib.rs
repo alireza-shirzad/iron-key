@@ -40,7 +40,7 @@ where
             LookupProof = Self::LookupProof,
             SelfAuditProof = Self::SelfAuditProof,
         >;
-    type Specification: VKDSpecification;
+    type Specification: VKDSpecification<E, PC>;
     type PublicParameters;
     type Dictionary: VKDDictionary<E, Label = Self::Label>;
     type Label: VKDLabel<E>;
@@ -134,8 +134,13 @@ pub trait VKDDictionary<E: Pairing> {
     type Value;
 }
 
-pub trait VKDSpecification {
+pub trait VKDSpecification<E, PC>
+where
+    E: Pairing,
+    PC: PolynomialCommitmentScheme<E>,
+{
     fn get_capacity(&self) -> usize;
+    fn get_pcs_conf(&self) -> PC::Config;
 }
 
 pub trait VKDPublicParameters {

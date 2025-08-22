@@ -54,33 +54,38 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         supported_num_vars: Option<usize>,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError>;
 
-    fn commit(
+    fn commit<R: Rng>(
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
-    ) -> Result<Self::Commitment, PCSError>;
+        hiding: Option<&mut R>,
+    ) -> Result<(Self::Commitment,Self::Aux), PCSError>;
 
-    fn comp_aux(
+    fn update_aux(
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
         com: &Self::Commitment,
-    ) -> Result<Self::Aux, PCSError> {
+        aux: &mut Self::Aux,
+    ) -> Result<(), PCSError> {
         unimplemented!()
     }
 
-    fn open(
+    fn open<R: Rng>(
         prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
         polynomial: &Self::Polynomial,
         point: &Self::Point,
         aux: &Self::Aux,
+        hiding: Option<&mut R>,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(Self::Proof, Self::Evaluation), PCSError>;
 
     fn multi_open(
         _prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+
         _polynomials: &[&Self::Polynomial],
         _point: &Self::Point,
         _auxes: &[Self::Aux],
-        _boolean: bool,
-        _sparse: bool,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
         unimplemented!()
@@ -91,8 +96,8 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         commitment: &Self::Commitment,
         point: &Self::Point,
         value: &E::ScalarField,
-        aux: Option<&Self::Aux>,
         proof: &Self::Proof,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError>;
 
     fn batch_verify(

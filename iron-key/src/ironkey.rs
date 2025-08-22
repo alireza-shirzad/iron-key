@@ -11,7 +11,7 @@ use crate::{
 use ark_ec::pairing::Pairing;
 use ark_std::{end_timer, ops::Sub, start_timer, test_rng};
 use std::ops::Add;
-use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
+use subroutines::{PolynomialCommitmentScheme, pcs, poly::DenseOrSparseMLE};
 pub struct IronKey<E, MvPCS, T>
 where
     E: Pairing,
@@ -60,7 +60,7 @@ where
     type Server = IronServer<E, MvPCS, T>;
     type Auditor = IronAuditor<E, T, MvPCS>;
     type Client = IronClient<E, T, MvPCS>;
-    type Specification = IronSpecification;
+    type Specification = IronSpecification<E, MvPCS>;
     type Dictionary = IronDictionary<E, T>;
     type LookupProof = IronLookupProof<E, MvPCS>;
     type SelfAuditProof = IronSelfAuditProof<E, MvPCS>;
@@ -71,10 +71,11 @@ where
     fn setup(specification: Self::Specification) -> VKDResult<Self::PublicParameters> {
         let timer = start_timer!(|| "IronKey::setup");
         let capacity = specification.get_capacity();
+        let pcs_conf = specification.get_pcs_conf();
         let real_capacity = capacity.next_power_of_two();
         let num_vars = real_capacity.trailing_zeros() as usize;
         let mut rng = test_rng();
-        let srs = MvPCS::gen_srs_for_testing(&mut rng, num_vars).unwrap();
+        let srs = MvPCS::gen_srs_for_testing(pcs_conf, &mut rng, num_vars).unwrap();
         end_timer!(timer);
         Ok(IronPublicParameters::<E, MvPCS>::new(real_capacity, srs))
     }

@@ -1,4 +1,4 @@
-use arithmetic::VPAuxInfo;
+use arithmetic::virtual_polynomial::VPAuxInfo;
 use ark_ec::pairing::Pairing;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use subroutines::{IOPProof, PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
@@ -104,7 +104,6 @@ where
     pub fn get_difference_accumulator(&self) -> &MvPCS::Commitment {
         &self.difference_accumulator
     }
-
 }
 
 #[derive(CanonicalSerialize, Clone)]
@@ -148,5 +147,4 @@ where
     pub fn get_update_proof(&self) -> &Option<IronUpdateProof<E, MvPCS>> {
         &self.update_proof
     }
-
 }

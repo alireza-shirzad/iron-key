@@ -6,17 +6,33 @@ use crate::{
         structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof},
     },
     poly::DenseOrSparseMLE,
-    PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
+    Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
-use arithmetic::{build_eq_x_r, fix_last_variables, fix_last_variables_sparse};
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, VariableBaseMSM};
-use ark_ff::{Field, One};
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
-use ark_std::{cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, Zero};
+use ark_ff::One;
+use ark_poly::{
+    univariate::DenseOrSparsePolynomial, DenseMultilinearExtension, MultilinearExtension,
+    SparseMultilinearExtension,
+};
+use ark_std::{
+    cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer,
+    rand::{Rng, RngCore},
+    start_timer, Zero,
+};
 use transcript::IOPTranscript;
 pub mod srs;
 pub mod structs;
-
+use arithmetic::{
+    bits_le_to_usize,
+    multilinear_polynomial::{
+        evaluate_last_sparse, fix_last_variables, fix_last_variables_boolean,
+        fix_last_variables_boolean_sparse, fix_last_variables_sparse,
+        partially_eval_dense_poly_on_bool_point, partially_eval_sparse_poly_on_bool_point,
+        rand_sparse_mle,
+    },
+    virtual_polynomial::build_eq_x_r,
+};
+use ark_std::UniformRand;
 #[cfg(feature = "parallel")]
 use rayon::iter::{
     IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
@@ -44,7 +60,7 @@ where
     type Evaluation = E::ScalarField;
     type Commitment = KZHKCommitment<E>;
     type Proof = KZHKOpeningProof<E>;
-    type BatchProof = ();
+    type BatchProof = KZHKOpeningProof<E>;
     type Aux = KZHKAuxInfo<E>;
 
     fn gen_srs_for_testing<R: Rng>(
@@ -57,7 +73,7 @@ where
 
     fn trim(
         srs: impl Borrow<Self::SRS>,
-        supported_degree: Option<usize>,
+        _supported_degree: Option<usize>,
         supported_num_vars: Option<usize>,
     ) -> Result<(Self::ProverParam, Self::VerifierParam), PCSError> {
         let srs = srs.borrow();
@@ -69,47 +85,181 @@ where
         ))
     }
 
-    fn commit(
+    fn commit<R: Rng>(
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
-    ) -> Result<Self::Commitment, PCSError> {
+        hiding: Option<&mut R>,
+    ) -> Result<(Self::Commitment, Self::Aux), PCSError> {
         let timer = start_timer!(|| "KZH::Commit");
-        let result = match poly {
-            DenseOrSparseMLE::Dense(poly) => Self::commit_dense(prover_param, poly),
-            DenseOrSparseMLE::Sparse(poly) => Self::commit_sparse(prover_param, poly),
-        };
+        if hiding.is_none() {
+            return Ok(Self::commit_non_zk(prover_param, poly).unwrap());
+        }
+        let result = Ok(Self::commit_zk(prover_param, poly, hiding).unwrap());
         end_timer!(timer);
         result
     }
 
-    fn comp_aux(
+    fn update_aux(
         prover_param: impl Borrow<Self::ProverParam>,
         polynomial: &Self::Polynomial,
         com: &Self::Commitment,
-    ) -> Result<Self::Aux, PCSError> {
-        let timer = start_timer!(|| "KZH::CompAux");
-        let result = match polynomial {
-            DenseOrSparseMLE::Dense(poly) => Self::comp_aux_dense(prover_param, poly, com),
-            DenseOrSparseMLE::Sparse(poly) => Self::comp_aux_sparse(prover_param, poly, com),
+        aux: &mut Self::Aux,
+    ) -> Result<(), PCSError> {
+        Self::update_aux_non_zk(prover_param, polynomial, com, aux)
+    }
+
+    fn open<R: Rng>(
+        prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+        polynomial: &Self::Polynomial,
+        point: &Self::Point,
+        aux: &Self::Aux,
+        hiding: Option<&mut R>,
+        transcript: &mut IOPTranscript<E::ScalarField>,
+    ) -> Result<(Self::Proof, Self::Evaluation), PCSError> {
+        let timer = start_timer!(|| "KZH::Open");
+
+        let result = if hiding.is_none() {
+            Self::open_non_zk(prover_param, commitment, polynomial, point, aux)
+        } else {
+            Self::open_zk(
+                prover_param,
+                commitment,
+                polynomial,
+                point,
+                aux,
+                hiding,
+                transcript,
+            )
+        };
+
+        end_timer!(timer);
+        result
+    }
+
+    fn multi_open(
+        prover_param: impl Borrow<Self::ProverParam>,
+        commitment: &Self::Commitment,
+        polynomials: &[&Self::Polynomial],
+        point: &Self::Point,
+        auxes: &[Self::Aux],
+        transcript: &mut IOPTranscript<E::ScalarField>,
+    ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
+        Self::multi_open_non_zk(
+            prover_param,
+            commitment,
+            polynomials,
+            point,
+            auxes,
+            transcript,
+        )
+    }
+
+    fn verify(
+        verifier_param: &Self::VerifierParam,
+        commitment: &Self::Commitment,
+        point: &Self::Point,
+        value: &E::ScalarField,
+        proof: &Self::Proof,
+        _transcript: &mut IOPTranscript<E::ScalarField>,
+    ) -> Result<bool, PCSError> {
+        let timer = start_timer!(|| "KZH::Verify");
+        let result = match (proof.get_r_hide(), proof.get_y_r(), proof.get_rho_prime()) {
+            (Some(_), Some(_), Some(_)) => {
+                Self::verify_zk(verifier_param, commitment, point, value, None, proof)
+            },
+            _ => Self::verify_non_zk(verifier_param, commitment, point, value, None, proof),
         };
         end_timer!(timer);
         result
     }
 
-    fn open(
-        prover_param: impl Borrow<Self::ProverParam>,
-        polynomial: &Self::Polynomial,
+    fn batch_verify(
+        verifier_param: &Self::VerifierParam,
+        commitments: &[Self::Commitment],
+        auxs: Option<&[Self::Aux]>,
         point: &Self::Point,
-        aux: &Self::Aux,
-    ) -> Result<(Self::Proof, Self::Evaluation), PCSError> {
-        let timer = start_timer!(|| "KZH::Open");
+        values: &[E::ScalarField],
+        batch_proof: &Self::BatchProof,
+        transcript: &mut IOPTranscript<E::ScalarField>,
+    ) -> Result<bool, PCSError> {
+        Self::batch_verify_non_zk(
+            verifier_param,
+            commitments,
+            auxs,
+            point,
+            values,
+            batch_proof,
+            transcript,
+        )
+    }
+}
+
+impl<E: Pairing> KZHK<E> {
+    fn commit_zk<R: RngCore>(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        poly: &DenseOrSparseMLE<E::ScalarField>,
+        hiding: Option<&mut R>,
+    ) -> Result<(KZHKCommitment<E>, KZHKAuxInfo<E>), PCSError> {
+        let timer = start_timer!(|| "KZH::Commit-ZK");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let tau = E::ScalarField::rand(hiding.unwrap());
+        let (non_zk_com, _) = Self::commit_non_zk(prover_param, poly)?;
+        let randomized_commitment =
+            (non_zk_com.get_commitment().into_group() + prover_param.get_h() * tau).into_affine();
+        let aux_info = KZHKAuxInfo::new(Some(tau), None);
+        let result = Ok((
+            KZHKCommitment::new(randomized_commitment, non_zk_com.get_num_vars()),
+            aux_info,
+        ));
+        end_timer!(timer);
+        result
+    }
+
+    fn commit_non_zk(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        poly: &DenseOrSparseMLE<E::ScalarField>,
+    ) -> Result<(KZHKCommitment<E>, KZHKAuxInfo<E>), PCSError> {
+        let timer = start_timer!(|| "KZH::Commit-Non-ZK");
+        let non_zk_com = match poly {
+            DenseOrSparseMLE::Dense(poly) => Self::commit_dense_inner(prover_param, poly),
+            DenseOrSparseMLE::Sparse(poly) => Self::commit_sparse_inner(prover_param, poly),
+        };
+        let result = Ok((non_zk_com.unwrap(), KZHKAuxInfo::default()));
+        end_timer!(timer);
+        result
+    }
+
+    fn update_aux_non_zk(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        polynomial: &DenseOrSparseMLE<E::ScalarField>,
+        com: &KZHKCommitment<E>,
+        aux: &mut KZHKAuxInfo<E>,
+    ) -> Result<(), PCSError> {
+        let timer = start_timer!(|| "KZH::CompAux");
+        let result = match polynomial {
+            DenseOrSparseMLE::Dense(poly) => Self::update_aux_dense(prover_param, poly, com, aux),
+            DenseOrSparseMLE::Sparse(poly) => Self::update_aux_sparse(prover_param, poly, com, aux),
+        };
+        end_timer!(timer);
+        result
+    }
+
+    fn open_non_zk(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        _commitment: &KZHKCommitment<E>,
+        polynomial: &DenseOrSparseMLE<E::ScalarField>,
+        point: &[E::ScalarField],
+        aux: &KZHKAuxInfo<E>,
+    ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
+        let timer = start_timer!(|| "KZH::Open-Non-ZK");
         let is_boolean_point = point.iter().all(|&x| x.is_zero() || x.is_one());
         let result = match (is_boolean_point, polynomial) {
             (true, DenseOrSparseMLE::Dense(poly)) => {
-                Self::open_dense_bool(prover_param, poly, point, aux)
+                Self::open_dense_non_bool_innerbool_inner(prover_param, poly, point, aux)
             },
             (true, DenseOrSparseMLE::Sparse(poly)) => {
-                Self::open_sparse_bool(prover_param, poly, point, aux)
+                Self::open_sparse_non_bool_innerbool_inner(prover_param, poly, point, aux)
             },
             (false, DenseOrSparseMLE::Dense(poly)) => {
                 Self::open_dense(prover_param, poly, point, aux)
@@ -122,47 +272,158 @@ where
         result
     }
 
-    fn multi_open(
-        _prover_param: impl Borrow<Self::ProverParam>,
-        _polynomials: &[&Self::Polynomial],
-        _point: &Self::Point,
-        _auxes: &[Self::Aux],
-        _boolean: bool,
-        _sparse: bool,
+    fn open_zk<R: Rng>(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        commitment: &KZHKCommitment<E>,
+        polynomial: &DenseOrSparseMLE<E::ScalarField>,
+        point: &[E::ScalarField],
+        aux: &KZHKAuxInfo<E>,
+        hiding: Option<&mut R>,
         _transcript: &mut IOPTranscript<E::ScalarField>,
-    ) -> Result<(Self::BatchProof, Self::Evaluation), PCSError> {
-        unimplemented!()
+    ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
+        let timer = start_timer!(|| "KZH::Open-ZK");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        // The zk path
+        let (non_zk_opening, non_zk_value) =
+            Self::open_non_zk(prover_param, commitment, polynomial, point, aux)?;
+        let mut rng = hiding.unwrap();
+        // Sampling the sparse polynomial r(X)
+        let r_poly: SparseMultilinearExtension<E::ScalarField> = rand_sparse_mle(
+            polynomial.num_vars(),
+            prover_param.get_hiding_sparsity(),
+            rng,
+        );
+        let r_poly_wrapped = DenseOrSparseMLE::Sparse(r_poly.clone());
+        // Committing to the r(X) polynomial
+        let (r_hide, mut r_aux) = Self::commit(prover_param, &r_poly_wrapped, Some(&mut rng))?;
+        // Computing the auxiliary of r(x)
+        let _ = Self::update_aux_non_zk(prover_param, &r_poly_wrapped, &r_hide, &mut r_aux);
+        let rho = r_aux.get_tau();
+        // Computing the opening and evaluation of r(x)
+        let (r_opening, y_r) =
+            Self::open_non_zk(prover_param, commitment, &r_poly_wrapped, point, &r_aux)?;
+        // Getting the challenge alpha
+        let alpha = E::ScalarField::one();
+        // Computing rho_prime
+        let rho_prime = alpha * aux.get_tau() + rho;
+        let mut output_opening = non_zk_opening * alpha + r_opening;
+        output_opening.set_r_hide(r_hide);
+        output_opening.set_y_r(y_r);
+        output_opening.set_rho_prime(rho_prime);
+        let result = Ok((output_opening, non_zk_value));
+        end_timer!(timer);
+        result
     }
 
-    fn verify(
-        verifier_param: &Self::VerifierParam,
-        commitment: &Self::Commitment,
-        point: &Self::Point,
+    fn multi_open_non_zk(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        commitment: &KZHKCommitment<E>,
+        polynomials: &[&DenseOrSparseMLE<E::ScalarField>],
+        point: &Vec<E::ScalarField>,
+        auxes: &[KZHKAuxInfo<E>],
+        transcript: &mut IOPTranscript<E::ScalarField>,
+    ) -> Result<(KZHKOpeningProof<E>, E::ScalarField), PCSError> {
+        let num_vars = point.len();
+        let mut aggr_aux: KZHKAuxInfo<E> = KZHKAuxInfo::default();
+        let (agg_poly, aggr_aux) = match polynomials[0] {
+            DenseOrSparseMLE::Dense(_) => {
+                let mut aggr_poly = DenseMultilinearExtension::from_evaluations_vec(
+                    num_vars,
+                    vec![E::ScalarField::zero(); 1usize << num_vars],
+                );
+                for (poly, aux) in polynomials.iter().zip(auxes.iter()) {
+                    if let DenseOrSparseMLE::Dense(dense_poly) = poly {
+                        aggr_poly += dense_poly;
+                        aggr_aux = aggr_aux + aux.clone();
+                    } else {
+                        panic!("All polynomials must be dense here");
+                    }
+                }
+                (DenseOrSparseMLE::Dense(aggr_poly), aggr_aux)
+            },
+            DenseOrSparseMLE::Sparse(_) => {
+                let mut aggr_poly =
+                    SparseMultilinearExtension::from_evaluations(num_vars, Vec::new());
+                for (poly, aux) in polynomials.iter().zip(auxes.iter()) {
+                    if let DenseOrSparseMLE::Sparse(sparse_poly) = poly {
+                        aggr_poly += sparse_poly;
+                        aggr_aux = aggr_aux + aux.clone();
+                    } else {
+                        panic!("All polynomials must be sparse here");
+                    }
+                }
+
+                (DenseOrSparseMLE::Sparse(aggr_poly), aggr_aux)
+            },
+        };
+        Self::open_non_zk(prover_param, commitment, &agg_poly, point, &aggr_aux)
+    }
+
+    fn verify_zk(
+        verifier_param: &KZHKVerifierParam<E>,
+        commitment: &KZHKCommitment<E>,
+        point: &[E::ScalarField],
         value: &E::ScalarField,
-        _aux: Option<&Self::Aux>,
-        proof: &Self::Proof,
+        _aux: Option<&KZHKAuxInfo<E>>,
+        proof: &KZHKOpeningProof<E>,
     ) -> Result<bool, PCSError> {
-        let timer = start_timer!(|| "KZH::Verify");
+        let timer = start_timer!(|| "KZH::Verify-ZK");
+        let alpha = E::ScalarField::one();
+        let c_lin = (commitment.get_commitment().into_group() * alpha
+            + proof.get_r_hide().unwrap().get_commitment().into_group()
+            - verifier_param.get_h() * proof.get_rho_prime().unwrap())
+        .into_affine();
+        let lin_commitment = KZHKCommitment::new(c_lin, commitment.get_num_vars());
+        let lin_value = *value * alpha + proof.get_y_r().unwrap();
+        let result = Self::verify_non_zk(
+            verifier_param,
+            &lin_commitment,
+            point,
+            &lin_value,
+            None,
+            proof,
+        );
+        end_timer!(timer);
+        result
+    }
+
+    fn verify_non_zk(
+        verifier_param: &KZHKVerifierParam<E>,
+        commitment: &KZHKCommitment<E>,
+        point: &[E::ScalarField],
+        value: &E::ScalarField,
+        _aux: Option<&KZHKAuxInfo<E>>,
+        proof: &KZHKOpeningProof<E>,
+    ) -> Result<bool, PCSError> {
+        let timer = start_timer!(|| "KZH::Verify-Non-ZK");
         let k = verifier_param.get_dimensions().len();
         let mut cj = commitment.get_commitment();
         let decomposed_point = KZHK::<E>::decompose_point(verifier_param.get_dimensions(), point);
         let pairing_loop_timer = start_timer!(|| "KZH::Verify::PairingLoop");
-        for j in 0..(k - 1) {
-            // Pairing Check
-            let g1_prepared = <E as Pairing>::G1Prepared::from(cj);
-            let g2_prepared = <E as Pairing>::G2Prepared::from(verifier_param.get_v());
-            let left_gt = E::multi_pairing([g1_prepared], [g2_prepared]);
 
-            let d_j_prepared = proof.get_d()[j]
-                .iter()
-                .map(|p| <E as Pairing>::G1Prepared::from(*p))
-                .collect::<Vec<_>>();
-            assert_eq!(d_j_prepared.len(), verifier_param.get_v_mat()[j].len());
-            let right_gt = E::multi_pairing(d_j_prepared, verifier_param.get_v_mat()[j].clone());
-            assert_eq!(left_gt, right_gt);
+        // TODO: See if it's worth it to randomely combine all multi-pairings
+        for (j, point_part) in decomposed_point.iter().take(k - 1).enumerate() {
+            let cj_prepared = <E as Pairing>::G1Prepared::from(cj);
+            let minus_v_prepared = <E as Pairing>::G2Prepared::from(verifier_param.get_minus_v());
 
-            // Updating Cj
-            let eq_poly = build_eq_x_r(&decomposed_point[j]).unwrap();
+            let mut g1_terms = Vec::with_capacity(1 + proof.get_d()[j].len());
+            let mut g2_terms = Vec::with_capacity(1 + verifier_param.get_v_mat()[j].len());
+
+            g1_terms.push(cj_prepared);
+            g2_terms.push(minus_v_prepared.clone());
+
+            g1_terms.extend(
+                proof.get_d()[j]
+                    .iter()
+                    .copied()
+                    .map(<E as Pairing>::G1Prepared::from),
+            );
+            g2_terms.extend(verifier_param.get_v_mat()[j].iter().cloned());
+
+            let prod = E::multi_pairing(g1_terms, g2_terms);
+            assert!(prod.is_zero());
+
+            let eq_poly = build_eq_x_r(point_part).unwrap();
             cj = E::G1::msm(&proof.get_d()[j], &eq_poly.evaluations)
                 .unwrap()
                 .into_affine();
@@ -199,21 +460,33 @@ where
         Ok(true)
     }
 
-    fn batch_verify(
-        _verifier_param: &Self::VerifierParam,
-        _commitments: &[Self::Commitment],
-        _auxs: Option<&[Self::Aux]>,
-        _point: &Self::Point,
-        _values: &[E::ScalarField],
-        _batch_proof: &Self::BatchProof,
+    fn batch_verify_non_zk(
+        verifier_param: &KZHKVerifierParam<E>,
+        commitments: &[KZHKCommitment<E>],
+        auxs: Option<&[KZHKAuxInfo<E>]>,
+        point: &Vec<E::ScalarField>,
+        values: &[E::ScalarField],
+        batch_proof: &KZHKOpeningProof<E>,
         _transcript: &mut IOPTranscript<E::ScalarField>,
     ) -> Result<bool, PCSError> {
-        unimplemented!()
-    }
-}
+        let mut aggr_comm = KZHKCommitment::default();
+        let mut aggr_value = E::ScalarField::zero();
+        for ((comm, aux), value) in commitments.iter().zip(auxs.iter()).zip(values.iter()) {
+            aggr_comm = aggr_comm + *comm;
+            aggr_value += value;
+        }
 
-impl<E: Pairing> KZHK<E> {
-    pub fn commit_dense(
+        Self::verify(
+            verifier_param,
+            &aggr_comm,
+            point,
+            &aggr_value,
+            batch_proof,
+            _transcript,
+        )
+    }
+
+    fn commit_dense_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         poly: &DenseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZHKCommitment<E>, PCSError> {
@@ -230,7 +503,7 @@ impl<E: Pairing> KZHK<E> {
         Ok(KZHKCommitment::new(com.into(), poly.num_vars()))
     }
 
-    pub fn commit_sparse(
+    fn commit_sparse_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
     ) -> Result<KZHKCommitment<E>, PCSError> {
@@ -258,11 +531,12 @@ impl<E: Pairing> KZHK<E> {
         ))
     }
 
-    fn comp_aux_dense(
+    fn update_aux_dense(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         _com: &KZHKCommitment<E>,
-    ) -> Result<KZHKAuxInfo<E>, PCSError> {
+        aux: &mut KZHKAuxInfo<E>,
+    ) -> Result<(), PCSError> {
         let timer = start_timer!(|| "KZH::CompAux_Dense");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
         let dimensions = prover_param.get_dimensions();
@@ -290,9 +564,8 @@ impl<E: Pairing> KZHK<E> {
             // Build d_{j}
             // TODO: Why can't we use d_j.par_iter_mut()?
             let mut d_j = vec![E::G1Affine::zero(); dj_size];
-            d_j.iter_mut().enumerate().for_each(|(i, d_j_i)| {
-                let scalars =
-                    KZHK::<E>::partially_eval_dense_poly_on_bool_point(polynomial, i, eval_len);
+            cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
+                let scalars = partially_eval_dense_poly_on_bool_point(polynomial, i, eval_len);
                 *d_j_i = E::G1::msm(h_slice, scalars.as_slice())
                     .unwrap()
                     .into_affine()
@@ -300,16 +573,17 @@ impl<E: Pairing> KZHK<E> {
 
             d_bool.push(d_j);
         }
-
+        aux.set_d_bool(d_bool);
         end_timer!(timer);
-        Ok(KZHKAuxInfo::new(d_bool))
+        Ok(())
     }
 
-    fn comp_aux_sparse(
+    fn update_aux_sparse(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         _com: &KZHKCommitment<E>,
-    ) -> Result<KZHKAuxInfo<E>, PCSError> {
+        aux: &mut KZHKAuxInfo<E>,
+    ) -> Result<(), PCSError> {
         let timer = start_timer!(|| "KZH::CompAux_Sparse");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
         let dimensions = prover_param.get_dimensions();
@@ -337,8 +611,7 @@ impl<E: Pairing> KZHK<E> {
             // Build d_{j}
             let mut d_j = vec![E::G1Affine::zero(); dj_size];
             cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
-                let scalars_map =
-                    KZHK::<E>::partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
+                let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
                 let mut bases = Vec::with_capacity(scalars_map.len());
                 let mut scalars = Vec::with_capacity(scalars_map.len());
                 for (&local_idx, s) in scalars_map.iter() {
@@ -354,8 +627,9 @@ impl<E: Pairing> KZHK<E> {
             });
             d_bool.push(d_j);
         }
+        aux.set_d_bool(d_bool);
         end_timer!(timer);
-        Ok(KZHKAuxInfo::new(d_bool))
+        Ok(())
     }
 
     fn open_dense(
@@ -395,10 +669,10 @@ impl<E: Pairing> KZHK<E> {
         let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
         let eval = fix_last_variables(&partial_polynomial, &decomposed_point[k - 1])[0];
         end_timer!(timer);
-        Ok((KZHKOpeningProof::new(d, f), eval))
+        Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_dense_bool(
+    fn open_dense_non_bool_innerbool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -434,22 +708,20 @@ impl<E: Pairing> KZHK<E> {
             d.push(d_j);
 
             // Reduce the dense polynomial on this boolean block (sequential dependency)
-            partial_polynomial =
-                Self::fix_last_variables_boolean(&partial_polynomial, partial_point);
+            partial_polynomial = fix_last_variables_boolean(&partial_polynomial, partial_point);
 
             // Update eb to include this block for the next iteration:
             // new_bits = [partial_point || old_bits] (LE), so:
             // eb_next = bits_le(partial_point) + (eb << block_dim)
-            let s = Self::bits_le_to_usize(partial_point);
+            let s = bits_le_to_usize(partial_point);
             eb = s + (eb << block_dim);
         }
 
         let f = DenseOrSparseMLE::Dense(partial_polynomial.clone());
-        let eval =
-            Self::fix_last_variables_boolean(&partial_polynomial, &decomposed_point[k - 1])[0];
+        let eval = fix_last_variables_boolean(&partial_polynomial, &decomposed_point[k - 1])[0];
 
         end_timer!(timer);
-        Ok((KZHKOpeningProof::new(d, f), eval))
+        Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
     fn open_sparse(
         prover_param: impl Borrow<KZHKProverParam<E>>,
@@ -507,10 +779,10 @@ impl<E: Pairing> KZHK<E> {
         let f = DenseOrSparseMLE::Sparse(partial_polynomial.clone());
         let eval = fix_last_variables_sparse(&partial_polynomial, &decomposed_point[k - 1])[0];
         end_timer!(timer);
-        Ok((KZHKOpeningProof::new(d, f), eval))
+        Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_sparse_bool(
+    fn open_sparse_non_bool_innerbool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -545,83 +817,23 @@ impl<E: Pairing> KZHK<E> {
 
             // Reduce the last block on the sparse polynomial (sequential dependency)
             partial_polynomial =
-                Self::fix_last_variables_boolean_sparse(&partial_polynomial, partial_point);
+                fix_last_variables_boolean_sparse(&partial_polynomial, partial_point);
 
             // Update eb to include this block for next iteration:
             // new_bits = [partial_point || old_bits] (LE)
-            let s = Self::bits_le_to_usize(partial_point);
+            let s = bits_le_to_usize(partial_point);
             eb = s + (eb << block_dim);
         }
 
         let f = DenseOrSparseMLE::Sparse(partial_polynomial.clone());
         let eval =
-            Self::fix_last_variables_boolean_sparse(&partial_polynomial, &decomposed_point[k - 1])
-                [0];
+            fix_last_variables_boolean_sparse(&partial_polynomial, &decomposed_point[k - 1])[0];
 
         end_timer!(timer);
-        Ok((KZHKOpeningProof::new(d, f), eval))
-    }
-    pub fn partially_eval_dense_poly_on_bool_point(
-        dense_poly: &DenseMultilinearExtension<E::ScalarField>,
-        index: usize,
-        n: usize,
-    ) -> Vec<E::ScalarField> {
-        cfg_iter!(dense_poly.evaluations[n * index..n * index + n])
-            .cloned()
-            .collect()
+        Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    pub fn partially_eval_sparse_poly_on_bool_point(
-        sparse_poly: &SparseMultilinearExtension<E::ScalarField>,
-        index: usize,
-        n: usize,
-    ) -> BTreeMap<usize, E::ScalarField> {
-        debug_assert!(n > 0 && n.is_power_of_two(), "n must be a power of two");
-        let total = 1usize << sparse_poly.num_vars;
-        debug_assert!(n <= total, "n must be <= 2^num_vars");
-        debug_assert!(total % n == 0, "n must divide 2^num_vars");
-        let num_prefix_assignments = total / n;
-        debug_assert!(index < num_prefix_assignments, "index out of range");
-
-        let base = index * n;
-
-        // Collect only the non-zero entries (i.e., those present in the sparse map)
-        // that fall in the contiguous window [base, base + n), and rebase to [0, n).
-        sparse_poly
-        .evaluations
-        .range(base..base + n) // end is exclusive
-        .map(|(&global_idx, v)| (global_idx - base, *v))
-        .collect()
-    }
-    pub fn fix_last_variables_boolean(
-        poly: &DenseMultilinearExtension<E::ScalarField>,
-        point: &[E::ScalarField],
-    ) -> DenseMultilinearExtension<E::ScalarField> {
-        let n = poly.num_vars() - point.len();
-        let index = Self::bits_le_to_usize(point);
-        DenseMultilinearExtension::from_evaluations_vec(
-            n,
-            Self::partially_eval_dense_poly_on_bool_point(poly, index, 1 << n),
-        )
-    }
-    pub fn fix_last_variables_boolean_sparse(
-        poly: &SparseMultilinearExtension<E::ScalarField>,
-        point: &[E::ScalarField],
-    ) -> SparseMultilinearExtension<E::ScalarField> {
-        // remaining vars after fixing the last |point| variables
-        let n = poly.num_vars() - point.len();
-        // little-endian: point[0] is LSB of the last block
-        let index = Self::bits_le_to_usize(point);
-        // grab the contiguous window and rebase indices to [0 .. 2^n)
-        let evals_map = Self::partially_eval_sparse_poly_on_bool_point(poly, index, 1 << n);
-        let evals: Vec<(usize, E::ScalarField)> = evals_map.into_iter().collect();
-
-        SparseMultilinearExtension::from_evaluations(n, &evals)
-    }
-    pub fn decompose_point(
-        dimensions: &[usize],
-        point: &[E::ScalarField],
-    ) -> Vec<Vec<E::ScalarField>> {
+    fn decompose_point(dimensions: &[usize], point: &[E::ScalarField]) -> Vec<Vec<E::ScalarField>> {
         let mut decomposed = Vec::new();
         let mut start = 0;
         for &dim in dimensions {
@@ -631,59 +843,23 @@ impl<E: Pairing> KZHK<E> {
         }
         decomposed
     }
+}
 
-    #[inline]
-    pub fn bits_le_to_usize<F: Field>(bits: &[F]) -> usize {
-        assert!(
-            bits.len() <= usize::BITS as usize,
-            "too many bits for usize"
-        );
-        assert!(
-            bits.iter().all(|b| b.is_zero() || b.is_one()),
-            "non-boolean bit"
-        );
-        let mut out: usize = 0;
-        for (i, bit) in bits.iter().enumerate() {
-            if bit.is_one() {
-                out |= 1usize << i;
+/// Cross‑compat “for_each_with_scratch”: uses `for_each_init` in parallel
+/// builds, and a single reusable scratch in sequential builds.
+#[macro_export]
+macro_rules! cfg_for_each_with_scratch {
+    ($iter:expr, $make_scratch:expr, |$scratch:ident, $item:pat_param| $body:block) => {{
+        #[cfg(feature = "parallel")]
+        {
+            ($iter).for_each_init($make_scratch, |$scratch, $item| $body);
+        }
+        #[cfg(not(feature = "parallel"))]
+        {
+            let mut $scratch = $make_scratch();
+            for $item in $iter {
+                $body
             }
         }
-        out
-    }
-
-
-    /// LITTLE-ENDIAN: out[0] is LSB.
-    /// Panics if `x` doesn't fit in `n_bits`.
-    #[inline]
-    pub fn usize_to_bits_le<F: Field>(x: usize, n_bits: usize) -> Vec<F> {
-        assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
-        let mut out = Vec::with_capacity(n_bits);
-        let mut v = x;
-        for _ in 0..n_bits {
-            out.push(if (v & 1) == 1 { F::one() } else { F::zero() });
-            v >>= 1;
-        }
-        assert!(v == 0, "value {} does not fit in {} bits", x, n_bits);
-        out
-    }
-
-    /// BIG-ENDIAN: out[0] is MSB.
-    /// Panics if `x` doesn't fit in `n_bits`.
-    #[inline]
-    pub fn usize_to_bits_be<F: Field>(x: usize, n_bits: usize) -> Vec<F> {
-        assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
-        let mut out = vec![F::zero(); n_bits];
-        for i in 0..n_bits {
-            let bit = ((x >> i) & 1) == 1;
-            out[n_bits - 1 - i] = if bit { F::one() } else { F::zero() };
-        }
-        // If n_bits < needed, the highest shifted bits would be non-zero.
-        assert!(
-            (x >> n_bits) == 0,
-            "value {} does not fit in {} bits",
-            x,
-            n_bits
-        );
-        out
-    }
+    }};
 }

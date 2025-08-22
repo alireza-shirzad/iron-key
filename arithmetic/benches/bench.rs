@@ -6,11 +6,10 @@
 
 #[macro_use]
 extern crate criterion;
-use ark_poly::Polynomial;
-use arithmetic::fix_first_variables;
+use arithmetic::multilinear_polynomial::fix_first_variables;
 use ark_bn254::Fr;
 use ark_ff::Field;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension, Polynomial};
 use ark_std::{ops::Range, test_rng};
 use criterion::{black_box, BenchmarkId, Criterion};
 

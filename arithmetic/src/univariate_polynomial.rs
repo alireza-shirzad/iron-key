@@ -7,12 +7,13 @@
 // TODO: remove
 #![allow(dead_code)]
 
-use crate::{bit_decompose, ArithErrors};
 use ark_ff::PrimeField;
 use ark_poly::{
     univariate::DensePolynomial, EvaluationDomain, Evaluations, Radix2EvaluationDomain,
 };
 use ark_std::log2;
+
+use crate::{errors::ArithErrors, util::bit_decompose};
 
 /// Given a list of points, build `l(points)` which is a list of univariate
 /// polynomials that goes through the points; extend the dimension of the points

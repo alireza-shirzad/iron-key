@@ -11,7 +11,7 @@ use crate::poly_iop::{
     structs::{IOPProof, IOPProverState, IOPVerifierState},
     PolyIOP,
 };
-use arithmetic::{VPAuxInfo, VirtualPolynomial};
+use arithmetic::virtual_polynomial::{VPAuxInfo, VirtualPolynomial};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{end_timer, start_timer};

@@ -6,7 +6,7 @@
 
 //! Error module.
 
-use arithmetic::ArithErrors;
+use arithmetic::errors::ArithErrors;
 use ark_serialize::SerializationError;
 use ark_std::string::String;
 use displaydoc::Display;

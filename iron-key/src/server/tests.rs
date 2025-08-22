@@ -11,18 +11,18 @@ use crate::{
 };
 use ark_bn254::{Bn254, Fr};
 use ark_ff::Field;
-use subroutines::pcs::kzh2::KZH2;
+use subroutines::pcs::kzhk::KZHK;
 
 #[test]
 fn test_server() {
     const LOG_CAPACITY: usize = 16;
-    let system_spec = IronSpecification::new(1usize << LOG_CAPACITY);
-    let pp = IronKey::<Bn254, KZH2<Bn254>, IronLabel>::setup(system_spec).unwrap();
-    let mut server: IronServer<Bn254, KZH2<Bn254>, IronLabel> = IronServer::init(&pp);
+    let system_spec = IronSpecification::new(1usize << LOG_CAPACITY, 2);
+    let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(system_spec).unwrap();
+    let mut server: IronServer<Bn254, KZHK<Bn254>, IronLabel> = IronServer::init(&pp);
     let mut client =
-        IronClient::<Bn254, IronLabel, KZH2<Bn254>>::init(pp.to_client_key(), IronLabel::new("3"));
-    let mut auditor = IronAuditor::<Bn254, IronLabel, KZH2<Bn254>>::init(pp.to_auditor_key());
-    let mut bulletin_board = DummyBB::<Bn254, KZH2<Bn254>>::default();
+        IronClient::<Bn254, IronLabel, KZHK<Bn254>>::init(pp.to_client_key(), IronLabel::new("3"));
+    let mut auditor = IronAuditor::<Bn254, IronLabel, KZHK<Bn254>>::init(pp.to_auditor_key());
+    let mut bulletin_board = DummyBB::<Bn254, KZHK<Bn254>>::default();
 
     let update_batch1: HashMap<IronLabel, Fr> = HashMap::from([
         (IronLabel::new("1"), Fr::from(1)),

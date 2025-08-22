@@ -1,19 +1,16 @@
-use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup};
+use ark_ec::{pairing::Pairing, CurveGroup};
 
 use crate::poly::DenseOrSparseMLE;
 use ark_serialize::{
     self, CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid,
     Validate, Write,
 };
-use ark_std::{cfg_iter_mut, ops::Sub, rand::Rng, UniformRand, Zero};
+use ark_std::{cfg_iter_mut, ops::Sub, Zero};
 use derivative::Derivative;
 use ndarray::{ArrayD, IxDyn};
 #[cfg(feature = "parallel")]
 use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::{
-    fmt,
-    ops::{Add, Deref, DerefMut},
-};
+use std::ops::{Add, Deref, DerefMut};
 ///////////////// Commitment //////////////////////
 
 #[derive(Derivative, CanonicalSerialize, CanonicalDeserialize)]
@@ -50,7 +47,7 @@ impl<E: Pairing> Sub for KZHKCommitment<E> {
     }
 }
 
-impl<'a, 'b, E: Pairing> Add<&'b KZHKCommitment<E>> for &'a KZHKCommitment<E> {
+impl<'b, E: Pairing> Add<&'b KZHKCommitment<E>> for &KZHKCommitment<E> {
     type Output = KZHKCommitment<E>;
 
     fn add(self, rhs: &'b KZHKCommitment<E>) -> Self::Output {
@@ -60,7 +57,7 @@ impl<'a, 'b, E: Pairing> Add<&'b KZHKCommitment<E>> for &'a KZHKCommitment<E> {
     }
 }
 
-impl<'a, 'b, E: Pairing> Sub<&'b KZHKCommitment<E>> for &'a KZHKCommitment<E> {
+impl<'b, E: Pairing> Sub<&'b KZHKCommitment<E>> for &KZHKCommitment<E> {
     type Output = KZHKCommitment<E>;
 
     fn sub(self, rhs: &'b KZHKCommitment<E>) -> Self::Output {
@@ -91,24 +88,37 @@ impl<E: Pairing> KZHKCommitment<E> {
 
 #[derive(Debug, Derivative, CanonicalSerialize, CanonicalDeserialize, Clone, PartialEq, Eq)]
 pub struct KZHKAuxInfo<E: Pairing> {
-    d_bool: Vec<Vec<E::G1Affine>>,
+    tau: Option<E::ScalarField>,
+    d_bool: Option<Vec<Vec<E::G1Affine>>>,
 }
 
 impl<E: Pairing> KZHKAuxInfo<E> {
     /// Create a new auxiliary information
-    pub fn new(d_bool: Vec<Vec<E::G1Affine>>) -> Self {
-        Self { d_bool }
+    pub fn new(tau: Option<E::ScalarField>, d_bool: Option<Vec<Vec<E::G1Affine>>>) -> Self {
+        Self { tau, d_bool }
     }
 
     /// Get the auxiliary information
     pub fn get_d_bool(&self) -> &Vec<Vec<E::G1Affine>> {
-        &self.d_bool
+        self.d_bool.as_ref().unwrap()
+    }
+
+    /// Get the auxiliary information
+    pub fn get_tau(&self) -> &E::ScalarField {
+        self.tau.as_ref().unwrap()
+    }
+
+    pub fn set_d_bool(&mut self, d_bool: Vec<Vec<E::G1Affine>>) {
+        self.d_bool = Some(d_bool);
     }
 }
 
 impl<E: Pairing> Default for KZHKAuxInfo<E> {
     fn default() -> Self {
-        KZHKAuxInfo { d_bool: vec![] }
+        KZHKAuxInfo {
+            d_bool: None,
+            tau: None,
+        }
     }
 }
 
@@ -123,11 +133,29 @@ impl<E: Pairing> Add for KZHKAuxInfo<E> {
             return self;
         }
         assert_eq!(
-            self.d_bool.len(),
-            rhs.d_bool.len(),
+            self.d_bool.as_ref().unwrap().len(),
+            rhs.d_bool.as_ref().unwrap().len(),
             "Auxiliary information must have the same length"
         );
-        todo!()
+        let out_d_bool = self
+            .d_bool
+            .as_ref()
+            .unwrap()
+            .iter()
+            .zip(rhs.d_bool.as_ref().unwrap().iter())
+            .map(|(ra, rb)| {
+                assert_eq!(ra.len(), rb.len(), "column count mismatch in a row");
+                ra.iter()
+                    .cloned()
+                    .zip(rb.iter().cloned())
+                    .map(|(x, y)| (x + y).into_affine())
+                    .collect()
+            })
+            .collect();
+        KZHKAuxInfo {
+            d_bool: Some(out_d_bool),
+            tau: None,
+        }
     }
 }
 
@@ -135,8 +163,36 @@ impl<E: Pairing> Sub for KZHKAuxInfo<E> {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        let mut output = vec![vec![E::G1Affine::zero(); self.d_bool[0].len()]; self.d_bool.len()];
-        todo!()
+        if self == KZHKAuxInfo::default() {
+            return rhs;
+        }
+        if rhs == KZHKAuxInfo::default() {
+            return self;
+        }
+        assert_eq!(
+            self.d_bool.as_ref().unwrap().len(),
+            rhs.d_bool.as_ref().unwrap().len(),
+            "Auxiliary information must have the same length"
+        );
+        let out_d_bool = self
+            .d_bool
+            .as_ref()
+            .unwrap()
+            .iter()
+            .zip(rhs.d_bool.as_ref().unwrap().iter())
+            .map(|(ra, rb)| {
+                assert_eq!(ra.len(), rb.len(), "column count mismatch in a row");
+                ra.iter()
+                    .cloned()
+                    .zip(rb.iter().cloned())
+                    .map(|(x, y)| (x - y).into_affine())
+                    .collect()
+            })
+            .collect();
+        KZHKAuxInfo {
+            d_bool: Some(out_d_bool),
+            tau: None,
+        }
     }
 }
 
@@ -148,12 +204,27 @@ impl<E: Pairing> Sub for KZHKAuxInfo<E> {
 pub struct KZHKOpeningProof<E: Pairing> {
     d: Vec<Vec<E::G1Affine>>,
     f: DenseOrSparseMLE<E::ScalarField>,
+    r_hide: Option<KZHKCommitment<E>>,
+    y_r: Option<E::ScalarField>,
+    rho_prime: Option<E::ScalarField>,
 }
 
 impl<E: Pairing> KZHKOpeningProof<E> {
     /// Create a new opening proof
-    pub fn new(d: Vec<Vec<E::G1Affine>>, f: DenseOrSparseMLE<E::ScalarField>) -> Self {
-        Self { d, f }
+    pub fn new(
+        d: Vec<Vec<E::G1Affine>>,
+        f: DenseOrSparseMLE<E::ScalarField>,
+        r_hide: Option<KZHKCommitment<E>>,
+        y_r: Option<E::ScalarField>,
+        rho_prime: Option<E::ScalarField>,
+    ) -> Self {
+        Self {
+            d,
+            f,
+            r_hide,
+            y_r,
+            rho_prime,
+        }
     }
 
     /// Get the evaluation of quotients
@@ -165,8 +236,212 @@ impl<E: Pairing> KZHKOpeningProof<E> {
     pub fn get_f(&self) -> &DenseOrSparseMLE<E::ScalarField> {
         &self.f
     }
+
+    pub fn get_r_hide(&self) -> &Option<KZHKCommitment<E>> {
+        &self.r_hide
+    }
+
+    /// Get the y_r value
+    pub fn get_y_r(&self) -> &Option<E::ScalarField> {
+        &self.y_r
+    }
+
+    /// Get the rho_prime value
+    pub fn get_rho_prime(&self) -> &Option<E::ScalarField> {
+        &self.rho_prime
+    }
+
+    pub fn set_rho_prime(&mut self, rho_prime: E::ScalarField) {
+        self.rho_prime = Some(rho_prime);
+    }
+
+    pub fn set_y_r(&mut self, y_r: E::ScalarField) {
+        self.y_r = Some(y_r);
+    }
+
+    pub fn set_r_hide(&mut self, r_hide: KZHKCommitment<E>) {
+        self.r_hide = Some(r_hide);
+    }
 }
 
+impl<E: Pairing> Default for KZHKOpeningProof<E> {
+    fn default() -> Self {
+        KZHKOpeningProof {
+            d: vec![],
+            f: DenseOrSparseMLE::zero(),
+            r_hide: None,
+            y_r: None,
+            rho_prime: None,
+        }
+    }
+}
+
+impl<E: Pairing> core::ops::Mul<E::ScalarField> for KZHKOpeningProof<E> {
+    type Output = Self;
+
+    fn mul(self, rhs: E::ScalarField) -> Self::Output {
+        if rhs.is_zero() {
+            return Self::default();
+        }
+        if self == Self::default() {
+            return self;
+        }
+        let out_d = self
+            .d
+            .into_iter()
+            .map(|row| row.into_iter().map(|x| (x * rhs).into_affine()).collect())
+            .collect();
+        let mut f_out = self.f;
+        mul_poly_by_cnst_in_place(&mut f_out, rhs);
+        KZHKOpeningProof {
+            d: out_d,
+            f: f_out,
+            r_hide: None,
+            y_r: None,
+            rho_prime: None,
+        }
+    }
+}
+
+impl<'a, E: Pairing> core::ops::Mul<E::ScalarField> for &'a KZHKOpeningProof<E> {
+    type Output = KZHKOpeningProof<E>;
+
+    fn mul(self, rhs: E::ScalarField) -> Self::Output {
+        if rhs.is_zero() {
+            return KZHKOpeningProof::default();
+        }
+        let out_d = self
+            .d
+            .iter()
+            .map(|row| {
+                row.iter()
+                    .cloned()
+                    .map(|x| (x * rhs).into_affine())
+                    .collect()
+            })
+            .collect();
+        let mut f_out = self.f.clone();
+        mul_poly_by_cnst_in_place(&mut f_out, rhs);
+        KZHKOpeningProof {
+            d: out_d,
+            f: f_out,
+            r_hide: None,
+            y_r: None,
+            rho_prime: None,
+        }
+    }
+}
+
+impl<E: Pairing> core::ops::MulAssign<E::ScalarField> for KZHKOpeningProof<E> {
+    fn mul_assign(&mut self, rhs: E::ScalarField) {
+        if rhs.is_zero() {
+            self.d.clear();
+            self.f = DenseOrSparseMLE::zero();
+            return;
+        }
+        for row in self.d.iter_mut() {
+            for x in row.iter_mut() {
+                *x = (*x * rhs).into_affine();
+            }
+        }
+        mul_poly_by_cnst_in_place(&mut self.f, rhs);
+    }
+}
+
+impl<E: Pairing> Add for KZHKOpeningProof<E> {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if self == KZHKOpeningProof::default() {
+            return rhs;
+        }
+        if rhs == KZHKOpeningProof::default() {
+            return self;
+        }
+        assert_eq!(
+            self.d.len(),
+            rhs.d.len(),
+            "Auxiliary information must have the same length"
+        );
+        let out_d = self
+            .d
+            .iter()
+            .zip(rhs.d.iter())
+            .map(|(ra, rb)| {
+                assert_eq!(ra.len(), rb.len(), "column count mismatch in a row");
+                ra.iter()
+                    .cloned()
+                    .zip(rb.iter().cloned())
+                    .map(|(x, y)| (x + y).into_affine())
+                    .collect()
+            })
+            .collect();
+
+        let f_out = match (&self.f, &rhs.f) {
+            (DenseOrSparseMLE::Dense(ref a), DenseOrSparseMLE::Dense(ref b)) => {
+                DenseOrSparseMLE::Dense(a + b)
+            },
+            (DenseOrSparseMLE::Sparse(ref a), DenseOrSparseMLE::Sparse(ref b)) => {
+                DenseOrSparseMLE::Sparse(a + b)
+            },
+            (DenseOrSparseMLE::Dense(ref a), DenseOrSparseMLE::Sparse(ref _b)) => {
+                let densed_b = rhs.f.to_dense();
+                DenseOrSparseMLE::Dense(a + &densed_b)
+            },
+            (DenseOrSparseMLE::Sparse(ref _a), DenseOrSparseMLE::Dense(ref b)) => {
+                let densed_a = self.f.to_dense();
+                DenseOrSparseMLE::Dense(&densed_a + b)
+            },
+        };
+
+        KZHKOpeningProof {
+            d: out_d,
+            f: f_out,
+            r_hide: None,
+            y_r: None,
+            rho_prime: None,
+        }
+    }
+}
+
+impl<E: Pairing> Sub for KZHKOpeningProof<E> {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        if self == KZHKOpeningProof::default() {
+            return rhs;
+        }
+        if rhs == KZHKOpeningProof::default() {
+            return self;
+        }
+        assert_eq!(
+            self.d.len(),
+            rhs.d.len(),
+            "Auxiliary information must have the same length"
+        );
+        let out_d = self
+            .d
+            .iter()
+            .zip(rhs.d.iter())
+            .map(|(ra, rb)| {
+                assert_eq!(ra.len(), rb.len(), "column count mismatch in a row");
+                ra.iter()
+                    .cloned()
+                    .zip(rb.iter().cloned())
+                    .map(|(x, y)| (x - y).into_affine())
+                    .collect()
+            })
+            .collect();
+        let f_out = self.f - rhs.f;
+        KZHKOpeningProof {
+            d: out_d,
+            f: f_out,
+            r_hide: None,
+            y_r: None,
+            rho_prime: None,
+        }
+    }
+}
 ///////////////// Tensor and implementation ///////////////////
 
 /// Local newtype wrapper around `ndarray::ArrayD<T>` so we can implement
@@ -216,7 +491,7 @@ struct RowMajorIx {
 impl RowMajorIx {
     fn new(shape: &[usize]) -> Self {
         let k = shape.len();
-        let done = shape.iter().any(|&d| d == 0);
+        let done = shape.contains(&0);
         Self {
             idx: vec![0; k],
             shape: shape.to_vec(),
@@ -349,5 +624,23 @@ impl<T: Valid + CanonicalDeserialize> CanonicalDeserialize for Tensor<T> {
         let arr = ArrayD::from_shape_vec(IxDyn(&shape), data)
             .map_err(|_| SerializationError::InvalidData)?;
         Ok(Tensor(arr))
+    }
+}
+
+fn mul_poly_by_cnst_in_place<F>(poly: &mut DenseOrSparseMLE<F>, c: F)
+where
+    F: ark_ff::Field,
+{
+    match poly {
+        DenseOrSparseMLE::Dense(dense) => {
+            cfg_iter_mut!(dense.evaluations).for_each(|x| {
+                *x = *x * c;
+            });
+        },
+        DenseOrSparseMLE::Sparse(sparse) => {
+            cfg_iter_mut!(sparse.evaluations).for_each(|(_, x)| {
+                *x = *x * c;
+            });
+        },
     }
 }

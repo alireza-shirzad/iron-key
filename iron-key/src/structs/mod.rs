@@ -1,6 +1,7 @@
 use ark_ec::pairing::Pairing;
 use ark_ff::PrimeField;
 use num_bigint::BigUint;
+use subroutines::PolynomialCommitmentScheme;
 
 use crate::{VKDLabel, VKDSpecification};
 
@@ -10,19 +11,25 @@ pub mod pp;
 pub mod self_audit;
 pub mod update;
 
-pub struct IronSpecification {
+pub struct IronSpecification<E: Pairing, PC: PolynomialCommitmentScheme<E>> {
     capacity: usize,
+    pcs_conf: PC::Config,
 }
 
-impl IronSpecification {
-    pub fn new(capacity: usize) -> Self {
-        Self { capacity }
+impl<E: Pairing, PC: PolynomialCommitmentScheme<E>> IronSpecification<E, PC> {
+    pub fn new(capacity: usize, pcs_conf: PC::Config) -> Self {
+        Self { capacity, pcs_conf }
     }
 }
 
-impl VKDSpecification for IronSpecification {
+impl<E: Pairing, PC: PolynomialCommitmentScheme<E>> VKDSpecification<E, PC>
+    for IronSpecification<E, PC>
+{
     fn get_capacity(&self) -> usize {
         self.capacity
+    }
+    fn get_pcs_conf(&self) -> <PC>::Config {
+        self.pcs_conf.clone()
     }
 }
 
@@ -33,9 +40,10 @@ pub struct IronLabel {
 
 impl IronLabel {
     pub fn new(label: &str) -> Self {
-        Self { label: label.to_string() }
+        Self {
+            label: label.to_string(),
+        }
     }
-
 }
 
 impl std::fmt::Display for IronLabel {

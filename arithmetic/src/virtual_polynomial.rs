@@ -7,7 +7,10 @@
 //! This module defines our main mathematical object `VirtualPolynomial`; and
 //! various functions associated with it.
 
-use crate::{errors::ArithErrors, multilinear_polynomial::random_zero_mle_list, random_mle_list};
+use crate::{
+    errors::ArithErrors,
+    multilinear_polynomial::{random_mle_list, random_zero_mle_list},
+};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension, Polynomial};
 use ark_serialize::CanonicalSerialize;

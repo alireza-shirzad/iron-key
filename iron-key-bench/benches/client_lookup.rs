@@ -14,11 +14,14 @@ use iron_key::{
     server::IronServer,
     structs::{IronLabel, IronSpecification, lookup::IronLookupProof, pp::IronPublicParameters},
 };
+use iron_key_bench::KZH_PARAM;
 use once_cell::sync::Lazy; // Added Lazy
-use subroutines::pcs::kzh4::KZH4;
+use subroutines::pcs::kzhk::KZHK;
+
+
 
 // Type alias for the Public Parameters
-type AppPublicParameters = IronPublicParameters<Bn254, KZH4<Bn254>>;
+type AppPublicParameters = IronPublicParameters<Bn254, KZHK<Bn254>>;
 
 // Static cache for public parameters, keyed by log_capacity
 static PP_CACHE: Lazy<Mutex<HashMap<usize, Arc<AppPublicParameters>>>> =
@@ -34,8 +37,8 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
                 "Cache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(1usize << log_capacity);
-            let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec)
+            let spec = IronSpecification::new(1usize << log_capacity,KZH_PARAM);
+            let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)
         })
@@ -46,15 +49,15 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
 fn server_with_updates(
     log_capacity: usize,
 ) -> (
-    IronClient<Bn254, IronLabel, KZH4<Bn254>>,
-    IronLookupProof<Bn254, KZH4<Bn254>>,
-    DummyBB<Bn254, KZH4<Bn254>>,
+    IronClient<Bn254, IronLabel, KZHK<Bn254>>,
+    IronLookupProof<Bn254, KZHK<Bn254>>,
+    DummyBB<Bn254, KZHK<Bn254>>,
 ) {
     let batch_size: usize = 1 << (log_capacity / 2); // This BATCH_SIZE is for the initial updates, not log_capacity
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
     // Initialize server with the (potentially cached) public parameters
-    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
+    let mut server = IronServer::<Bn254, KZHK<Bn254>, IronLabel>::init(&*pp_arc); // Dereference Arc to get &AppPublicParameters
     let mut bb = DummyBB::default();
 
     // Build `BATCH_SIZE` distinct (label, value) pairs for initial server state.
@@ -71,7 +74,7 @@ fn server_with_updates(
     let proof = server.lookup_prove(label.clone(), &mut bb).unwrap();
 
     let client =
-        IronClient::<Bn254, IronLabel, KZH4<Bn254>>::init(pp_arc.to_client_key(), label.clone());
+        IronClient::<Bn254, IronLabel, KZHK<Bn254>>::init(pp_arc.to_client_key(), label.clone());
 
     (client, proof, bb)
 }

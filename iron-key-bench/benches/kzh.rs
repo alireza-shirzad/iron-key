@@ -17,11 +17,11 @@
 // use subroutines::pcs::{
 //     PolynomialCommitmentScheme,
 //     kzh::{
-//         KZH2,
-//         srs::{KZH2ProverParam, KZH2UniversalParams},
+//         KZHK,
+//         srs::{KZHKProverParam, KZHKUniversalParams},
 //     },
 // };
-// fn prepare_prover_inputs() -> (KZH2ProverParam<Bn254>, DenseMultilinearExtension<Fr>) {
+// fn prepare_prover_inputs() -> (KZHKProverParam<Bn254>, DenseMultilinearExtension<Fr>) {
 //     const LOG_CAPACITY: usize = 25;
 //     const LOG_DENSITY: usize = 20;
 //     let srs_path = current_dir()
@@ -31,11 +31,11 @@
 //     BufReader::new(File::open(&srs_path).unwrap())
 //         .read_to_end(&mut buffer)
 //         .unwrap();
-//     let srs = KZH2UniversalParams::<Bn254>::deserialize_uncompressed_unchecked(&buffer[..])
+//     let srs = KZHKUniversalParams::<Bn254>::deserialize_uncompressed_unchecked(&buffer[..])
 //         .unwrap_or_else(|_| {
 //             panic!("Failed to deserialize SRS from {:?}", srs_path);
 //         });
-//     let (pk, vk) = KZH2::<Bn254>::trim(srs, None, Some(LOG_CAPACITY)).unwrap();
+//     let (pk, vk) = KZHK::<Bn254>::trim(srs, None, Some(LOG_CAPACITY)).unwrap();
 //     let mut evals = vec![Fr::from(0); 1usize << LOG_CAPACITY];
 //     let mut t_rng = rand::rng();
 //     // Sample k unique positions from the vector
@@ -66,6 +66,6 @@
 //     bencher
 //         .with_inputs(prepare_prover_inputs)
 //         .bench_values(|(pk, polynomial)| {
-//             KZH2::<Bn254>::commit(pk, &polynomial).unwrap();
+//             KZHK::<Bn254>::commit(pk, &polynomial).unwrap();
 //         });
 // }

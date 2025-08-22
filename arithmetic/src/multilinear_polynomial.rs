@@ -1,11 +1,24 @@
 use ark_ff::{Field, PrimeField};
-use ark_poly::{univariate::DenseOrSparsePolynomial, SparseMultilinearExtension};
-use ark_std::{end_timer, rand::RngCore, start_timer};
-#[cfg(feature = "parallel")]
-use rayon::prelude::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelIterator};
-use std::{collections::BTreeMap, sync::Arc};
-
 pub use ark_poly::DenseMultilinearExtension;
+use ark_poly::{
+    univariate::DenseOrSparsePolynomial, MultilinearExtension, SparseMultilinearExtension,
+};
+use ark_std::{
+    cfg_iter, end_timer,
+    rand::{Rng, RngCore},
+    start_timer, UniformRand,
+};
+#[cfg(feature = "parallel")]
+use rayon::iter::{
+    IndexedParallelIterator, IntoParallelIterator, IntoParallelRefIterator,
+    IntoParallelRefMutIterator, ParallelIterator,
+};
+use std::{
+    collections::{BTreeMap, HashSet},
+    sync::Arc,
+};
+
+use crate::bits_le_to_usize;
 
 /// Sample a random list of multilinear polynomials.
 /// Returns
@@ -320,13 +333,118 @@ pub fn fix_last_variables_sparse<F: Field + Sync>(
     let evaluations: Vec<(usize, F)> = out.into_iter().filter(|(_, v)| !v.is_zero()).collect();
     SparseMultilinearExtension::from_evaluations(mu, &evaluations)
 }
+pub fn evaluate_last_sparse<F: PrimeField>(f: &SparseMultilinearExtension<F>, point: &[F]) -> F {
+    assert_eq!(f.num_vars, point.len());
+    fix_last_variables_sparse(f, point).evaluations[&0]
+}
+pub fn partially_eval_dense_poly_on_bool_point<F: Field>(
+    dense_poly: &DenseMultilinearExtension<F>,
+    index: usize,
+    n: usize,
+) -> Vec<F> {
+    cfg_iter!(dense_poly.evaluations[n * index..n * index + n])
+        .cloned()
+        .collect()
+}
+
+pub fn partially_eval_sparse_poly_on_bool_point<F: Field>(
+    sparse_poly: &SparseMultilinearExtension<F>,
+    index: usize,
+    n: usize,
+) -> BTreeMap<usize, F> {
+    debug_assert!(n > 0 && n.is_power_of_two(), "n must be a power of two");
+    let total = 1usize << sparse_poly.num_vars;
+    debug_assert!(n <= total, "n must be <= 2^num_vars");
+    debug_assert!(total % n == 0, "n must divide 2^num_vars");
+    let num_prefix_assignments = total / n;
+    debug_assert!(index < num_prefix_assignments, "index out of range");
+
+    let base = index * n;
+
+    // Collect only the non-zero entries (i.e., those present in the sparse map)
+    // that fall in the contiguous window [base, base + n), and rebase to [0, n).
+    sparse_poly
+        .evaluations
+        .range(base..base + n) // end is exclusive
+        .map(|(&global_idx, v)| (global_idx - base, *v))
+        .collect()
+}
+
+pub fn fix_last_variables_boolean<F: Field>(
+    poly: &DenseMultilinearExtension<F>,
+    point: &[F],
+) -> DenseMultilinearExtension<F> {
+    let n = poly.num_vars() - point.len();
+    let index = bits_le_to_usize(point);
+    DenseMultilinearExtension::from_evaluations_vec(
+        n,
+        partially_eval_dense_poly_on_bool_point(poly, index, 1 << n),
+    )
+}
+pub fn fix_last_variables_boolean_sparse<F: Field>(
+    poly: &SparseMultilinearExtension<F>,
+    point: &[F],
+) -> SparseMultilinearExtension<F> {
+    // remaining vars after fixing the last |point| variables
+    let n = poly.num_vars() - point.len();
+    // little-endian: point[0] is LSB of the last block
+    let index = bits_le_to_usize(point);
+    // grab the contiguous window and rebase indices to [0 .. 2^n)
+    let evals_map = partially_eval_sparse_poly_on_bool_point(poly, index, 1 << n);
+    let evals: Vec<(usize, F)> = evals_map.into_iter().collect();
+
+    SparseMultilinearExtension::from_evaluations(n, &evals)
+}
+
+fn rand_sparse_eval_map<F: Field, R: Rng>(
+    num_vars: usize,
+    sparsity: usize,
+    rng: &mut R,
+) -> BTreeMap<usize, F> {
+    let domain_size = 1usize << num_vars;
+    assert!(sparsity <= domain_size, "sparsity must be <= 2^num_vars");
+
+    // Pick `s` distinct indices uniformly (rejection sampling with a bitmask).
+    let mut idxs = HashSet::with_capacity(sparsity);
+    let mask = domain_size - 1; // valid because domain_size is a power of two
+    while idxs.len() < sparsity {
+        let i = usize::rand(rng) & mask;
+        idxs.insert(i);
+    }
+
+    // Assign random non-zero field values to those indices, collect into a
+    // BTreeMap.
+    let mut map = BTreeMap::new();
+    for i in idxs {
+        let mut v = F::rand(rng);
+        while v.is_zero() {
+            v = F::rand(rng);
+        }
+        map.insert(i, v);
+    }
+    map
+}
+
+pub fn rand_sparse_mle<F: Field, R: Rng>(
+    num_vars: usize,
+    sparsity: usize,
+    rng: &mut R,
+) -> SparseMultilinearExtension<F> {
+    let map = rand_sparse_eval_map::<F, _>(num_vars, sparsity, rng);
+    // Convert map -> Vec<(usize, F)> to use your existing constructor
+    let pairs: Vec<(usize, F)> = map.iter().map(|(&i, &v)| (i, v)).collect();
+    SparseMultilinearExtension::from_evaluations(num_vars, &pairs)
+}
+
 #[cfg(test)]
 mod fix_last_sparse_vs_dense {
+    use std::collections::HashSet;
+
     use super::*; // brings types + functions from the current module (adjust if needed)
     use ark_bn254::Fr;
     use ark_ff::Field;
     use ark_poly::MultilinearExtension;
-    use ark_std::{test_rng, One, UniformRand, Zero};
+    use ark_std::{rand::Rng, test_rng, One, UniformRand, Zero};
     /// Helper: build a truly sparse MLE from a dense one by dropping zeros.
     fn dense_to_sparse<F: Field>(
         dense: &DenseMultilinearExtension<F>,
@@ -364,8 +482,8 @@ mod fix_last_sparse_vs_dense {
                     })
                     .collect();
 
-                let d_fix = crate::fix_last_variables(&dense, &bpoint);
-                let s_fix = crate::fix_last_variables_sparse(&sparse, &bpoint);
+                let d_fix = fix_last_variables(&dense, &bpoint);
+                let s_fix = fix_last_variables_sparse(&sparse, &bpoint);
 
                 assert_eq!(
                     d_fix.to_evaluations(),
@@ -377,8 +495,8 @@ mod fix_last_sparse_vs_dense {
                 // ---- random (non-boolean) point (general path) ----
                 let rpoint: Vec<Fr> = (0..nu).map(|_| Fr::rand(&mut rng)).collect();
 
-                let d_fix = crate::fix_last_variables(&dense, &rpoint);
-                let s_fix = crate::fix_last_variables_sparse(&sparse, &rpoint);
+                let d_fix = fix_last_variables(&dense, &rpoint);
+                let s_fix = fix_last_variables_sparse(&sparse, &rpoint);
 
                 assert_eq!(
                     d_fix.to_evaluations(),
@@ -412,8 +530,8 @@ mod fix_last_sparse_vs_dense {
 
         // nu = 0 (no fixing): identity
         {
-            let d_fix = crate::fix_last_variables(&dense, &[]);
-            let s_fix = crate::fix_last_variables_sparse(&sparse, &[]);
+            let d_fix = fix_last_variables(&dense, &[]);
+            let s_fix = fix_last_variables_sparse(&sparse, &[]);
             assert_eq!(
                 d_fix.to_evaluations(),
                 s_fix.to_dense_multilinear_extension().evaluations
@@ -433,8 +551,8 @@ mod fix_last_sparse_vs_dense {
                     }
                 })
                 .collect();
-            let d_fix = crate::fix_last_variables(&dense, &bpoint);
-            let s_fix = crate::fix_last_variables_sparse(&sparse, &bpoint);
+            let d_fix = fix_last_variables(&dense, &bpoint);
+            let s_fix = fix_last_variables_sparse(&sparse, &bpoint);
             assert_eq!(
                 d_fix.to_evaluations(),
                 s_fix.to_dense_multilinear_extension().evaluations
@@ -442,8 +560,8 @@ mod fix_last_sparse_vs_dense {
 
             // random point
             let rpoint: Vec<Fr> = (0..NV).map(|_| Fr::rand(&mut rng)).collect();
-            let d_fix = crate::fix_last_variables(&dense, &rpoint);
-            let s_fix = crate::fix_last_variables_sparse(&sparse, &rpoint);
+            let d_fix = fix_last_variables(&dense, &rpoint);
+            let s_fix = fix_last_variables_sparse(&sparse, &rpoint);
             assert_eq!(
                 d_fix.to_evaluations(),
                 s_fix.to_dense_multilinear_extension().evaluations

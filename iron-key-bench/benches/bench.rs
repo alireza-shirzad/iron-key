@@ -11,6 +11,10 @@ use ark_ec::VariableBaseMSM;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;
 use sha2::{Digest, Sha256};
+
+
+
+
 #[divan::bench]
 fn field_multiplication(bencher: Bencher) {
     let mut rng = ark_std::test_rng();

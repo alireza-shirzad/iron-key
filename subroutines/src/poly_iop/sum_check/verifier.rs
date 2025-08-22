@@ -11,7 +11,7 @@ use crate::poly_iop::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPVerifierState},
 };
-use arithmetic::VPAuxInfo;
+use arithmetic::virtual_polynomial::VPAuxInfo;
 use ark_ff::PrimeField;
 use ark_std::{end_timer, start_timer};
 use transcript::IOPTranscript;

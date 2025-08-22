@@ -1,23 +1,42 @@
-// Copyright (c) 2023 Espresso Systems (espressosys.com)
-// This file is part of the HyperPlonk library.
+pub mod errors;
+pub mod multilinear_polynomial;
+pub mod univariate_polynomial;
+pub mod util;
+pub mod virtual_polynomial;
 
-// You should have received a copy of the MIT License
-// along with the HyperPlonk library. If not, see <https://mit-license.org/>.
 
-mod errors;
-mod multilinear_polynomial;
-mod univariate_polynomial;
-mod util;
-mod virtual_polynomial;
+#[inline]
+pub fn bits_le_to_usize<F: ark_ff::Field>(bits: &[F]) -> usize {
+    assert!(
+        bits.len() <= usize::BITS as usize,
+        "too many bits for usize"
+    );
+    assert!(
+        bits.iter().all(|b| b.is_zero() || b.is_one()),
+        "non-boolean bit"
+    );
+    let mut out: usize = 0;
+    for (i, bit) in bits.iter().enumerate() {
+        if bit.is_one() {
+            out |= 1usize << i;
+        }
+    }
+    out
+}
 
-pub use errors::ArithErrors;
-pub use multilinear_polynomial::{
-    evaluate_last_dense, evaluate_opt, fix_first_variables, fix_last_variables,fix_last_variables_sparse,
-    identity_permutation, identity_permutation_mles, random_mle_list, random_permutation,
-    random_permutation_mles, random_zero_mle_list, DenseMultilinearExtension,
-};
-pub use univariate_polynomial::{build_l, get_uni_domain};
-pub use util::{bit_decompose, gen_eval_point, get_batched_nv, get_index};
-pub use virtual_polynomial::{
-    build_eq_x_r, build_eq_x_r_vec, eq_eval, VPAuxInfo, VirtualPolynomial,
-};
+/// LITTLE-ENDIAN: out[0] is LSB.
+/// Panics if `x` doesn't fit in `n_bits`.
+#[inline]
+pub fn usize_to_bits_le<F: ark_ff::Field>(x: usize, n_bits: usize) -> Vec<F> {
+    assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
+    let mut out = Vec::with_capacity(n_bits);
+    let mut v = x;
+    for _ in 0..n_bits {
+        out.push(if (v & 1) == 1 { F::one() } else { F::zero() });
+        v >>= 1;
+    }
+    assert!(v == 0, "value {} does not fit in {} bits", x, n_bits);
+    out
+}
+
+

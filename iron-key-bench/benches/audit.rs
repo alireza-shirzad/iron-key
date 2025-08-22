@@ -12,20 +12,20 @@ use iron_key::{
     structs::pp::IronPublicParameters, // Crucial import for the actual PP type
     structs::{IronLabel, IronSpecification},
 };
+use iron_key_bench::KZH_PARAM;
 use once_cell::sync::Lazy; // For caching
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex}, // For caching
 };
-use subroutines::pcs::kzh4::KZH4;
+use subroutines::pcs::kzhk::KZHK;
 
 // Type alias for the Public Parameters
-type AppPublicParameters = IronPublicParameters<E, KZH4<E>>;
+type AppPublicParameters = IronPublicParameters<E, KZHK<E>>;
 
 // Static cache for public parameters, keyed by log_capacity (u64)
 static PP_CACHE: Lazy<Mutex<HashMap<u64, Arc<AppPublicParameters>>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
-
 /// Helper function to get or create AppPublicParameters for a given
 /// log_capacity
 fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
@@ -37,10 +37,10 @@ fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
                 "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(1usize << log_capacity);
+            let spec = IronSpecification::new(1usize << log_capacity, KZH_PARAM);
             // IronKey::<..., IronLabel> specifies generics for the IronKey struct itself,
             // its `setup` method returns Result<IronPublicParameters<E, Pcs>, _>
-            let pp = IronKey::<Bn254, KZH4<Bn254>, IronLabel>::setup(spec)
+            let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)
         })
@@ -52,12 +52,12 @@ fn prepare_verifier_lookup_intput(
     log_capacity: u64,
     log_first_batch_size: u64,
     log_second_batch_size: u64,
-) -> (IronAuditor<E, IronLabel, KZH4<E>>, DummyBB<E, KZH4<E>>) {
+) -> (IronAuditor<E, IronLabel, KZHK<E>>, DummyBB<E, KZHK<E>>) {
     // Get PP from cache or create it if it's not there for the given log_capacity
     let pp_arc = get_or_create_pp(log_capacity);
     let pp_ref = &*pp_arc; // pp_ref is &AppPublicParameters
 
-    let mut server = IronServer::<Bn254, KZH4<Bn254>, IronLabel>::init(pp_ref);
+    let mut server = IronServer::<Bn254, KZHK<Bn254>, IronLabel>::init(pp_ref);
     let mut bulletin_board = DummyBB::default();
     let first_batch_size = 1usize << log_first_batch_size;
     let second_batch_elements = 1usize << log_second_batch_size; // Number of elements in the second batch

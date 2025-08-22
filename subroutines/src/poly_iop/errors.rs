@@ -7,7 +7,7 @@
 //! Error module.
 
 use crate::pcs::prelude::PCSError;
-use arithmetic::ArithErrors;
+use arithmetic::errors::ArithErrors;
 use ark_std::string::String;
 use displaydoc::Display;
 use transcript::TranscriptError;

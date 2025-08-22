@@ -1,4 +1,4 @@
-size,lookup_time_kzh2(ms),lookup_time_kzh4(ms),lookup_size_kzh2(B),lookup_size_kzh4(B),client_key_size_kzh2(B),client_key_size_kzh4(B),audit_time_kzh2(ms),audit_time_kzh4(ms),audit_size_kzh2(B),audit_size_kzh4(B)
+size,lookup_time_kzhk(ms),lookup_time_kzhk(ms),lookup_size_kzhk(B),lookup_size_kzhk(B),client_key_size_kzhk(B),client_key_size_kzhk(B),audit_time_kzhk(ms),audit_time_kzhk(ms),audit_size_kzhk(B),audit_size_kzhk(B)
 4,0.5655,1.697,433,441,488,720,1.093,2.551,1050,1018
 5,0.5611,1.372,465,473,616,848,0.9518,2.818,1258,1186
 6,0.8274,1.583,585,569,872,976,1.594,2.810,1474,1418

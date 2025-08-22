@@ -20,7 +20,8 @@ rand = { workspace = true }
 ndarray = { workspace = true, features = ["serde"] }
 transcript = { path = "../transcript" }
 util = { path = "../util" }
-
+num-bigint = { workspace = true }
+num-traits = { workspace = true }
 
 [features]
 parallel = [

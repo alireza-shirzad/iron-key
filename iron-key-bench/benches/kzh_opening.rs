@@ -2,6 +2,7 @@ use ark_bn254::{Bn254 as E, Fr};
 use ark_ff::UniformRand;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension, SparseMultilinearExtension};
 use ark_std::{rand::Rng, test_rng};
+use iron_key_bench::KZH_PARAM;
 use std::{
     collections::HashMap,
     fmt,
@@ -13,13 +14,13 @@ use once_cell::sync::Lazy;
 use subroutines::{
     pcs::{
         PolynomialCommitmentScheme,
-        kzh4::{KZH4, srs::KZH4ProverParam, structs::KZH4Commitment},
+        kzhk::{KZHK, srs::KZHKProverParam, structs::KZHKCommitment},
     },
     poly::DenseOrSparseMLE,
 };
 // ---
 
-type ProverKey = KZH4ProverParam<E>;
+type ProverKey = KZHKProverParam<E>;
 
 // Static cache for prover and verifier keys, keyed by the number of variables
 // `nv`. This avoids re-generating the SRS for each benchmark combination.
@@ -35,10 +36,10 @@ fn get_or_create_keys(nv: usize) -> Arc<ProverKey> {
         .or_insert_with(|| {
             println!("\nCache miss: Creating new keys for nv = {}", nv);
             let mut rng = test_rng();
-            let params = KZH4::<E>::gen_srs_for_testing(&mut rng, nv)
+            let params = KZHK::<E>::gen_srs_for_testing(KZH_PARAM, &mut rng, nv)
                 .expect("Failed to generate SRS for testing");
             let (ck, _) =
-                KZH4::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
+                KZHK::<E>::trim(params, None, Some(nv)).expect("Failed to trim parameters");
             Arc::new(ck)
         })
         .clone()
@@ -71,7 +72,7 @@ impl fmt::Display for BenchParams {
     }
 }
 
-/// Prepares all inputs required for the `KZH4::open` function.
+/// Prepares all inputs required for the `KZHK::open` function.
 /// This includes generating the polynomial, the point, and the auxiliary info.
 fn prepare_open_inputs(
     nv: usize,
@@ -81,7 +82,7 @@ fn prepare_open_inputs(
     Arc<ProverKey>,
     DenseOrSparseMLE<Fr>,
     Vec<Fr>,
-    KZH4Commitment<E>,
+    KZHKCommitment<E>,
 ) {
     let mut rng = test_rng();
     let ck = get_or_create_keys(nv);
@@ -109,7 +110,7 @@ fn prepare_open_inputs(
         (0..nv).map(|_| Fr::rand(&mut rng)).collect()
     };
     // Commit to the polynomial to generate the auxiliary info required for opening.
-    let com = KZH4::commit(ck.clone(), &poly).unwrap();
+    let com = KZHK::commit(ck.clone(), &poly).unwrap();
     (ck, poly, point, com)
 }
 
@@ -172,11 +173,11 @@ fn bench_open(bencher: Bencher, params: BenchParams) {
 
     // Pre-compute aux info outside the benchmark loop.
     // We pass a reference to the ProverKey inside the Arc.
-    let aux = KZH4::comp_aux(&*ck, &poly, &com).unwrap();
+    let aux = KZHK::comp_aux(&*ck, &poly, &com).unwrap();
 
     bencher.bench_local(|| {
-        // This benchmarks the `KZH4::open` function.
+        // This benchmarks the `KZHK::open` function.
         // We also pass a reference here to avoid moving the Arc.
-        KZH4::open(&*ck, &poly, &point, &aux)
+        KZHK::open(&*ck, &poly, &point, &aux)
     });
 }

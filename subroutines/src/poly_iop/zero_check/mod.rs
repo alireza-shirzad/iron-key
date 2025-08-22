@@ -9,7 +9,7 @@
 use std::fmt::Debug;
 
 use crate::poly_iop::{errors::PolyIOPErrors, sum_check::SumCheck, PolyIOP};
-use arithmetic::eq_eval;
+use arithmetic::virtual_polynomial::eq_eval;
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::{end_timer, start_timer};
@@ -125,7 +125,7 @@ mod test {
 
     use super::ZeroCheck;
     use crate::poly_iop::{errors::PolyIOPErrors, PolyIOP};
-    use arithmetic::VirtualPolynomial;
+    use arithmetic::virtual_polynomial::VirtualPolynomial;
     use ark_bn254::Fr;
     use ark_std::test_rng;
 

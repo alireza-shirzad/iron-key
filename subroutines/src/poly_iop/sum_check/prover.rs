@@ -11,16 +11,17 @@ use crate::poly_iop::{
     errors::PolyIOPErrors,
     structs::{IOPProverMessage, IOPProverState},
 };
-use arithmetic::{fix_first_variables, VirtualPolynomial};
+use arithmetic::{
+    multilinear_polynomial::fix_first_variables, virtual_polynomial::VirtualPolynomial,
+};
 use ark_ff::{batch_inversion, PrimeField};
 use ark_poly::DenseMultilinearExtension;
 use ark_std::{cfg_into_iter, cfg_iter, end_timer, start_timer, vec::Vec};
 #[cfg(feature = "parallel")]
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
+#[cfg(feature = "parallel")]
 use rayon::prelude::{IntoParallelIterator, IntoParallelRefIterator};
 use std::sync::Arc;
-
-#[cfg(feature = "parallel")]
-use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
     type VirtualPolynomial = VirtualPolynomial<F>;
@@ -100,6 +101,8 @@ impl<F: PrimeField> SumCheckProver<F> for IOPProverState<F> {
                 .flattened_ml_extensions
                 .par_iter_mut()
                 .for_each(|mle_arc| {
+                    use arithmetic::multilinear_polynomial::fix_first_variables;
+
                     let mle_mut = Arc::make_mut(mle_arc);
                     *mle_mut = fix_first_variables(mle_mut, &[r]);
                 });

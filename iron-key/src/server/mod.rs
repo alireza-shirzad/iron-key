@@ -15,7 +15,6 @@ use crate::{
         update::{IronEpochKeyMessage, IronEpochRegMessage, IronUpdateProof},
     },
 };
-use arithmetic::{VirtualPolynomial, evaluate_last_sparse};
 use ark_ec::pairing::Pairing;
 use ark_poly::MultilinearExtension;
 use ark_std::{One, Zero, end_timer, start_timer};
@@ -27,6 +26,7 @@ use std::{
     sync::Arc,
 };
 use subroutines::{PolyIOP, PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
+use arithmetic::{multilinear_polynomial::evaluate_last_sparse, virtual_polynomial::VirtualPolynomial};
 pub struct IronServer<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
