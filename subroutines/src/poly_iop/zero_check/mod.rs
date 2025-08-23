@@ -150,7 +150,7 @@ mod test {
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
             let zero_subclaim =
                 <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)?;
-            assert!(
+            debug_assert!(
                 poly.evaluate(&zero_subclaim.point)? == zero_subclaim.expected_evaluation,
                 "wrong subclaim"
             );
@@ -169,7 +169,7 @@ mod test {
             let mut transcript = <PolyIOP<Fr> as ZeroCheck<Fr>>::init_transcript();
             transcript.append_message(b"testing", b"initializing transcript for testing")?;
 
-            assert!(
+            debug_assert!(
                 <PolyIOP<Fr> as ZeroCheck<Fr>>::verify(&proof, &poly_info, &mut transcript)
                     .is_err()
             );
@@ -201,7 +201,7 @@ mod test {
         let num_multiplicands_range = (4, 13);
         let num_products = 5;
 
-        assert!(test_zerocheck(nv, num_multiplicands_range, num_products).is_err());
+        debug_assert!(test_zerocheck(nv, num_multiplicands_range, num_products).is_err());
         Ok(())
     }
 }

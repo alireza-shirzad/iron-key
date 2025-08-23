@@ -5,8 +5,8 @@ use sha2::{Digest, Sha256};
 /// (1) the first `mu` bits as a usize, and
 /// (2) the bit representation as Vec<bool> of length `mu`
 pub fn hash_to_mu_bits<F: PrimeField>(input: &str, mu: usize) -> (usize, Vec<F>) {
-    assert!(mu <= usize::BITS as usize, "μ must be ≤ usize width");
-    assert!(mu <= 256, "SHA-256 only gives 256 bits");
+    debug_assert!(mu <= usize::BITS as usize, "μ must be ≤ usize width");
+    debug_assert!(mu <= 256, "SHA-256 only gives 256 bits");
 
     let mut hasher = Sha256::new();
     hasher.update(input.as_bytes());

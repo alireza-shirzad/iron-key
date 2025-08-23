@@ -10,7 +10,7 @@ use ark_ec::pairing::Pairing;
 
 use ark_poly::Polynomial;
 use ark_std::{end_timer, start_timer};
-use subroutines::{PolynomialCommitmentScheme, poly::DenseOrSparseMLE};
+use subroutines::{PolyIOP, PolynomialCommitmentScheme, SumCheck, poly::DenseOrSparseMLE};
 use transcript::IOPTranscript;
 
 use crate::{
@@ -101,13 +101,14 @@ where
         end_timer!(get_message_timer);
         let mvpcs_verify_timer = start_timer!(|| "lookup_verify::mvpcs_verify");
         let mvpcs_verify_timer1 = start_timer!(|| "lookup_verify::mvpcs_verify1");
+        let mut transcript = PolyIOP::<E::ScalarField>::init_transcript();
         let value_result = MvPCS::verify(
             self.key.get_pcs_verifier_param(),
             last_keys_message.get_value_commitment(),
             &proof.get_index(),
             &value,
-            None,
             proof.get_value_opening_proof().0,
+            &mut transcript,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
         end_timer!(mvpcs_verify_timer1);
@@ -118,8 +119,8 @@ where
             last_reg_message.get_label_commitment(),
             &proof.get_index(),
             &label.to_field(),
-            None,
             proof.get_label_opening_proof().0,
+            &mut transcript,
         )
         .map_err(|_| VKDError::ClientError(errors::ClientError::LookupFailed))?;
         end_timer!(mvpcs_verify_timer2);

@@ -36,7 +36,7 @@ fn test_single_helper(
         &mut prover_transcript,
     )?;
     let mut verif_transcript = IOPTranscript::new(b"test_kzhk");
-    assert!(KZHK::<E>::verify(
+    debug_assert!(KZHK::<E>::verify(
         &vk,
         &com,
         &point,

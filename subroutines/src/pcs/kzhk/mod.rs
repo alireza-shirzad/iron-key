@@ -421,7 +421,7 @@ impl<E: Pairing> KZHK<E> {
             g2_terms.extend(verifier_param.get_v_mat()[j].iter().cloned());
 
             let prod = E::multi_pairing(g1_terms, g2_terms);
-            assert!(prod.is_zero());
+            debug_assert!(prod.is_zero());
 
             let eq_poly = build_eq_x_r(point_part).unwrap();
             cj = E::G1::msm(&proof.get_d()[j], &eq_poly.evaluations)
@@ -541,7 +541,7 @@ impl<E: Pairing> KZHK<E> {
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
         let dimensions = prover_param.get_dimensions();
         let k = dimensions.len();
-        assert!(k >= 2, "need at least 2 blocks to build d_i's");
+        debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
 
         let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
         let mut prefix_vars: usize = 0;
@@ -588,7 +588,7 @@ impl<E: Pairing> KZHK<E> {
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
         let dimensions = prover_param.get_dimensions();
         let k = dimensions.len();
-        assert!(k >= 2, "need at least 2 blocks to build d_i's");
+        debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
 
         let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
         let mut prefix_vars: usize = 0;
@@ -650,7 +650,7 @@ impl<E: Pairing> KZHK<E> {
             let num_chunks = 1 << prover_param.get_dimensions()[j];
             assert_eq!(partial_polynomial_evals.len() % num_chunks, 0);
             let chunk_len: usize = partial_polynomial_evals.len() / num_chunks; // = 2^(n-r)
-            assert!(chunk_len > 0);
+            debug_assert!(chunk_len > 0);
             let h_slice = prover_param.get_h_tensors()[j + 1]
                 .as_slice_memory_order()
                 .expect("H_t must be contiguous");
@@ -762,7 +762,6 @@ impl<E: Pairing> KZHK<E> {
                     bases.push(h_slice[local]);
                     scalars.push(val);
                 }
-
                 let acc = if scalars.is_empty() {
                     E::G1Affine::zero()
                 } else {

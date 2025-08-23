@@ -7,11 +7,11 @@ pub mod virtual_polynomial;
 
 #[inline]
 pub fn bits_le_to_usize<F: ark_ff::Field>(bits: &[F]) -> usize {
-    assert!(
+    debug_assert!(
         bits.len() <= usize::BITS as usize,
         "too many bits for usize"
     );
-    assert!(
+    debug_assert!(
         bits.iter().all(|b| b.is_zero() || b.is_one()),
         "non-boolean bit"
     );
@@ -28,14 +28,14 @@ pub fn bits_le_to_usize<F: ark_ff::Field>(bits: &[F]) -> usize {
 /// Panics if `x` doesn't fit in `n_bits`.
 #[inline]
 pub fn usize_to_bits_le<F: ark_ff::Field>(x: usize, n_bits: usize) -> Vec<F> {
-    assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
+    debug_assert!(n_bits <= usize::BITS as usize, "n_bits too large for usize");
     let mut out = Vec::with_capacity(n_bits);
     let mut v = x;
     for _ in 0..n_bits {
         out.push(if (v & 1) == 1 { F::one() } else { F::zero() });
         v >>= 1;
     }
-    assert!(v == 0, "value {} does not fit in {} bits", x, n_bits);
+    debug_assert!(v == 0, "value {} does not fit in {} bits", x, n_bits);
     out
 }
 

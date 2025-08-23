@@ -15,9 +15,12 @@ use crate::{
         update::{IronEpochKeyMessage, IronEpochRegMessage, IronUpdateProof},
     },
 };
+use arithmetic::{
+    multilinear_polynomial::evaluate_last_sparse, virtual_polynomial::VirtualPolynomial,
+};
 use ark_ec::pairing::Pairing;
 use ark_poly::MultilinearExtension;
-use ark_std::{One, Zero, end_timer, start_timer};
+use ark_std::{One, Zero, end_timer, start_timer, test_rng};
 #[cfg(feature = "parallel")]
 use rayon::join;
 use std::{
@@ -26,7 +29,6 @@ use std::{
     sync::Arc,
 };
 use subroutines::{PolyIOP, PolynomialCommitmentScheme, ZeroCheck, poly::DenseOrSparseMLE};
-use arithmetic::{multilinear_polynomial::evaluate_last_sparse, virtual_polynomial::VirtualPolynomial};
 pub struct IronServer<
     E: Pairing,
     MvPCS: PolynomialCommitmentScheme<
@@ -113,27 +115,20 @@ where
         let diff_label_mle: DenseOrSparseMLE<<E as Pairing>::ScalarField> =
             &*new_label_mle.borrow() - &*current_label_mle.borrow();
         // Commit to the diff commitment
+        let mut rng = test_rng();
 
-        #[cfg(feature = "parallel")]
-        let (diff_label_com, diff_label_aux) = join(
-            || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_label_mle).unwrap(),
-            || {
-                MvPCS::comp_aux(
-                    self.key.get_pcs_prover_param(),
-                    &diff_label_mle,
-                    &MvPCS::Commitment::default(),
-                )
-                .unwrap()
-            },
-        );
-        #[cfg(not(feature = "parallel"))]
-        let diff_label_com =
-            MvPCS::commit(self.key.get_pcs_prover_param(), &diff_label_mle).unwrap();
+        let (diff_label_com, mut diff_label_aux) = MvPCS::commit(
+            self.key.get_pcs_prover_param(),
+            &diff_label_mle,
+            Some(&mut rng),
+        )
+        .unwrap();
         // Compute the diff aux
-        let diff_label_aux = MvPCS::comp_aux(
+        MvPCS::update_aux(
             self.key.get_pcs_prover_param(),
             &diff_label_mle,
             &diff_label_com,
+            &mut diff_label_aux,
         )
         .unwrap();
         // Check if the bulletin board has a reg message
@@ -189,6 +184,7 @@ where
                 let auxes = vec![new_label_aux.clone(), last_label_aux.clone()];
                 let update_proof = MvPCS::multi_open(
                     self.key.get_pcs_prover_param(),
+                    &new_label_comm,
                     polys,
                     &zerocheck_proof.point,
                     &auxes,
@@ -234,6 +230,7 @@ where
         {
             self.authenticate_batch(update_batch)?;
         }
+        let mut rng = test_rng();
         // Save the current value MLE
         let current_value_mle = self.dictionary.get_value_mle().clone();
         // Insert the batch to the dictionary
@@ -243,26 +240,17 @@ where
         // Compute the difference MLE
         let diff_value_mle = &*new_value_mle.borrow() - &*current_value_mle.borrow();
         // Compute the commtment and the aux to the diff
-        #[cfg(feature = "parallel")]
-        let (diff_value_com, diff_value_aux) = join(
-            || MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap(),
-            || {
-                MvPCS::comp_aux(
-                    self.key.get_pcs_prover_param(),
-                    &diff_value_mle,
-                    &MvPCS::Commitment::default(),
-                )
-                .unwrap()
-            },
-        );
-        #[cfg(not(feature = "parallel"))]
-        let diff_value_com =
-            MvPCS::commit(self.key.get_pcs_prover_param(), &diff_value_mle).unwrap();
-        #[cfg(not(feature = "parallel"))]
-        let diff_value_aux = MvPCS::comp_aux(
+        let (diff_value_com, mut diff_value_aux) = MvPCS::commit(
+            self.key.get_pcs_prover_param(),
+            &diff_value_mle,
+            Some(&mut rng),
+        )
+        .unwrap();
+        MvPCS::update_aux(
             self.key.get_pcs_prover_param(),
             &diff_value_mle,
             &MvPCS::Commitment::default(),
+            &mut diff_value_aux,
         )
         .unwrap();
 
@@ -315,18 +303,25 @@ where
         let value_ref = binding.borrow();
         end_timer!(timer_get_mle);
         let timer_open = start_timer!(|| "IronServer::lookup_prove::open");
+        let mut transcript = PolyIOP::<E::ScalarField>::init_transcript();
         let label_opening_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
+            &MvPCS::Commitment::default(),
             &*label_ref,
             &index_boolean,
             &self.label_aux,
+            Some(&mut test_rng()),
+            &mut transcript,
         )
         .unwrap();
         let value_opening_proof = MvPCS::open(
             self.key.get_pcs_prover_param(),
+            &MvPCS::Commitment::default(),
             &*value_ref,
             &index_boolean,
             &self.value_aux,
+            Some(&mut test_rng()),
+            &mut transcript,
         )
         .unwrap();
         end_timer!(timer_open);

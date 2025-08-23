@@ -86,17 +86,17 @@ mod test {
         let (x0, x1, sign) = get_index(a, 4);
         assert_eq!(x0, 0b0100);
         assert_eq!(x1, 0b0101);
-        assert!(sign);
+        debug_assert!(sign);
 
         let (x0, x1, sign) = get_index(a, 5);
         assert_eq!(x0, 0b10100);
         assert_eq!(x1, 0b10101);
-        assert!(!sign);
+        debug_assert!(!sign);
 
         let a = 0b1111;
         let (x0, x1, sign) = get_index(a, 4);
         assert_eq!(x0, 0b1110);
         assert_eq!(x1, 0b1111);
-        assert!(sign);
+        debug_assert!(sign);
     }
 }

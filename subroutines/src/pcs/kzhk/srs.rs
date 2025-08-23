@@ -351,7 +351,7 @@ fn decode_coords(mut idx: usize, bases: &[usize], out_coords: &mut Vec<usize>) {
 }
 /// ceil( k * N^{1/k} ) exactly (no floating-point).
 pub fn ceil_k_root_scaled(N: u128, k: u32) -> u128 {
-    assert!(k > 0, "k must be >= 1");
+    debug_assert!(k > 0, "k must be >= 1");
     if N == 0 {
         return 0;
     }

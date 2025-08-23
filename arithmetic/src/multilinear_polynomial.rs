@@ -147,7 +147,7 @@ pub fn fix_first_variables<F: Field>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
 ) -> DenseMultilinearExtension<F> {
-    assert!(
+    debug_assert!(
         partial_point.len() <= poly.num_vars,
         "invalid size of partial point"
     );
@@ -186,7 +186,7 @@ pub fn fix_last_variables<F: PrimeField>(
     poly: &DenseMultilinearExtension<F>,
     partial_point: &[F],
 ) -> DenseMultilinearExtension<F> {
-    assert!(
+    debug_assert!(
         partial_point.len() <= poly.num_vars,
         "invalid size of partial point"
     );
@@ -266,7 +266,7 @@ pub fn fix_last_variables_sparse<F: Field + Sync>(
     partial_point_x: &[F],
 ) -> SparseMultilinearExtension<F> {
     let nu = partial_point_x.len();
-    assert!(nu <= poly.num_vars, "invalid size of partial point");
+    debug_assert!(nu <= poly.num_vars, "invalid size of partial point");
     if nu == 0 {
         return poly.clone();
     }
@@ -402,7 +402,7 @@ fn rand_sparse_eval_map<F: Field, R: Rng>(
     rng: &mut R,
 ) -> BTreeMap<usize, F> {
     let domain_size = 1usize << num_vars;
-    assert!(sparsity <= domain_size, "sparsity must be <= 2^num_vars");
+    debug_assert!(sparsity <= domain_size, "sparsity must be <= 2^num_vars");
 
     // Pick `s` distinct indices uniformly (rejection sampling with a bitmask).
     let mut idxs = HashSet::with_capacity(sparsity);

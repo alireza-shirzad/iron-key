@@ -238,7 +238,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 //             &poly_info,
 //             &mut transcript,
 //         )?;
-//         // assert!(
+//         // debug_assert!(
 //         //     poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
 //         //     "wrong subclaim"
 //         // );
@@ -278,7 +278,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 //         let subclaim =
 //             IOPVerifierState::check_and_generate_subclaim(&verifier_state, &asserted_sum)
 //                 .expect("fail to generate subclaim");
-//         // assert!(
+//         // debug_assert!(
 //         //     poly.evaluate(&subclaim.point).unwrap() == subclaim.expected_evaluation,
 //         //     "wrong subclaim"
 //         // );
@@ -309,8 +309,8 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 //         let num_multiplicands_range = (4, 13);
 //         let num_products = 5;
 
-//         assert!(test_sumcheck(nv, num_multiplicands_range, num_products).is_err());
-//         assert!(test_sumcheck_internal(nv, num_multiplicands_range, num_products).is_err());
+//         debug_assert!(test_sumcheck(nv, num_multiplicands_range, num_products).is_err());
+//         debug_assert!(test_sumcheck_internal(nv, num_multiplicands_range, num_products).is_err());
 //     }
 
 //     #[test]
@@ -385,7 +385,7 @@ impl<F: PrimeField> SumCheck<F> for PolyIOP<F> {
 //             &poly_info,
 //             &mut transcript,
 //         )?;
-//         assert!(
+//         debug_assert!(
 //             poly.evaluate(&subclaim.point)? == subclaim.expected_evaluation,
 //             "wrong subclaim"
 //         );
