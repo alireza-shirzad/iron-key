@@ -259,16 +259,16 @@ impl<E: Pairing> KZHK<E> {
         let is_boolean_point = point.iter().all(|&x| x.is_zero() || x.is_one());
         let result = match (is_boolean_point, polynomial) {
             (true, DenseOrSparseMLE::Dense(poly)) => {
-                Self::open_dense_non_bool_inner(prover_param, poly, point, aux)
+                Self::open_dense_bool_inner(prover_param, poly, point, aux)
             },
             (true, DenseOrSparseMLE::Sparse(poly)) => {
-                Self::open_sparse_non_bool_inner(prover_param, poly, point, aux)
+                Self::open_sparse_bool_inner(prover_param, poly, point, aux)
             },
             (false, DenseOrSparseMLE::Dense(poly)) => {
-                Self::open_dense(prover_param, poly, point, aux)
+                Self::open_dense_non_bool_inner(prover_param, poly, point, aux)
             },
             (false, DenseOrSparseMLE::Sparse(poly)) => {
-                Self::open_sparse(prover_param, poly, point, aux)
+                Self::open_sparse_non_bool_inner(prover_param, poly, point, aux)
             },
         };
         end_timer!(timer);
@@ -300,11 +300,15 @@ impl<E: Pairing> KZHK<E> {
         // Committing to the r(X) polynomial
         let (r_hide, mut r_aux) = Self::commit(prover_param, &r_poly_wrapped, Some(&mut rng))?;
         // Computing the auxiliary of r(x)
-        let _ = Self::update_aux_non_zk(prover_param, &r_poly_wrapped, &r_hide, &mut r_aux);
+        // let _ = Self::update_aux_non_zk(prover_param, &r_poly_wrapped, &r_hide, &mut r_aux);
         let rho = r_aux.get_tau();
         // Computing the opening and evaluation of r(x)
+        // let (r_opening, y_r) =
+        //     Self::open_non_zk(prover_param, commitment, &r_poly_wrapped, point,
+        // &r_aux)?;
+        let dummy_aux = KZHKAuxInfo::default();
         let (r_opening, y_r) =
-            Self::open_non_zk(prover_param, commitment, &r_poly_wrapped, point, &r_aux)?;
+            Self::open_sparse_non_bool_inner(prover_param, &r_poly, point, &dummy_aux)?;
         // Getting the challenge alpha
         let alpha = E::ScalarField::one();
         // Computing rho_prime
@@ -651,7 +655,7 @@ impl<E: Pairing> KZHK<E> {
         Ok(())
     }
 
-    fn open_dense(
+    fn open_dense_non_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -691,7 +695,7 @@ impl<E: Pairing> KZHK<E> {
         Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_dense_non_bool_inner(
+    fn open_dense_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -742,7 +746,7 @@ impl<E: Pairing> KZHK<E> {
         end_timer!(timer);
         Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
-    fn open_sparse(
+    fn open_sparse_non_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -800,7 +804,7 @@ impl<E: Pairing> KZHK<E> {
         Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_sparse_non_bool_inner(
+    fn open_sparse_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
