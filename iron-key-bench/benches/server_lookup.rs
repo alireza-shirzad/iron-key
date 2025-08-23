@@ -35,7 +35,7 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
                 "Cache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(KZH_PARAM,1usize << log_capacity);
+            let spec = IronSpecification::new(1usize << log_capacity,KZH_PARAM);
             let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)
@@ -74,7 +74,7 @@ fn server_with_updates(
 
 /// Benchmark `lookup_prove` after different-sized update batches.
 /// The `args` list controls `log_capacity` values.
-#[divan::bench(    max_time     = 1,args = [20,21,22,23,24,25,26,27,28,29,30,31,32])]
+#[divan::bench(    max_time     = 1,args = [10,11,12,13,14,15,16,17,18,1920,21,22,23,24,25,26,27,28,29,30,31,32])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     bencher
         // build a brand-new (server, bb, label) for *each* iteration

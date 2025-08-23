@@ -3,10 +3,12 @@ use std::sync::Arc;
 use crate::{
     cfg_for_each_with_scratch, pcs::kzhk::structs::Tensor, PCSError, StructuredReferenceString,
 };
-use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, PrimeGroup};
+use ark_ec::{
+    pairing::Pairing, scalar_mul::BatchMulPreprocessing, AffineRepr, CurveGroup, PrimeGroup,
+};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{cfg_into_iter, cfg_iter_mut, rand::Rng, One, UniformRand};
+use ark_std::{cfg_into_iter, cfg_iter_mut, end_timer, rand::Rng, start_timer, One, UniformRand};
 use ndarray::{ArrayD, IxDyn};
 use num_bigint::BigUint;
 use num_traits::ToPrimitive;
@@ -235,7 +237,7 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
         k: usize,
         num_vars: usize,
     ) -> Result<KZHKUniversalParams<E>, PCSError> {
-        // ----- Dimensions -----
+        // ----- Dimensions: split num_vars across k -----
         let d = num_vars / k;
         let remainder_d = num_vars % k;
         let mut dimensions = vec![d; k];
@@ -243,13 +245,12 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
             *dim += 1;
         }
 
-        // ----- Sample small public generators (sequential; RNG is not Sync) -----
+        // ----- Public generators -----
         let g = E::G1::rand(rng);
         let h = E::G1::rand(rng);
         let v = E::G2::rand(rng);
 
-        // ----- Sample trapdoors mu_mat (sequential to respect rng borrowing) -----
-        // mu_mat[j] has length 2^{d_j}
+        // ----- Trapdoors mu_mat: mu_mat[j].len() = 2^{d_j} -----
         let mu_mat: Vec<Vec<E::ScalarField>> = (0..k)
             .map(|j| {
                 (0..(1usize << dimensions[j]))
@@ -258,70 +259,119 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
             })
             .collect();
 
-        // Share read-only data with workers
         let mu_mat = Arc::new(mu_mat);
         let dimensions_arc = Arc::new(dimensions.clone());
 
-        // ---------- Build all H_t tensors in parallel ----------
-        // H_{t} has shape: (2^{d_t}, 2^{d_{t+1}}, ..., 2^{d_{k-1}})
-        // element at coords (r_t, r_{t+1}, ..., r_{k-1}) = g^{ ∏_{j=t}^{k-1}
-        // mu_mat[j][r_j] }
-        let h_tensors: Vec<Tensor<E::G1Affine>> = cfg_into_iter!(0..k)
-            .map(|t| {
-                let dims = &dimensions_arc[t..];
-                let shape: Vec<usize> = dims.iter().map(|&dj| 1usize << dj).collect();
+        // ---------- Build H_t tensors (outer sequential to bound RAM) ----------
+        let h_tenso_timer = start_timer!(|| "KZHK::gen_srs_for_testing::h_tensors");
+        let mut h_tensors: Vec<Tensor<E::G1Affine>> = Vec::with_capacity(k);
 
-                // Total elements in this tensor
-                let len: usize = shape.iter().product();
+        for t in 0..k {
+            let dims = &dimensions_arc[t..];
+            let shape: Vec<usize> = dims.iter().map(|&dj| 1usize << dj).collect();
+            let len: usize = shape.iter().product();
+            let axes = shape.len();
 
-                // Pre-allocate a flat buffer and fill it in parallel
-                let mut flat: Vec<E::G1Affine> = vec![E::G1Affine::zero(); len];
+            // 1) Build scalar buffer S_t[r_t,...,r_{k-1}] = ∏_{j=t}^{k-1} mu_mat[j][r_j]
+            let mut exps: Vec<E::ScalarField> = vec![E::ScalarField::one(); len];
 
-                // Small scratch vec for index decoding per-thread
-                cfg_for_each_with_scratch!(
-                    cfg_iter_mut!(flat).enumerate(),
-                    || Vec::with_capacity(shape.len()),
-                    |coords_scratch, (idx, slot)| {
-                        #[cfg(feature = "parallel")]
-                        decode_coords(idx, &shape, coords_scratch);
-                        #[cfg(not(feature = "parallel"))]
-                        decode_coords(idx, &shape, &mut coords_scratch);
-                        // Multiply scalars across axes: s = ∏ mu_mat[j][r_j]
-                        let mut s = E::ScalarField::one();
-                        for (axis_off, &row) in coords_scratch.iter().enumerate() {
-                            let j = t + axis_off;
-                            s *= mu_mat[j][row];
-                        }
-
-                        *slot = g.mul_bigint(s.into_bigint()).into_affine();
+            #[cfg(feature = "parallel")]
+            {
+                // Compute each exponent independently from its mixed-radix index.
+                let shape_local = shape.clone();
+                let axes = shape_local.len();
+                exps.par_iter_mut().enumerate().for_each(|(idx, e)| {
+                    let mut tmp = idx;
+                    let mut acc = E::ScalarField::one();
+                    for a_rev in (0..axes).rev() {
+                        let size_a = shape_local[a_rev];
+                        let coord = tmp % size_a;
+                        tmp /= size_a;
+                        let j = t + a_rev;
+                        acc *= mu_mat[j][coord];
                     }
-                );
+                    *e = acc;
+                });
+            }
+            #[cfg(not(feature = "parallel"))]
+            {
+                // axis_stride = product of sizes of trailing axes processed so far.
+                let mut axis_stride = 1usize;
+                for a in (0..axes).rev() {
+                    let size_a = shape[a]; // 2^{d_{t+a}}
+                    let block = size_a * axis_stride; // elements per full cycle along this axis
+                    let total_blocks = len / block;
+                    let j = t + a; // global mu axis
 
-                // Convert flat buffer into ndarray with C-order
-                let arr = ArrayD::from_shape_vec(IxDyn(&shape), flat)
-                    .expect("shape consistent with buffer length");
-                Tensor(arr)
-            })
-            .collect();
+                    for b in 0..total_blocks {
+                        let base = b * block;
+                        for r in 0..size_a {
+                            let mu = mu_mat[j][r];
+                            let seg_start = base + r * axis_stride;
+                            let seg_end = seg_start + axis_stride;
+                            for idx in seg_start..seg_end {
+                                exps[idx] *= mu;
+                            }
+                        }
+                    }
+
+                    axis_stride *= size_a;
+                }
+            }
+
+            // 2) Batch multiply once on base g, then batch-normalize.
+            //    BatchMulPreprocessing::new(base, count) builds a table suited for `count`
+            //    outputs.
+            let table_g = BatchMulPreprocessing::new(g, len);
+            let flat_proj: Vec<E::G1Affine> = table_g.batch_mul(&exps);
+
+            // 3) Pack into ndarray (C-order)
+            let arr = ArrayD::from_shape_vec(IxDyn(&shape), flat_proj)
+                .expect("shape consistent with buffer length");
+            h_tensors.push(Tensor(arr));
+        }
 
         let h_tensors = Arc::new(h_tensors);
+        end_timer!(h_tenso_timer);
 
-        // ---------- Build v_mat in parallel ----------
-        // v_mat[j][i] = G2Prepared( v^{ mu_mat[j][i] } )
-        let v_mat: Vec<Vec<<E as Pairing>::G2Prepared>> = cfg_into_iter!(0..k)
-            .map(|j| {
-                let rows = 1usize << dimensions_arc[j];
-                cfg_into_iter!(0..rows)
-                    .map(|i| {
-                        let s = mu_mat[j][i];
-                        let vp = v.mul_bigint(s.into_bigint());
-                        <E as Pairing>::G2Prepared::from(vp)
+        // ---------- Build v_mat (parallel per j), also via BatchMulPreprocessing
+        // ----------
+        let v_mat_timer = start_timer!(|| "KZHK::gen_srs_for_testing::v_mat");
+
+        let v_mat: Vec<Vec<<E as Pairing>::G2Prepared>> = {
+            #[cfg(feature = "parallel")]
+            {
+                (0..k)
+                    .into_par_iter()
+                    .map(|j| {
+                        use ark_ec::scalar_mul::BatchMulPreprocessing;
+
+                        let rows = 1usize << dimensions_arc[j];
+                        let table_v = BatchMulPreprocessing::new(v, rows);
+                        let proj: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
+                        proj.into_iter()
+                            .map(<E as Pairing>::G2Prepared::from)
+                            .collect()
                     })
                     .collect()
-            })
-            .collect();
+            }
+            #[cfg(not(feature = "parallel"))]
+            {
+                (0..k)
+                    .map(|j| {
+                        let rows = 1usize << dimensions_arc[j];
+                        let table_v = BatchMulPreprocessing::new(v, rows);
+                        let proj: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
+                        proj.into_iter()
+                            .map(<E as Pairing>::G2Prepared::from)
+                            .collect()
+                    })
+                    .collect()
+            }
+        };
 
         let v_mat = Arc::new(v_mat);
+        end_timer!(v_mat_timer);
 
         let hiding_sparsity = ceil_k_root_scaled(1u128 << num_vars, k as u32) as usize;
 
