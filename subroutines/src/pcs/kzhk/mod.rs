@@ -2,7 +2,9 @@ use std::{borrow::Borrow, collections::BTreeMap, marker::PhantomData};
 
 use crate::{
     pcs::kzhk::{
-        msm::msm_wrapper_g1, srs::{KZHKProverParam, KZHKUniversalParams, KZHKVerifierParam}, structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof}
+        msm::msm_wrapper_g1,
+        srs::{KZHKProverParam, KZHKUniversalParams, KZHKVerifierParam},
+        structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof},
     },
     poly::DenseOrSparseMLE,
     Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
@@ -257,10 +259,10 @@ impl<E: Pairing> KZHK<E> {
         let is_boolean_point = point.iter().all(|&x| x.is_zero() || x.is_one());
         let result = match (is_boolean_point, polynomial) {
             (true, DenseOrSparseMLE::Dense(poly)) => {
-                Self::open_dense_non_bool_innerbool_inner(prover_param, poly, point, aux)
+                Self::open_dense_non_bool_inner(prover_param, poly, point, aux)
             },
             (true, DenseOrSparseMLE::Sparse(poly)) => {
-                Self::open_sparse_non_bool_innerbool_inner(prover_param, poly, point, aux)
+                Self::open_sparse_non_bool_inner(prover_param, poly, point, aux)
             },
             (false, DenseOrSparseMLE::Dense(poly)) => {
                 Self::open_dense(prover_param, poly, point, aux)
@@ -580,86 +582,59 @@ impl<E: Pairing> KZHK<E> {
         Ok(())
     }
 
-    pub fn update_aux_sparse(
-    prover_param: impl Borrow<KZHKProverParam<E>>,
-    polynomial: &SparseMultilinearExtension<E::ScalarField>,
-    _com: &KZHKCommitment<E>,
-    aux: &mut KZHKAuxInfo<E>,
-) -> Result<(), PCSError> {
+    fn update_aux_sparse(
+        prover_param: impl Borrow<KZHKProverParam<E>>,
+        polynomial: &SparseMultilinearExtension<E::ScalarField>,
+        _com: &KZHKCommitment<E>,
+        aux: &mut KZHKAuxInfo<E>,
+    ) -> Result<(), PCSError> {
+        let timer = start_timer!(|| "KZH::CompAux_Sparse");
+        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+        let dimensions = prover_param.get_dimensions();
+        let k = dimensions.len();
+        debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
 
-    let timer = start_timer!(|| "KZH::CompAux_Sparse");
-    let prover_param: &KZHKProverParam<E> = prover_param.borrow();
-    let dimensions = prover_param.get_dimensions();
-    let k = dimensions.len();
-    debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
+        let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
+        let mut prefix_vars: usize = 0;
 
-    let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
-    let mut prefix_vars: usize = 0;
+        for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
+            // Update prefix sum of variables up to and including block j
+            prefix_vars += dim;
 
-    for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
-        // Update prefix
-        prefix_vars += dim;
+            // Number of i's (outer loop) and length of each partial evaluation
+            let dj_size = 1usize << prefix_vars;
+            let rem_vars = polynomial.num_vars() - prefix_vars;
+            let eval_len = 1usize << rem_vars;
 
-        // #prefixes and partial-eval length
-        let dj_size   = 1usize << prefix_vars;
-        let rem_vars  = polynomial.num_vars() - prefix_vars;
-        let eval_len  = 1usize << rem_vars;
+            // Choose H_t. Natural generalization uses [j]; if you intended to always use
+            // [0], replace j with 0 below.
+            let h_slice = prover_param.get_h_tensors()[j + 1]
+                .as_slice_memory_order()
+                .expect("H_t must be contiguous (standard layout)");
 
-        // Contiguous H tensor slice
-        let h_slice: &[E::G1Affine] = prover_param.get_h_tensors()[j + 1]
-            .as_slice_memory_order()
-            .expect("H_t must be contiguous (standard layout)");
-
-        // Build in projective; batch-normalize at the end.
-        let mut d_j_proj: Vec<E::G1> = vec![E::G1::zero(); dj_size];
-
-        cfg_iter_mut!(d_j_proj)
-            .enumerate()
-            .for_each(|(i, d_j_i)| {
-                // Sparse partial evaluation at this Boolean prefix.
-                // NOTE: if you can expose an iterator/bucketer to skip empty prefixes,
-                // it will be an even bigger win.
+            // Build d_{j}
+            let mut d_j = vec![E::G1Affine::zero(); dj_size];
+            cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
                 let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
-
-                if scalars_map.is_empty() {
-                    return; // leave zero
+                let mut bases = Vec::with_capacity(scalars_map.len());
+                let mut scalars = Vec::with_capacity(scalars_map.len());
+                for (&local_idx, s) in scalars_map.iter() {
+                    bases.push(h_slice[local_idx]);
+                    scalars.push(*s);
                 }
 
-                // Small, fast scratch on the stack for tiny supports.
-                // Falls back to a single heap alloc only if >16 terms.
-                let mut bases  : SmallVec<[E::G1Affine; 16]> = SmallVec::new();
-                let mut scalars: SmallVec<[E::ScalarField; 16]> = SmallVec::new();
-                bases.reserve(scalars_map.len());
-                scalars.reserve(scalars_map.len());
-
-                for (&local_idx, scal) in scalars_map.iter() {
-                    debug_assert!(local_idx < eval_len);
-                    // Unchecked hot-path indexing (safe under the debug assert above).
-                    let base = unsafe { *h_slice.get_unchecked(local_idx) };
-                    bases.push(base);
-                    scalars.push(*scal);
-                }
-
-                *d_j_i = if bases.len() == 1 {
-                    // 1-term fast path
-                    (bases[0].into_group()) * scalars[0]
+                *d_j_i = if scalars.is_empty() {
+                    E::G1Affine::zero()
                 } else {
-                    // Use the thread-aware wrapper (auto threads, but collapses to 1 when
-                    // already running inside Rayon to avoid nested oversubscription).
-                    msm_wrapper_g1::<E>(&bases, &scalars)
-                        .expect("bases/scalars lengths match by construction")
-                };
+                    msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
+                }
             });
-
-        // One-shot batch normalization
-        let d_j_aff: Vec<E::G1Affine> = E::G1::normalize_batch(&d_j_proj);
-        d_bool.push(d_j_aff);
+            d_bool.push(d_j);
+        }
+        aux.set_d_bool(d_bool);
+        end_timer!(timer);
+        Ok(())
     }
-
-    aux.set_d_bool(d_bool);
-    end_timer!(timer);
-    Ok(())
-}
 
     fn open_dense(
         prover_param: impl Borrow<KZHKProverParam<E>>,
@@ -701,7 +676,7 @@ impl<E: Pairing> KZHK<E> {
         Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_dense_non_bool_innerbool_inner(
+    fn open_dense_non_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &DenseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
@@ -810,7 +785,7 @@ impl<E: Pairing> KZHK<E> {
         Ok((KZHKOpeningProof::new(d, f, None, None, None), eval))
     }
 
-    fn open_sparse_non_bool_innerbool_inner(
+    fn open_sparse_non_bool_inner(
         prover_param: impl Borrow<KZHKProverParam<E>>,
         polynomial: &SparseMultilinearExtension<E::ScalarField>,
         point: &[E::ScalarField],
