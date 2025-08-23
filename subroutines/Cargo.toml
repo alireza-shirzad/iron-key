@@ -22,7 +22,7 @@ transcript = { path = "../transcript" }
 util = { path = "../util" }
 num-bigint = { workspace = true }
 num-traits = { workspace = true }
-
+once_cell = { workspace = true }
 [features]
 parallel = [
     "rayon",

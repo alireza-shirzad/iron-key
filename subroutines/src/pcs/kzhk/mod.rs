@@ -2,8 +2,7 @@ use std::{borrow::Borrow, collections::BTreeMap, marker::PhantomData};
 
 use crate::{
     pcs::kzhk::{
-        srs::{KZHKProverParam, KZHKUniversalParams, KZHKVerifierParam},
-        structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof},
+        msm::msm_wrapper_g1, srs::{KZHKProverParam, KZHKUniversalParams, KZHKVerifierParam}, structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof}
     },
     poly::DenseOrSparseMLE,
     Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
@@ -20,6 +19,7 @@ use ark_std::{
     start_timer, Zero,
 };
 use transcript::IOPTranscript;
+pub mod msm;
 pub mod srs;
 pub mod structs;
 use arithmetic::{
@@ -424,7 +424,7 @@ impl<E: Pairing> KZHK<E> {
             debug_assert!(prod.is_zero());
 
             let eq_poly = build_eq_x_r(point_part).unwrap();
-            cj = E::G1::msm(&proof.get_d()[j], &eq_poly.evaluations)
+            cj = msm_wrapper_g1::<E>(&proof.get_d()[j], &eq_poly.evaluations)
                 .unwrap()
                 .into_affine();
         }
@@ -492,7 +492,7 @@ impl<E: Pairing> KZHK<E> {
     ) -> Result<KZHKCommitment<E>, PCSError> {
         let commit_timer = start_timer!(|| "KZH::Commit_Dense");
         let prover_param: &KZHKProverParam<E> = prover_param.borrow();
-        let com = E::G1::msm(
+        let com = msm_wrapper_g1::<E>(
             prover_param.get_h_tensors()[0]
                 .as_slice_memory_order()
                 .unwrap(),
@@ -524,7 +524,7 @@ impl<E: Pairing> KZHK<E> {
         .collect();
 
         dbg!(&bases.len());
-        let com = E::G1::msm(&bases, &scalars).unwrap();
+        let com = msm_wrapper_g1::<E>(&bases, &scalars).unwrap();
         end_timer!(commit_timer);
         Ok(KZHKCommitment::new(
             com.into_affine(),
@@ -567,7 +567,7 @@ impl<E: Pairing> KZHK<E> {
             let mut d_j = vec![E::G1Affine::zero(); dj_size];
             cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
                 let scalars = partially_eval_dense_poly_on_bool_point(polynomial, i, eval_len);
-                *d_j_i = E::G1::msm(h_slice, scalars.as_slice())
+                *d_j_i = msm_wrapper_g1::<E>(h_slice, scalars.as_slice())
                     .unwrap()
                     .into_affine()
             });
@@ -623,7 +623,7 @@ impl<E: Pairing> KZHK<E> {
                 *d_j_i = if scalars.is_empty() {
                     E::G1Affine::zero()
                 } else {
-                    E::G1::msm(&bases, &scalars).unwrap().into_affine()
+                    msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
                 }
             });
             d_bool.push(d_j);
@@ -660,7 +660,7 @@ impl<E: Pairing> KZHK<E> {
                 .map(|i| {
                     let off = i * chunk_len;
                     let chunk = &partial_polynomial_evals[off..off + chunk_len];
-                    E::G1::msm(h_slice, chunk).unwrap().into_affine()
+                    msm_wrapper_g1::<E>(h_slice, chunk).unwrap().into_affine()
                 })
                 .collect();
             d.push(dj);
@@ -766,7 +766,7 @@ impl<E: Pairing> KZHK<E> {
                 let acc = if scalars.is_empty() {
                     E::G1Affine::zero()
                 } else {
-                    E::G1::msm(&bases, &scalars).unwrap().into_affine()
+                    msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
                 };
                 *d_j_i = acc;
             });
