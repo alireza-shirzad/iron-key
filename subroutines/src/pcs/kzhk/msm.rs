@@ -32,9 +32,13 @@ where
     E::ScalarField: PrimeField,
     <E::G1 as CurveGroup>::Affine: AffineRepr<ScalarField = E::ScalarField, Group = E::G1>,
 {
+    #[cfg(not(feature = "parallel"))]
+    return <E::G1 as VariableBaseMSM>::msm(bases, scalars);
+
+    #[cfg(feature = "parallel")]
     msm_wrapper_affine::<E, <E::G1 as CurveGroup>::Affine>(bases, scalars)
 }
-
+#[cfg(feature = "parallel")]
 /// G2 wrapper with `Result` like arkworks' `msm`.
 pub fn msm_wrapper_g2<E: Pairing>(
     bases: &[<E::G2 as CurveGroup>::Affine],
@@ -49,6 +53,7 @@ where
 
 /// Generic affine wrapper tied to `E::ScalarField`. Returns `Result<_, usize>`
 /// to match arkworks.
+#[cfg(feature = "parallel")]
 pub fn msm_wrapper_affine<E, A>(bases: &[A], scalars: &[E::ScalarField]) -> Result<A::Group, usize>
 where
     E: Pairing,
@@ -72,6 +77,7 @@ where
 }
 
 /// Force a specific number of threads (handy for experiments).
+#[cfg(feature = "parallel")]
 pub fn msm_with_threads_affine<E, A>(
     bases: &[A],
     scalars: &[E::ScalarField],
@@ -94,7 +100,7 @@ where
 // ===============================
 // Inner MSM kernel (swap if you have your own)
 // ===============================
-
+#[cfg(feature = "parallel")]
 #[inline(always)]
 fn inner_msm_affine<A>(bases: &[A], scalars: &[A::ScalarField]) -> Result<A::Group, usize>
 where
@@ -118,7 +124,7 @@ struct Breakpoints {
     cap: usize,
 }
 static BKPTS: OnceCell<Breakpoints> = OnceCell::new();
-
+#[cfg(feature = "parallel")]
 fn threads_for_n(n: usize, phys_cores: usize) -> usize {
     let bk = BKPTS.get_or_init(|| {
         if env::var("MSM_AUTOTUNE").ok().as_deref() == Some("1") {
@@ -143,7 +149,7 @@ fn threads_for_n(n: usize, phys_cores: usize) -> usize {
     t = t.min(bk.cap).max(1);
     t
 }
-
+#[cfg(feature = "parallel")]
 fn heuristic_breakpoints(phys_cores: usize) -> Breakpoints {
     Breakpoints {
         t2: 128,
@@ -153,7 +159,7 @@ fn heuristic_breakpoints(phys_cores: usize) -> Breakpoints {
         cap: phys_cores.min(16),
     }
 }
-
+#[cfg(feature = "parallel")]
 fn quick_autotune(phys_cores: usize) -> Breakpoints {
     // Placeholder: keep heuristic; replace with a sweep if you want per-curve
     // tuning.
@@ -163,7 +169,7 @@ fn quick_autotune(phys_cores: usize) -> Breakpoints {
 // ===============================
 // System helpers
 // ===============================
-
+#[cfg(feature = "parallel")]
 fn detect_physical_cores() -> usize {
     if let Ok(override_val) = env::var("MSM_PHYS_CORES") {
         if let Ok(v) = override_val.parse::<usize>() {
