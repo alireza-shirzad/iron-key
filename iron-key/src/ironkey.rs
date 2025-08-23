@@ -83,7 +83,7 @@ where
         let mut rng = test_rng();
         let srs_path = current_dir()
             .unwrap()
-            .join(format!("../srs/srs_{}.bin", num_vars));
+            .join(format!("../srs/srs_{:?}_{}.bin", pcs_conf, num_vars));
 
         let srs = if srs_path.exists() {
             eprintln!("Loading SRS");
