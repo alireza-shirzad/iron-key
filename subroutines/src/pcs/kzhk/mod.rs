@@ -13,6 +13,9 @@ use ark_poly::{
     univariate::DenseOrSparsePolynomial, DenseMultilinearExtension, MultilinearExtension,
     SparseMultilinearExtension,
 };
+use smallvec::SmallVec;
+use rayon::ThreadLocal;
+
 use ark_std::{
     cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer,
     rand::{Rng, RngCore},
@@ -39,7 +42,13 @@ use rayon::iter::{
     IntoParallelRefMutIterator, ParallelIterator,
 };
 mod test;
-
+// Define once, outside your function:
+thread_local! {
+    static SCRATCH: RefCell<Scratch> = RefCell::new(Scratch {
+        bases: SmallVec::new(),
+        scalars: SmallVec::new(),
+    });
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KZHK<E: Pairing> {
     #[doc(hidden)]
@@ -579,59 +588,100 @@ impl<E: Pairing> KZHK<E> {
         Ok(())
     }
 
-    fn update_aux_sparse(
-        prover_param: impl Borrow<KZHKProverParam<E>>,
-        polynomial: &SparseMultilinearExtension<E::ScalarField>,
-        _com: &KZHKCommitment<E>,
-        aux: &mut KZHKAuxInfo<E>,
-    ) -> Result<(), PCSError> {
-        let timer = start_timer!(|| "KZH::CompAux_Sparse");
-        let prover_param: &KZHKProverParam<E> = prover_param.borrow();
-        let dimensions = prover_param.get_dimensions();
-        let k = dimensions.len();
-        debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
+    pub fn update_aux_sparse(
+    prover_param: impl Borrow<KZHKProverParam<E>>,
+    polynomial: &SparseMultilinearExtension<E::ScalarField>,
+    _com: &KZHKCommitment<E>,
+    aux: &mut KZHKAuxInfo<E>,
+) -> Result<(), PCSError> {
+    let timer = start_timer!(|| "KZH::CompAux_Sparse");
+    let prover_param: &KZHKProverParam<E> = prover_param.borrow();
+    let dimensions = prover_param.get_dimensions();
+    let k = dimensions.len();
+    debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
 
-        let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
-        let mut prefix_vars: usize = 0;
+    let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
+    let mut prefix_vars: usize = 0;
 
-        for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
-            // Update prefix sum of variables up to and including block j
-            prefix_vars += dim;
-
-            // Number of i's (outer loop) and length of each partial evaluation
-            let dj_size = 1usize << prefix_vars;
-            let rem_vars = polynomial.num_vars() - prefix_vars;
-            let eval_len = 1usize << rem_vars;
-
-            // Choose H_t. Natural generalization uses [j]; if you intended to always use
-            // [0], replace `j` with `0` below.
-            let h_slice = prover_param.get_h_tensors()[j + 1]
-                .as_slice_memory_order()
-                .expect("H_t must be contiguous (standard layout)");
-
-            // Build d_{j}
-            let mut d_j = vec![E::G1Affine::zero(); dj_size];
-            d_j.iter_mut().enumerate().for_each(|(i, d_j_i)| {
-                let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
-                let mut bases = Vec::with_capacity(scalars_map.len());
-                let mut scalars = Vec::with_capacity(scalars_map.len());
-                for (&local_idx, s) in scalars_map.iter() {
-                    bases.push(h_slice[local_idx]);
-                    scalars.push(*s);
-                }
-
-                *d_j_i = if scalars.is_empty() {
-                    E::G1Affine::zero()
-                } else {
-                    msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
-                }
-            });
-            d_bool.push(d_j);
-        }
-        aux.set_d_bool(d_bool);
-        end_timer!(timer);
-        Ok(())
+    // Thread-local scratch to avoid per-iteration allocations.
+    // SmallVec keeps the common tiny cases on the stack.
+    struct Scratch<A, F> {
+        bases: SmallVec<[A; 16]>,
+        scalars: SmallVec<[F; 16]>,
     }
+    let scratch: ThreadLocal<std::cell::RefCell<Scratch<E::G1Affine, E::ScalarField>>> =
+        ThreadLocal::new();
+
+    for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
+        prefix_vars += dim;
+
+        let dj_size   = 1usize << prefix_vars;
+        let rem_vars  = polynomial.num_vars() - prefix_vars;
+        let eval_len  = 1usize << rem_vars;
+
+        // H tensor slice for this block (contiguous).
+        let h_slice: &[E::G1Affine] = prover_param.get_h_tensors()[j + 1]
+            .as_slice_memory_order()
+            .expect("H_t must be contiguous (standard layout)");
+
+        // Build d_j in the group first (projective); we’ll batch-normalize once at the end.
+        let mut d_j_proj: Vec<E::G1> = vec![E::G1::zero(); dj_size];
+
+        cfg_iter_mut!(d_j_proj)
+            .enumerate()
+            .for_each(|(i, d_j_i)| {
+                // Gather sparse partial evaluation at (prefix = i)
+                // NOTE: If you can rework `partially_eval_sparse_poly_on_bool_point` to *fill*
+                // provided buffers, do that — it removes a BTreeMap alloc here.
+                let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
+
+                if scalars_map.is_empty() {
+                    // leave as zero
+                    return;
+                }
+
+                let cell = scratch.get_or(|| {
+                    std::cell::RefCell::new(Scratch {
+                        bases: SmallVec::new(),
+                        scalars: SmallVec::new(),
+                    })
+                });
+                let mut s = cell.borrow_mut();
+                s.bases.clear();
+                s.scalars.clear();
+                s.bases.reserve(scalars_map.len());
+                s.scalars.reserve(scalars_map.len());
+
+                // SAFETY: local_idx < eval_len by construction of partial eval.
+                // We keep a debug assertion in dev builds.
+                for (&local_idx, scal) in scalars_map.iter() {
+                    debug_assert!(local_idx < eval_len);
+                    // Unchecked indexing to avoid bounds checks in the hot loop.
+                    let base = unsafe { *h_slice.get_unchecked(local_idx) };
+                    s.bases.push(base);
+                    s.scalars.push(*scal);
+                }
+
+                // For tiny 1-term cases, direct mul avoids MSM overhead (fast path).
+                *d_j_i = if s.bases.len() == 1 {
+                    // base * scalar
+                    (s.bases[0].into_group()) * s.scalars[0]
+                } else {
+                    // Use arkworks MSM directly (no per-call threadpool wrapper).
+                    // We already made sure lengths match.
+                    msm_wrapper_g1::<E>(&s.bases, &s.scalars)
+                };
+            });
+
+        // One shot batch normalization to affine (huge win vs per-iteration into_affine()).
+        let d_j_aff: Vec<E::G1Affine> = E::G1::normalize_batch(&d_j_proj);
+        d_bool.push(d_j_aff);
+    }
+
+    aux.set_d_bool(d_bool);
+    end_timer!(timer);
+    Ok(())
+}
 
     fn open_dense(
         prover_param: impl Borrow<KZHKProverParam<E>>,
