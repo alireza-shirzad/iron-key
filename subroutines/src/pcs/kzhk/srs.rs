@@ -272,61 +272,56 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
             let len: usize = shape.iter().product();
             let axes = shape.len();
 
-            // 1) Build scalar buffer S_t[r_t,...,r_{k-1}] = ∏_{j=t}^{k-1} mu_mat[j][r_j]
+            // 1) Build scalar buffer exps[r_t,...,r_{k-1}] = ∏_{j=t}^{k-1} mu_mat[j][r_j]
             let mut exps: Vec<E::ScalarField> = vec![E::ScalarField::one(); len];
 
-            #[cfg(feature = "parallel")]
-            {
-                // Compute each exponent independently from its mixed-radix index.
-                let shape_local = shape.clone();
-                let axes = shape_local.len();
-                exps.par_iter_mut().enumerate().for_each(|(idx, e)| {
-                    let mut tmp = idx;
-                    let mut acc = E::ScalarField::one();
-                    for a_rev in (0..axes).rev() {
-                        let size_a = shape_local[a_rev];
-                        let coord = tmp % size_a;
-                        tmp /= size_a;
-                        let j = t + a_rev;
-                        acc *= mu_mat[j][coord];
-                    }
-                    *e = acc;
-                });
-            }
-            #[cfg(not(feature = "parallel"))]
-            {
-                // axis_stride = product of sizes of trailing axes processed so far.
-                let mut axis_stride = 1usize;
-                for a in (0..axes).rev() {
-                    let size_a = shape[a]; // 2^{d_{t+a}}
-                    let block = size_a * axis_stride; // elements per full cycle along this axis
-                    let total_blocks = len / block;
-                    let j = t + a; // global mu axis
+            // axis_stride = product of sizes of trailing axes processed so far (C-order).
+            let mut axis_stride = 1usize;
+            for a in (0..axes).rev() {
+                let size_a = shape[a]; // = 2^{d_{t+a}}
+                let block = size_a * axis_stride; // elements per full cycle along this axis
+                let j = t + a; // global mu axis
+                let mu_j = &mu_mat[j];
 
-                    for b in 0..total_blocks {
-                        let base = b * block;
+                #[cfg(feature = "parallel")]
+                {
+                    use rayon::slice::ParallelSliceMut;
+
+                    exps.par_chunks_mut(block).for_each(|chunk| {
+                        // chunk layout: [ r=0 segment | r=1 segment | ... ] each of length
+                        // axis_stride
                         for r in 0..size_a {
-                            let mu = mu_mat[j][r];
-                            let seg_start = base + r * axis_stride;
-                            let seg_end = seg_start + axis_stride;
-                            for idx in seg_start..seg_end {
-                                exps[idx] *= mu;
+                            let mu = mu_j[r];
+                            let seg = &mut chunk[r * axis_stride..(r + 1) * axis_stride];
+                            for e in seg.iter_mut() {
+                                *e *= mu;
+                            }
+                        }
+                    });
+                }
+                #[cfg(not(feature = "parallel"))]
+                {
+                    for chunk in exps.chunks_mut(block) {
+                        for r in 0..size_a {
+                            let mu = mu_j[r];
+                            let seg = &mut chunk[r * axis_stride..(r + 1) * axis_stride];
+                            for e in seg.iter_mut() {
+                                *e *= mu;
                             }
                         }
                     }
-
-                    axis_stride *= size_a;
                 }
+
+                axis_stride *= size_a;
             }
 
-            // 2) Batch multiply once on base g, then batch-normalize.
-            //    BatchMulPreprocessing::new(base, count) builds a table suited for `count`
-            //    outputs.
+            // 2) One batch mul on base g, returning affine points directly. NOTE: if your
+            //    API expects "max_degree + 1" instead of count, adjust accordingly.
             let table_g = BatchMulPreprocessing::new(g, len);
-            let flat_proj: Vec<E::G1Affine> = table_g.batch_mul(&exps);
+            let flat_affine: Vec<E::G1Affine> = table_g.batch_mul(&exps);
 
             // 3) Pack into ndarray (C-order)
-            let arr = ArrayD::from_shape_vec(IxDyn(&shape), flat_proj)
+            let arr = ArrayD::from_shape_vec(IxDyn(&shape), flat_affine)
                 .expect("shape consistent with buffer length");
             h_tensors.push(Tensor(arr));
         }
@@ -344,12 +339,10 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
                 (0..k)
                     .into_par_iter()
                     .map(|j| {
-                        use ark_ec::scalar_mul::BatchMulPreprocessing;
-
                         let rows = 1usize << dimensions_arc[j];
                         let table_v = BatchMulPreprocessing::new(v, rows);
-                        let proj: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
-                        proj.into_iter()
+                        let aff: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
+                        aff.into_iter()
                             .map(<E as Pairing>::G2Prepared::from)
                             .collect()
                     })
@@ -361,8 +354,8 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
                     .map(|j| {
                         let rows = 1usize << dimensions_arc[j];
                         let table_v = BatchMulPreprocessing::new(v, rows);
-                        let proj: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
-                        proj.into_iter()
+                        let aff: Vec<E::G2Affine> = table_v.batch_mul(&mu_mat[j]);
+                        aff.into_iter()
                             .map(<E as Pairing>::G2Prepared::from)
                             .collect()
                     })
