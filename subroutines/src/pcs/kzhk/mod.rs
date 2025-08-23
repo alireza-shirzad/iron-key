@@ -523,6 +523,7 @@ impl<E: Pairing> KZHK<E> {
         .map(|&index| h_mat[index]) // Use the key `index` to get the correct base.
         .collect();
 
+        dbg!(&bases.len());
         let com = E::G1::msm(&bases, &scalars).unwrap();
         end_timer!(commit_timer);
         Ok(KZHKCommitment::new(
@@ -610,7 +611,7 @@ impl<E: Pairing> KZHK<E> {
 
             // Build d_{j}
             let mut d_j = vec![E::G1Affine::zero(); dj_size];
-            cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
+            d_j.iter_mut().enumerate().for_each(|(i, d_j_i)| {
                 let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
                 let mut bases = Vec::with_capacity(scalars_map.len());
                 let mut scalars = Vec::with_capacity(scalars_map.len());

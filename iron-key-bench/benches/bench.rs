@@ -7,13 +7,38 @@ mod server_update_keys;
 mod server_update_reg;
 use ark_bn254 as E;
 use ark_bn254::Fr;
+use ark_bn254::{G1Affine, G1Projective};
 use ark_ec::VariableBaseMSM;
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use divan::Bencher;
 use sha2::{Digest, Sha256};
+use divan::black_box;
+use ark_ec::CurveGroup;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+fn sample_msm_inputs(n: usize, seed: u64) -> (Vec<G1Affine>, Vec<Fr>) {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let bases: Vec<G1Affine> = (0..n)
+        .map(|_| G1Projective::rand(&mut rng).into_affine())
+        .collect();
+    let scalars: Vec<Fr> = (0..n).map(|_| Fr::rand(&mut rng)).collect();
+    (bases, scalars)
+}
 
+/// Measure E::G1::msm with `n` bases/scalars.
+/// Try sizes that are big enough to be meaningful but won’t OOM.
+#[divan::bench(args = [256, 512, 1024, 2048, 4096, 8192])]
+fn msm_g1(args: usize, bencher: Bencher) {
+    let n = args;
+    let (bases, scalars) = sample_msm_inputs(n, 42);
 
-
+    // Bench just the MSM (no allocation or RNG inside the timing loop).
+    bencher.bench_local(|| {
+        let res = <E as ark_ec::pairing::Pairing>::G1::msm(black_box(&bases), black_box(&scalars))
+            .expect("msm ok");
+        black_box(res)
+    });
+}
 
 #[divan::bench]
 fn field_multiplication(bencher: Bencher) {
@@ -49,6 +74,28 @@ fn zk(bencher: Bencher) {
         .collect::<Vec<_>>();
     bencher.bench(|| <E::G1Projective as VariableBaseMSM>::msm(&bases, &scalars));
 }
+
+
+
+
+
+#[cfg(feature = "parallel")]
+pub fn init_rayon_global(threads: usize, stack_bytes: usize) {
+    use rayon::ThreadPoolBuilder;
+    use std::sync::Once;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        // choose a sane cap: physical cores or lower on memory‑tight boxes
+        let _ = ThreadPoolBuilder::new()
+            .num_threads(threads.max(1))
+            .stack_size(stack_bytes) // e.g., 2 * 1024 * 1024
+            .build_global();
+    });
+}
+
+
+
+
 
 fn main() {
     divan::Divan::from_args().main();

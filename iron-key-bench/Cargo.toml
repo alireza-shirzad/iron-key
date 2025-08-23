@@ -18,7 +18,7 @@ ark-bn254 = { workspace = true }
 rayon = { workspace = true, optional = true }
 anyhow = {workspace = true}
 once_cell =  {workspace = true}
-
+num_cpus = "1.16"
 [[bench]]
 name = "bench"
 harness = false
@@ -28,4 +28,4 @@ harness = false
 default = ["std"]
 std = ["ark-ff/std", "ark-std/std"]
 print-trace = ["ark-std/print-trace", "subroutines/print-trace", "iron-key/print-trace"]
-parallel = ["std", "iron-key/parallel", "subroutines/parallel", "rayon"]
+parallel = ["std", "iron-key/parallel", "subroutines/parallel", "rayon","ark-ec/parallel","ark-ff/parallel","ark-poly/parallel","ark-serialize/parallel","ark-std/parallel"]

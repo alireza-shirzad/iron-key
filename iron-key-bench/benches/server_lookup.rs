@@ -74,7 +74,7 @@ fn server_with_updates(
 
 /// Benchmark `lookup_prove` after different-sized update batches.
 /// The `args` list controls `log_capacity` values.
-#[divan::bench(    max_time     = 1,args = [10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32])]
+#[divan::bench(    max_time     = 1,args = [27])]
 fn lookup_prove_after_updates(bencher: Bencher, log_capacity_arg: usize) {
     bencher
         // build a brand-new (server, bb, label) for *each* iteration
