@@ -594,43 +594,58 @@ impl<E: Pairing> KZHK<E> {
         let k = dimensions.len();
         debug_assert!(k >= 2, "need at least 2 blocks to build d_i's");
 
-        let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
-        let mut prefix_vars: usize = 0;
+        // Build prefix sums of dimensions up to each block (exclusive of the last)
+        let prefix_vars_vec: Vec<usize> = {
+            let mut prefix_vars: usize = 0;
+            dimensions
+                .iter()
+                .take(k - 1)
+                .map(|&dim| {
+                    prefix_vars += dim;
+                    prefix_vars
+                })
+                .collect()
+        };
 
-        for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
-            // Update prefix sum of variables up to and including block j
-            prefix_vars += dim;
+        // Compute d_bool without shared mutation; preserve order across j.
+        let d_bool: Vec<Vec<E::G1Affine>> = {
+            cfg_into_iter!(0..k - 1)
+                .map(|j| {
+                    let prefix_var = prefix_vars_vec[j];
+                    // Number of i's (outer loop) and length of each partial evaluation
+                    let dj_size = 1usize << prefix_var;
+                    let rem_vars = polynomial.num_vars() - prefix_var;
+                    let eval_len = 1usize << rem_vars;
 
-            // Number of i's (outer loop) and length of each partial evaluation
-            let dj_size = 1usize << prefix_vars;
-            let rem_vars = polynomial.num_vars() - prefix_vars;
-            let eval_len = 1usize << rem_vars;
+                    // Choose H_t. Natural generalization uses [j]; if you intended to always
+                    // use [0], replace j with 0 below.
+                    let h_slice = prover_param.get_h_tensors()[j + 1]
+                        .as_slice_memory_order()
+                        .expect("H_t must be contiguous (standard layout)");
 
-            // Choose H_t. Natural generalization uses [j]; if you intended to always use
-            // [0], replace j with 0 below.
-            let h_slice = prover_param.get_h_tensors()[j + 1]
-                .as_slice_memory_order()
-                .expect("H_t must be contiguous (standard layout)");
+                    // Build d_{j}
+                    let mut d_j = vec![E::G1Affine::zero(); dj_size];
+                    cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
+                        let scalars_map =
+                            partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
+                        let mut bases = Vec::with_capacity(scalars_map.len());
+                        let mut scalars = Vec::with_capacity(scalars_map.len());
+                        for (&local_idx, s) in scalars_map.iter() {
+                            bases.push(h_slice[local_idx]);
+                            scalars.push(*s);
+                        }
 
-            // Build d_{j}
-            let mut d_j = vec![E::G1Affine::zero(); dj_size];
-            cfg_iter_mut!(d_j).enumerate().for_each(|(i, d_j_i)| {
-                let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
-                let mut bases = Vec::with_capacity(scalars_map.len());
-                let mut scalars = Vec::with_capacity(scalars_map.len());
-                for (&local_idx, s) in scalars_map.iter() {
-                    bases.push(h_slice[local_idx]);
-                    scalars.push(*s);
-                }
+                        *d_j_i = if scalars.is_empty() {
+                            E::G1Affine::zero()
+                        } else {
+                            msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
+                        }
+                    });
+                    d_j
+                })
+                .collect()
+        };
 
-                *d_j_i = if scalars.is_empty() {
-                    E::G1Affine::zero()
-                } else {
-                    msm_wrapper_g1::<E>(&bases, &scalars).unwrap().into_affine()
-                }
-            });
-            d_bool.push(d_j);
-        }
         aux.set_d_bool(d_bool);
         end_timer!(timer);
         Ok(())

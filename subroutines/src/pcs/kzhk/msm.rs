@@ -1,4 +1,5 @@
-//! msm.rs — size-aware MSM wrapper (E: Pairing), same signature shape as arkworks `msm`.
+//! msm.rs — size-aware MSM wrapper (E: Pairing), same signature shape as
+//! arkworks `msm`.
 //!
 //! Example switch-over:
 //!   // old:
@@ -11,6 +12,7 @@
 //!   MSM_PHYS_CORES=<int>
 
 use once_cell::sync::OnceCell;
+#[cfg(feature = "parallel")]
 use rayon::ThreadPoolBuilder;
 use std::env;
 
@@ -45,11 +47,9 @@ where
     msm_wrapper_affine::<E, <E::G2 as CurveGroup>::Affine>(bases, scalars)
 }
 
-/// Generic affine wrapper tied to `E::ScalarField`. Returns `Result<_, usize>` to match arkworks.
-pub fn msm_wrapper_affine<E, A>(
-    bases: &[A],
-    scalars: &[E::ScalarField],
-) -> Result<A::Group, usize>
+/// Generic affine wrapper tied to `E::ScalarField`. Returns `Result<_, usize>`
+/// to match arkworks.
+pub fn msm_wrapper_affine<E, A>(bases: &[A], scalars: &[E::ScalarField]) -> Result<A::Group, usize>
 where
     E: Pairing,
     E::ScalarField: PrimeField,
@@ -96,7 +96,6 @@ where
 // ===============================
 
 #[inline(always)]
-#[inline(always)]
 fn inner_msm_affine<A>(bases: &[A], scalars: &[A::ScalarField]) -> Result<A::Group, usize>
 where
     A: AffineRepr,
@@ -129,11 +128,17 @@ fn threads_for_n(n: usize, phys_cores: usize) -> usize {
         }
     });
 
-    let mut t = if n < bk.t2 { 1 }
-    else if n < bk.t4 { 2 }
-    else if n < bk.t8 { 4 }
-    else if n < bk.t16 { 8 }
-    else { 16 };
+    let mut t = if n < bk.t2 {
+        1
+    } else if n < bk.t4 {
+        2
+    } else if n < bk.t8 {
+        4
+    } else if n < bk.t16 {
+        8
+    } else {
+        16
+    };
 
     t = t.min(bk.cap).max(1);
     t
@@ -150,7 +155,8 @@ fn heuristic_breakpoints(phys_cores: usize) -> Breakpoints {
 }
 
 fn quick_autotune(phys_cores: usize) -> Breakpoints {
-    // Placeholder: keep heuristic; replace with a sweep if you want per-curve tuning.
+    // Placeholder: keep heuristic; replace with a sweep if you want per-curve
+    // tuning.
     heuristic_breakpoints(phys_cores)
 }
 
@@ -161,7 +167,9 @@ fn quick_autotune(phys_cores: usize) -> Breakpoints {
 fn detect_physical_cores() -> usize {
     if let Ok(override_val) = env::var("MSM_PHYS_CORES") {
         if let Ok(v) = override_val.parse::<usize>() {
-            if v >= 1 { return v; }
+            if v >= 1 {
+                return v;
+            }
         }
     }
     std::thread::available_parallelism()
@@ -190,12 +198,13 @@ mod tests {
         let pts_g1: Vec<<<Bn254 as Pairing>::G1 as CurveGroup>::Affine> = (0..n)
             .map(|_| <Bn254 as Pairing>::G1::rand(&mut rng).into_affine())
             .collect();
-        let sc: Vec<<Bn254 as Pairing>::ScalarField> =
-            (0..n).map(|_| <Bn254 as Pairing>::ScalarField::rand(&mut rng)).collect();
+        let sc: Vec<<Bn254 as Pairing>::ScalarField> = (0..n)
+            .map(|_| <Bn254 as Pairing>::ScalarField::rand(&mut rng))
+            .collect();
 
         let _out = msm_wrapper_g1::<Bn254>(&pts_g1, &sc).unwrap();
 
         // length error
-        assert!(msm_wrapper_g1::<Bn254>(&pts_g1[..n-1], &sc).is_err());
+        assert!(msm_wrapper_g1::<Bn254>(&pts_g1[..n - 1], &sc).is_err());
     }
 }
