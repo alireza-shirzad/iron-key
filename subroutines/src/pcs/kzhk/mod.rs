@@ -14,7 +14,6 @@ use ark_poly::{
     SparseMultilinearExtension,
 };
 use smallvec::SmallVec;
-use rayon::ThreadLocal;
 
 use ark_std::{
     cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer,
@@ -42,13 +41,6 @@ use rayon::iter::{
     IntoParallelRefMutIterator, ParallelIterator,
 };
 mod test;
-// Define once, outside your function:
-thread_local! {
-    static SCRATCH: RefCell<Scratch> = RefCell::new(Scratch {
-        bases: SmallVec::new(),
-        scalars: SmallVec::new(),
-    });
-}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KZHK<E: Pairing> {
     #[doc(hidden)]
@@ -594,6 +586,7 @@ impl<E: Pairing> KZHK<E> {
     _com: &KZHKCommitment<E>,
     aux: &mut KZHKAuxInfo<E>,
 ) -> Result<(), PCSError> {
+
     let timer = start_timer!(|| "KZH::CompAux_Sparse");
     let prover_param: &KZHKProverParam<E> = prover_param.borrow();
     let dimensions = prover_param.get_dimensions();
@@ -603,77 +596,62 @@ impl<E: Pairing> KZHK<E> {
     let mut d_bool: Vec<Vec<E::G1Affine>> = Vec::with_capacity(k - 1);
     let mut prefix_vars: usize = 0;
 
-    // Thread-local scratch to avoid per-iteration allocations.
-    // SmallVec keeps the common tiny cases on the stack.
-    struct Scratch<A, F> {
-        bases: SmallVec<[A; 16]>,
-        scalars: SmallVec<[F; 16]>,
-    }
-    let scratch: ThreadLocal<std::cell::RefCell<Scratch<E::G1Affine, E::ScalarField>>> =
-        ThreadLocal::new();
-
     for (j, &dim) in dimensions.iter().take(k - 1).enumerate() {
+        // Update prefix
         prefix_vars += dim;
 
+        // #prefixes and partial-eval length
         let dj_size   = 1usize << prefix_vars;
         let rem_vars  = polynomial.num_vars() - prefix_vars;
         let eval_len  = 1usize << rem_vars;
 
-        // H tensor slice for this block (contiguous).
+        // Contiguous H tensor slice
         let h_slice: &[E::G1Affine] = prover_param.get_h_tensors()[j + 1]
             .as_slice_memory_order()
             .expect("H_t must be contiguous (standard layout)");
 
-        // Build d_j in the group first (projective); we’ll batch-normalize once at the end.
+        // Build in projective; batch-normalize at the end.
         let mut d_j_proj: Vec<E::G1> = vec![E::G1::zero(); dj_size];
 
         cfg_iter_mut!(d_j_proj)
             .enumerate()
             .for_each(|(i, d_j_i)| {
-                // Gather sparse partial evaluation at (prefix = i)
-                // NOTE: If you can rework `partially_eval_sparse_poly_on_bool_point` to *fill*
-                // provided buffers, do that — it removes a BTreeMap alloc here.
+                // Sparse partial evaluation at this Boolean prefix.
+                // NOTE: if you can expose an iterator/bucketer to skip empty prefixes,
+                // it will be an even bigger win.
                 let scalars_map = partially_eval_sparse_poly_on_bool_point(polynomial, i, eval_len);
 
                 if scalars_map.is_empty() {
-                    // leave as zero
-                    return;
+                    return; // leave zero
                 }
 
-                let cell = scratch.get_or(|| {
-                    std::cell::RefCell::new(Scratch {
-                        bases: SmallVec::new(),
-                        scalars: SmallVec::new(),
-                    })
-                });
-                let mut s = cell.borrow_mut();
-                s.bases.clear();
-                s.scalars.clear();
-                s.bases.reserve(scalars_map.len());
-                s.scalars.reserve(scalars_map.len());
+                // Small, fast scratch on the stack for tiny supports.
+                // Falls back to a single heap alloc only if >16 terms.
+                let mut bases  : SmallVec<[E::G1Affine; 16]> = SmallVec::new();
+                let mut scalars: SmallVec<[E::ScalarField; 16]> = SmallVec::new();
+                bases.reserve(scalars_map.len());
+                scalars.reserve(scalars_map.len());
 
-                // SAFETY: local_idx < eval_len by construction of partial eval.
-                // We keep a debug assertion in dev builds.
                 for (&local_idx, scal) in scalars_map.iter() {
                     debug_assert!(local_idx < eval_len);
-                    // Unchecked indexing to avoid bounds checks in the hot loop.
+                    // Unchecked hot-path indexing (safe under the debug assert above).
                     let base = unsafe { *h_slice.get_unchecked(local_idx) };
-                    s.bases.push(base);
-                    s.scalars.push(*scal);
+                    bases.push(base);
+                    scalars.push(*scal);
                 }
 
-                // For tiny 1-term cases, direct mul avoids MSM overhead (fast path).
-                *d_j_i = if s.bases.len() == 1 {
-                    // base * scalar
-                    (s.bases[0].into_group()) * s.scalars[0]
+                *d_j_i = if bases.len() == 1 {
+                    // 1-term fast path
+                    (bases[0].into_group()) * scalars[0]
                 } else {
-                    // Use arkworks MSM directly (no per-call threadpool wrapper).
-                    // We already made sure lengths match.
-                    msm_wrapper_g1::<E>(&s.bases, &s.scalars)
+                    // Use the thread-aware wrapper (auto threads, but collapses to 1 when
+                    // already running inside Rayon to avoid nested oversubscription).
+                    msm_wrapper_g1::<E>(&bases, &scalars)
+                        .expect("bases/scalars lengths match by construction")
                 };
             });
 
-        // One shot batch normalization to affine (huge win vs per-iteration into_affine()).
+        // One-shot batch normalization
         let d_j_aff: Vec<E::G1Affine> = E::G1::normalize_batch(&d_j_proj);
         d_bool.push(d_j_aff);
     }
