@@ -6,16 +6,12 @@ mod server_lookup;
 mod server_update_keys;
 mod server_update_reg;
 use ark_bn254 as E;
-use ark_bn254::Fr;
-use ark_bn254::{G1Affine, G1Projective};
-use ark_ec::VariableBaseMSM;
+use ark_bn254::{Fr, G1Affine, G1Projective};
+use ark_ec::{CurveGroup, VariableBaseMSM};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
-use divan::Bencher;
+use ark_std::rand::{SeedableRng, rngs::StdRng};
+use divan::{Bencher, black_box};
 use sha2::{Digest, Sha256};
-use divan::black_box;
-use ark_ec::CurveGroup;
-use rand::rngs::StdRng;
-use rand::SeedableRng;
 fn sample_msm_inputs(n: usize, seed: u64) -> (Vec<G1Affine>, Vec<Fr>) {
     let mut rng = StdRng::seed_from_u64(seed);
     let bases: Vec<G1Affine> = (0..n)
@@ -28,14 +24,12 @@ fn sample_msm_inputs(n: usize, seed: u64) -> (Vec<G1Affine>, Vec<Fr>) {
 /// Measure E::G1::msm with `n` bases/scalars.
 /// Try sizes that are big enough to be meaningful but won’t OOM.
 #[divan::bench(args = [256, 512, 1024, 2048, 4096, 8192])]
-fn msm_g1(args: usize, bencher: Bencher) {
-    let n = args;
+fn msm_g1(bencher: Bencher, n: usize) {
     let (bases, scalars) = sample_msm_inputs(n, 42);
 
     // Bench just the MSM (no allocation or RNG inside the timing loop).
     bencher.bench_local(|| {
-        let res = <E as ark_ec::pairing::Pairing>::G1::msm(black_box(&bases), black_box(&scalars))
-            .expect("msm ok");
+        let res = <G1Projective as VariableBaseMSM>::msm(black_box(&bases), black_box(&scalars));
         black_box(res)
     });
 }
@@ -75,10 +69,6 @@ fn zk(bencher: Bencher) {
     bencher.bench(|| <E::G1Projective as VariableBaseMSM>::msm(&bases, &scalars));
 }
 
-
-
-
-
 #[cfg(feature = "parallel")]
 pub fn init_rayon_global(threads: usize, stack_bytes: usize) {
     use rayon::ThreadPoolBuilder;
@@ -92,10 +82,6 @@ pub fn init_rayon_global(threads: usize, stack_bytes: usize) {
             .build_global();
     });
 }
-
-
-
-
 
 fn main() {
     divan::Divan::from_args().main();
