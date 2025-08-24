@@ -1,4 +1,11 @@
-use std::{borrow::Borrow, collections::BTreeMap, marker::PhantomData};
+use std::{
+    borrow::Borrow,
+    collections::BTreeMap,
+    env::current_dir,
+    fs::File,
+    io::{BufReader, BufWriter, Read, Write},
+    marker::PhantomData,
+};
 
 use crate::{
     pcs::kzhk::{
@@ -6,7 +13,7 @@ use crate::{
         srs::{KZHKProverParam, KZHKUniversalParams, KZHKVerifierParam},
         structs::{KZHKAuxInfo, KZHKCommitment, KZHKOpeningProof},
     },
-    poly::DenseOrSparseMLE,
+    poly::{self, DenseOrSparseMLE},
     Commitment, PCSError, PolynomialCommitmentScheme, StructuredReferenceString,
 };
 use ark_ec::{pairing::Pairing, AffineRepr, CurveGroup, VariableBaseMSM};
@@ -15,13 +22,13 @@ use ark_poly::{
     univariate::DenseOrSparsePolynomial, DenseMultilinearExtension, MultilinearExtension,
     SparseMultilinearExtension,
 };
-use smallvec::SmallVec;
-
+use ark_serialize::CanonicalDeserialize;
 use ark_std::{
-    cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer,
+    cfg_into_iter, cfg_iter, cfg_iter_mut, end_timer, log2,
     rand::{Rng, RngCore},
-    start_timer, Zero,
+    start_timer, test_rng, Zero,
 };
+use smallvec::SmallVec;
 use transcript::IOPTranscript;
 pub mod msm;
 pub mod srs;
@@ -36,6 +43,7 @@ use arithmetic::{
     },
     virtual_polynomial::build_eq_x_r,
 };
+use ark_serialize::CanonicalSerialize;
 use ark_std::UniformRand;
 #[cfg(feature = "parallel")]
 use rayon::iter::{
@@ -67,11 +75,41 @@ where
     type Aux = KZHKAuxInfo<E>;
 
     fn gen_srs_for_testing<R: Rng>(
-        conf: Self::Config,
+        conf: Option<Self::Config>,
         rng: &mut R,
         supported_size: usize,
+        zk: bool,
     ) -> Result<Self::SRS, PCSError> {
-        KZHKUniversalParams::gen_srs_for_testing(rng, conf, supported_size)
+        let k = conf.unwrap_or_else(|| compute_k(supported_size, zk));
+        dbg!(k);
+        let srs_path = current_dir()
+            .unwrap()
+            .join(format!("../srs/srs_{:?}_{}.bin", k, supported_size));
+        let srs = if srs_path.exists() {
+            eprintln!("Loading SRS");
+            let mut buffer = Vec::new();
+            BufReader::new(File::open(&srs_path).unwrap())
+                .read_to_end(&mut buffer)
+                .unwrap();
+            Self::SRS::deserialize_uncompressed_unchecked(&buffer[..]).unwrap_or_else(|_| {
+                panic!("Failed to deserialize SRS from {:?}", srs_path);
+            })
+        } else {
+            eprintln!("Computing SRS");
+            let mut rng = test_rng();
+            let srs =
+                KZHKUniversalParams::gen_srs_for_testing(&mut rng, k, supported_size).unwrap();
+            let mut serialized = Vec::new();
+            srs.serialize_uncompressed(&mut serialized).unwrap();
+            BufWriter::new(
+                File::create(srs_path.clone())
+                    .unwrap_or_else(|_| panic!("could not create file for SRS at {:?}", srs_path)),
+            )
+            .write_all(&serialized)
+            .unwrap();
+            srs
+        };
+        Ok(srs)
     }
 
     fn trim(
@@ -300,15 +338,14 @@ impl<E: Pairing> KZHK<E> {
         // Committing to the r(X) polynomial
         let (r_hide, mut r_aux) = Self::commit(prover_param, &r_poly_wrapped, Some(&mut rng))?;
         // Computing the auxiliary of r(x)
-        // let _ = Self::update_aux_non_zk(prover_param, &r_poly_wrapped, &r_hide, &mut r_aux);
+        let _ = Self::update_aux_non_zk(prover_param, &r_poly_wrapped, &r_hide, &mut r_aux);
         let rho = r_aux.get_tau();
         // Computing the opening and evaluation of r(x)
-        // let (r_opening, y_r) =
-        //     Self::open_non_zk(prover_param, commitment, &r_poly_wrapped, point,
-        // &r_aux)?;
-        let dummy_aux = KZHKAuxInfo::default();
         let (r_opening, y_r) =
-            Self::open_sparse_non_bool_inner(prover_param, &r_poly, point, &dummy_aux)?;
+            Self::open_non_zk(prover_param, commitment, &r_poly_wrapped, point, &r_aux)?;
+        // let dummy_aux = KZHKAuxInfo::default();
+        // let (r_opening, y_r) =
+        // Self::open_sparse_non_bool_inner(prover_param, &r_poly, point, &dummy_aux)?;
         // Getting the challenge alpha
         let alpha = E::ScalarField::one();
         // Computing rho_prime
@@ -884,4 +921,13 @@ macro_rules! cfg_for_each_with_scratch {
             }
         }
     }};
+}
+// TODO: Check if this is optimum
+pub fn compute_k(poly_size: usize, is_zk: bool) -> usize {
+    let n: u128 = 1 << poly_size;
+    if is_zk {
+        (0.5 * (n as f64).ln()) as usize
+    } else {
+        ((n as f64).log2()) as usize
+    }
 }

@@ -43,9 +43,10 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         + Sync;
 
     fn gen_srs_for_testing<R: Rng>(
-        conf: Self::Config,
+        conf: Option<Self::Config>,
         rng: &mut R,
         supported_size: usize,
+        zk: bool,
     ) -> Result<Self::SRS, PCSError>;
 
     fn trim(
@@ -58,7 +59,7 @@ pub trait PolynomialCommitmentScheme<E: Pairing> {
         prover_param: impl Borrow<Self::ProverParam>,
         poly: &Self::Polynomial,
         hiding: Option<&mut R>,
-    ) -> Result<(Self::Commitment,Self::Aux), PCSError>;
+    ) -> Result<(Self::Commitment, Self::Aux), PCSError>;
 
     fn update_aux(
         prover_param: impl Borrow<Self::ProverParam>,

@@ -37,7 +37,7 @@ fn get_or_create_pp(log_capacity: u64) -> Arc<AppPublicParameters> {
                 "\nCache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(1usize << log_capacity, KZH_PARAM);
+            let spec = IronSpecification::new(1usize << log_capacity, true);
             // IronKey::<..., IronLabel> specifies generics for the IronKey struct itself,
             // its `setup` method returns Result<IronPublicParameters<E, Pcs>, _>
             let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(spec)

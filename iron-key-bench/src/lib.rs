@@ -1,1 +1,1 @@
-pub const KZH_PARAM: usize = 8;
+pub const KZH_PARAM: usize = 10;

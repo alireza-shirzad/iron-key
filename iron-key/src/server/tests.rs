@@ -16,7 +16,7 @@ use subroutines::pcs::kzhk::KZHK;
 #[test]
 fn test_server() {
     const LOG_CAPACITY: usize = 16;
-    let system_spec = IronSpecification::new(1usize << LOG_CAPACITY, 2);
+    let system_spec = IronSpecification::new(1usize << LOG_CAPACITY, true);
     let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(system_spec).unwrap();
     let mut server: IronServer<Bn254, KZHK<Bn254>, IronLabel> = IronServer::init(&pp);
     let mut client =

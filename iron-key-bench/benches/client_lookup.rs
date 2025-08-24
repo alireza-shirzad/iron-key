@@ -37,7 +37,7 @@ fn get_or_create_pp(log_capacity: usize) -> Arc<AppPublicParameters> {
                 "Cache miss: Creating new IronPublicParameters for log_capacity = {}",
                 log_capacity
             );
-            let spec = IronSpecification::new(1usize << log_capacity,KZH_PARAM);
+            let spec = IronSpecification::new(1usize << log_capacity,true);
             let pp = IronKey::<Bn254, KZHK<Bn254>, IronLabel>::setup(spec)
                 .expect("Failed to setup IronPublicParameters");
             Arc::new(pp)

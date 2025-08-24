@@ -16,7 +16,7 @@ fn test_single_helper(
         DenseOrSparseMLE::Dense(DenseMultilinearExtension::<Fr>::rand(nv, &mut rng))
     };
     let mut prover_transcript = IOPTranscript::new(b"test_kzhk");
-    let params = KZHK::<E>::gen_srs_for_testing(k, &mut rng, nv)?;
+    let params = KZHK::<E>::gen_srs_for_testing(Some(k), &mut rng, nv, zk)?;
     let (ck, vk) = KZHK::trim(params, None, Some(nv))?;
     let point = match is_boolean {
         true => (0..nv)

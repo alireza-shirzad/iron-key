@@ -48,7 +48,7 @@ static SHARED_PP: Lazy<AppPublicParameters> = Lazy::new(|| {
         "\nInitializing SHARED_PP (IronPublicParameters) for log_capacity = {}...\n",
         SHARED_LOG_CAPACITY
     );
-    let system_spec = IronSpecification::new(KZH_PARAM, 1usize << SHARED_LOG_CAPACITY);
+    let system_spec = IronSpecification::new(1usize << SHARED_LOG_CAPACITY, true);
     // IronKey::<..., IronLabel> specifies the generics for the IronKey struct
     // itself, its `setup` method then returns Result<IronPublicParameters<E,
     // Pcs>, _>

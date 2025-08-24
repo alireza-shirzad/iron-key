@@ -11,25 +11,23 @@ pub mod pp;
 pub mod self_audit;
 pub mod update;
 
-pub struct IronSpecification<E: Pairing, PC: PolynomialCommitmentScheme<E>> {
+pub struct IronSpecification{
     capacity: usize,
-    pcs_conf: PC::Config,
+    zk: bool,
 }
 
-impl<E: Pairing, PC: PolynomialCommitmentScheme<E>> IronSpecification<E, PC> {
-    pub fn new(capacity: usize, pcs_conf: PC::Config) -> Self {
-        Self { capacity, pcs_conf }
+impl IronSpecification {
+    pub fn new(capacity: usize, zk: bool) -> Self {
+        Self { capacity, zk }
     }
 }
 
-impl<E: Pairing, PC: PolynomialCommitmentScheme<E>> VKDSpecification<E, PC>
-    for IronSpecification<E, PC>
-{
+impl VKDSpecification for IronSpecification {
     fn get_capacity(&self) -> usize {
         self.capacity
     }
-    fn get_pcs_conf(&self) -> <PC>::Config {
-        self.pcs_conf.clone()
+    fn is_zk(&self) -> bool {
+        self.zk
     }
 }
 

@@ -237,6 +237,8 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
         k: usize,
         num_vars: usize,
     ) -> Result<KZHKUniversalParams<E>, PCSError> {
+
+
         // ----- Dimensions: split num_vars across k -----
         let d = num_vars / k;
         let remainder_d = num_vars % k;
@@ -379,6 +381,8 @@ impl<E: Pairing> StructuredReferenceString<E> for KZHKUniversalParams<E> {
         ))
     }
 }
+
+
 // Helper: mixed-radix decode of a flat index into coordinates (C-order).
 #[inline]
 fn decode_coords(mut idx: usize, bases: &[usize], out_coords: &mut Vec<usize>) {
